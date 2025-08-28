@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HERMES - Panel Empleado</title>
+    <link rel="stylesheet" href="css/panelempleado.css">
+</head>
+<body>
+    <div class="contenedor">
+        <!-- Barra lateral -->
+        <nav class="barra-lateral">
+            <div class="logo">
+                <h2>HERMES</h2>
+                <p>Express</p>
+            </div>
+            
+            <ul class="menu">
+                <li><a href="#inicio" class="activo" onclick="mostrarSeccion('inicio')">
+                    <span class="icono">🏠</span>Inicio
+                </a></li>
+                <li><a href="#mis-paquetes" onclick="mostrarSeccion('mis-paquetes')">
+                    <span class="icono">📦</span>Mis Paquetes
+                </a></li>
+                <li><a href="#entregar" onclick="mostrarSeccion('entregar')">
+                    <span class="icono">✅</span>Entregar
+                </a></li>
+                <li><a href="#ruta" onclick="mostrarSeccion('ruta')">
+                    <span class="icono">🗺️</span>Mi Ruta
+                </a></li>
+                <li><a href="#perfil" onclick="mostrarSeccion('perfil')">
+                    <span class="icono">👤</span>Perfil
+                </a></li>
+            </ul>
+            
+            <div class="usuario-info">
+                <div class="avatar">👤</div>
+                <div class="info">
+                    <p id="nombreUsuario">Empleado</p>
+                    <small>Empleado</small>
+                </div>
+                <button onclick="cerrarSesion()" class="btn-salir">🚪</button>
+            </div>
+        </nav>
+
+        <!-- Contenido principal -->
+        <main class="contenido-principal">
+            <header class="cabecera">
+                <h1 id="tituloSeccion">Panel de Empleado</h1>
+                <div class="acciones">
+                    <button class="btn btn-primario" onclick="actualizarEstado()">🔄 Actualizar</button>
+                    <button class="btn btn-secundario" onclick="verNotificaciones()">🔔 Notificaciones</button>
+                </div>
+            </header>
+
+            <!-- Sección Inicio -->
+            <section id="seccion-inicio" class="seccion activa">
+                <div class="tarjetas-resumen">
+                    <div class="tarjeta">
+                        <div class="icono-tarjeta">📦</div>
+                        <div class="info-tarjeta">
+                            <h3 id="misPaquetes">0</h3>
+                            <p>Mis Paquetes</p>
+                        </div>
+                    </div>
+                    <div class="tarjeta">
+                        <div class="icono-tarjeta">🚛</div>
+                        <div class="info-tarjeta">
+                            <h3 id="enRuta">0</h3>
+                            <p>En Ruta</p>
+                        </div>
+                    </div>
+                    <div class="tarjeta">
+                        <div class="icono-tarjeta">✅</div>
+                        <div class="info-tarjeta">
+                            <h3 id="entregadosHoy">0</h3>
+                            <p>Entregados Hoy</p>
+                        </div>
+                    </div>
+                    <div class="tarjeta">
+                        <div class="icono-tarjeta">⏰</div>
+                        <div class="info-tarjeta">
+                            <h3 id="pendientes">0</h3>
+                            <p>Pendientes</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel-trabajo">
+                    <div class="tareas-hoy">
+                        <h3>Tareas de Hoy</h3>
+                        <div id="listaTareas" class="lista-tareas">
+                            <!-- Se llena dinámicamente -->
+                        </div>
+                    </div>
+                    
+                    <div class="estado-vehiculo">
+                        <h3>Mi Vehículo</h3>
+                        <div id="infoVehiculo" class="info-vehiculo">
+                            <!-- Se llena dinámicamente -->
+                        </div>
+                        <div class="acciones-vehiculo">
+                            <button class="btn btn-primario" onclick="iniciarRuta()">Iniciar Ruta</button>
+                            <button class="btn btn-secundario" onclick="reportarProblema()">Reportar Problema</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Sección Mis Paquetes -->
+            <section id="seccion-mis-paquetes" class="seccion">
+                <div class="filtros">
+                    <input type="text" id="buscarMiPaquete" placeholder="Buscar por código o destinatario...">
+                    <select id="filtroMiEstado">
+                        <option value="">Todos los estados</option>
+                        <option value="pendiente">Pendiente</option>
+                        <option value="en_transito">En Tránsito</option>
+                        <option value="entregado">Entregado</option>
+                    </select>
+                </div>
+                
+                <div class="tabla-container">
+                    <table id="tablaMisPaquetes">
+                        <thead>
+                            <tr>
+                                <th>Código</th>
+                                <th>Destinatario</th>
+                                <th>Dirección</th>
+                                <th>Estado</th>
+                                <th>Peso</th>
+                                <th>Fecha</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="cuerpoTablaMisPaquetes">
+                            <!-- Se llena dinámicamente -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Sección Entregar -->
+            <section id="seccion-entregar" class="seccion">
+                <div class="panel-entrega">
+                    <h3>Confirmar Entrega</h3>
+                    <form id="formEntrega">
+                        <div class="form-grupo">
+                            <label>Código del Paquete:</label>
+                            <input type="text" id="codigoEntrega" placeholder="Escanear o escribir código" required>
+                            <button type="button" class="btn-escanear" onclick="escanearCodigo()">📷</button>
+                        </div>
+                        <div class="form-grupo">
+                            <label>Nombre del Receptor:</label>
+                            <input type="text" id="nombreReceptor" required>
+                        </div>
+                        <div class="form-grupo">
+                            <label>Documento del Receptor:</label>
+                            <input type="text" id="documentoReceptor" required>
+                        </div>
+                        <div class="form-grupo">
+                            <label>Observaciones:</label>
+                            <textarea id="observaciones" placeholder="Observaciones adicionales..."></textarea>
+                        </div>
+                        <div class="form-grupo">
+                            <label>Foto de Entrega:</label>
+                            <input type="file" id="fotoEntrega" accept="image/*" capture="camera">
+                        </div>
+                        <div class="form-acciones">
+                            <button type="submit" class="btn btn-primario">Confirmar Entrega</button>
+                            <button type="button" class="btn btn-secundario" onclick="limpiarFormEntrega()">Limpiar</button>
+                        </div>
+                    </form>
+                </div>
+            </section>
+
+            <!-- Sección Mi Ruta -->
+            <section id="seccion-ruta" class="seccion">
+                <div class="info-ruta">
+                    <h3>Ruta del Día</h3>
+                    <div id="detallesRuta" class="detalles-ruta">
+                        <!-- Se llena dinámicamente -->
+                    </div>
+                </div>
+                
+                <div class="mapa-ruta">
+                    <h3>Mapa de Entregas</h3>
+                    <div id="mapaContainer" class="mapa-container">
+                        <p>🗺️ Mapa interactivo - Por implementar</p>
+                    </div>
+                </div>
+                
+                <div class="lista-entregas">
+                    <h3>Entregas Programadas</h3>
+                    <div id="listaEntregas" class="entregas-programadas">
+                        <!-- Se llena dinámicamente -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- Sección Perfil -->
+            <section id="seccion-perfil" class="seccion">
+                <div class="perfil-empleado">
+                    <h3>Mi Perfil</h3>
+                    <form id="formPerfil">
+                        <div class="form-grupo">
+                            <label>Nombre:</label>
+                            <input type="text" id="perfilNombre" readonly>
+                        </div>
+                        <div class="form-grupo">
+                            <label>Usuario:</label>
+                            <input type="text" id="perfilUsuario" readonly>
+                        </div>
+                        <div class="form-grupo">
+                            <label>Email:</label>
+                            <input type="email" id="perfilEmail">
+                        </div>
+                        <div class="form-grupo">
+                            <label>Nueva Contraseña:</label>
+                            <input type="password" id="nuevaClave" placeholder="Dejar vacío para no cambiar">
+                        </div>
+                        <div class="form-grupo">
+                            <label>Confirmar Contraseña:</label>
+                            <input type="password" id="confirmarClave">
+                        </div>
+                        <div class="form-acciones">
+                            <button type="submit" class="btn btn-primario">Actualizar Perfil</button>
+                        </div>
+                    </form>
+                </div>
+                
+                <div class="estadisticas-empleado">
+                    <h3>Mis Estadísticas</h3>
+                    <div id="estadisticasContainer" class="estadisticas-container">
+                        <!-- Se llena dinámicamente -->
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="js/panelempleado.js"></script>
+</body>
+</html>

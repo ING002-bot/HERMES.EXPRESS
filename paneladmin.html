@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HERMES - Panel Administrador</title>
+    <link rel="stylesheet" href="css/paneladmin.css">
+</head>
+<body>
+    <div class="contenedor">
+        <!-- Barra lateral -->
+        <nav class="barra-lateral">
+            <div class="logo">
+                <h2>HERMES</h2>
+                <p>Express</p>
+            </div>
+            
+            <ul class="menu">
+                <li><a href="#dashboard" class="activo" onclick="mostrarSeccion('dashboard')">
+                    <span class="icono">📊</span>Dashboard
+                </a></li>
+                <li><a href="#paquetes" onclick="mostrarSeccion('paquetes')">
+                    <span class="icono">📦</span>Paquetes
+                </a></li>
+                <li><a href="#empleados" onclick="mostrarSeccion('empleados')">
+                    <span class="icono">👥</span>Empleados
+                </a></li>
+                <li><a href="#vehiculos" onclick="mostrarSeccion('vehiculos')">
+                    <span class="icono">🚛</span>Vehículos
+                </a></li>
+                <li><a href="#rutas" onclick="mostrarSeccion('rutas')">
+                    <span class="icono">🗺️</span>Rutas
+                </a></li>
+                <li><a href="#" onclick="mostrarSeccion('reportes')">📊 Reportes</a>
+                <li><a href="#" onclick="mostrarSeccion('pagos')">💰 Pagos Empleados</a>
+                <li><a href="#" onclick="mostrarSeccion('configuracion')">⚙️ Configuración</a>
+            </ul>
+            
+            <div class="usuario-info">
+                <div class="avatar">👤</div>
+                <div class="info">
+                    <p id="nombreUsuario">Administrador</p>
+                    <small>Admin</small>
+                </div>
+                <button onclick="cerrarSesion()" class="btn-salir">🚪</button>
+            </div>
+        </nav>
+
+        <!-- Contenido principal -->
+        <main class="contenido-principal">
+            <header class="cabecera">
+                <h1 id="tituloSeccion">Panel de Administración</h1>
+                <div class="acciones">
+                    <button class="btn btn-primario" onclick="nuevoPaquete()">+ Nuevo Paquete</button>
+                    <button class="btn btn-secundario" onclick="actualizar()">🔄 Actualizar</button>
+                </div>
+            </header>
+
+            <!-- Sección Dashboard -->
+            <section id="seccion-dashboard" class="seccion activa">
+                <div class="metricas-principales">
+                    <div class="tarjeta-metrica">
+                        <div class="icono-metrica">📦</div>
+                        <div class="info-metrica">
+                            <h3 id="totalPaquetes">0</h3>
+                            <p>Total Paquetes</p>
+                        </div>
+                    </div>
+                    <div class="tarjeta-metrica">
+                        <div class="icono-metrica">💰</div>
+                        <div class="info-metrica">
+                            <h3 id="ingresosMes">$0</h3>
+                            <p>Ingresos del Mes</p>
+                        </div>
+                    </div>
+                    <div class="tarjeta-metrica">
+                        <div class="icono-metrica">👥</div>
+                        <div class="info-metrica">
+                            <h3 id="empleadosActivos">0</h3>
+                            <p>Empleados Activos</p>
+                        </div>
+                    </div>
+                    <div class="tarjeta-metrica">
+                        <div class="icono-metrica">🚛</div>
+                        <div class="info-metrica">
+                            <h3 id="vehiculosOperativos">0</h3>
+                            <p>Vehículos Operativos</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="graficos-admin">
+                    <div class="grafico-ventas">
+                        <h3>Ingresos por Mes</h3>
+                        <canvas id="graficoVentas" width="600" height="300"></canvas>
+                    </div>
+                    <div class="actividad-reciente">
+                        <h3>Actividad Reciente</h3>
+                        <div id="listaActividad" class="lista-actividad">
+                            <!-- Se llena dinámicamente -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Sección Paquetes -->
+            <section id="seccion-paquetes" class="seccion">
+                <div class="filtros">
+                    <input type="text" id="buscarPaquete" placeholder="Buscar por código o destinatario...">
+                    <select id="filtroEstado">
+                        <option value="">Todos los estados</option>
+                        <option value="pendiente">Pendiente</option>
+                        <option value="en_transito">En Tránsito</option>
+                        <option value="entregado">Entregado</option>
+                        <option value="devuelto">Devuelto</option>
+                    </select>
+                </div>
+                
+                <div class="tabla-container">
+                    <table id="tablaPaquetes">
+                        <thead>
+                            <tr>
+                                <th>Código</th>
+                                <th>Remitente</th>
+                                <th>Destinatario</th>
+                                <th>Estado</th>
+                                <th>Peso</th>
+                                <th>Precio</th>
+                                <th>Fecha</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="cuerpoTablaPaquetes">
+                            <!-- Se llena dinámicamente -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Sección Empleados -->
+            <section id="seccion-empleados" class="seccion">
+                <div class="controles-empleados">
+                    <button class="btn btn-primario" onclick="nuevoEmpleado()">+ Nuevo Empleado</button>
+                </div>
+                
+                <div id="contenedorEmpleados" class="grid-empleados">
+                    <!-- Se llena dinámicamente -->
+                </div>
+            </section>
+
+            <!-- Sección Vehículos -->
+            <section id="seccion-vehiculos" class="seccion">
+                <div class="controles-vehiculos">
+                    <button class="btn btn-primario" onclick="nuevoVehiculo()">+ Nuevo Vehículo</button>
+                </div>
+                
+                <div id="contenedorVehiculos" class="grid-vehiculos">
+                    <!-- Se llena dinámicamente -->
+                </div>
+            </section>
+
+            <!-- Sección Rutas -->
+            <section id="seccion-rutas" class="seccion">
+                <div class="controles-rutas">
+                    <button class="btn btn-primario" onclick="nuevaRuta()">+ Nueva Ruta</button>
+                </div>
+                
+                <div id="contenedorRutas" class="grid-rutas">
+                    <!-- Se llena dinámicamente -->
+                </div>
+            </section>
+
+            <!-- Sección Reportes -->
+            <section id="seccion-reportes" class="seccion">
+                <div class="generador-reportes">
+                    <h3>Generar Reportes</h3>
+                    <div class="opciones-reporte">
+                        <select id="tipoReporte">
+                            <option value="ventas">Reporte de Ventas</option>
+                            <option value="entregas">Reporte de Entregas</option>
+                            <option value="empleados">Reporte de Empleados</option>
+                        </select>
+                        <input type="date" id="reporteFechaInicio">
+                        <input type="date" id="reporteFechaFin">
+                        <button class="btn btn-primario" onclick="generarReporte()">Generar</button>
+                    </div>
+                </div>
+                
+                <div id="vistaReporte" class="vista-reporte">
+                    <!-- Se llena dinámicamente -->
+                </div>
+            </section>
+
+            <!-- Sección Pagos Empleados -->
+            <section id="seccion-pagos" class="seccion">
+                <div class="seccion-header">
+                    <h2>Gestión de Pagos a Empleados</h2>
+                    <div class="acciones">
+                        <button class="btn btn-primario" onclick="calcularPagos()">🧮 Calcular Pagos</button>
+                        <button class="btn btn-secundario" onclick="configurarTarifas()">⚙️ Configurar Tarifas</button>
+                        <button class="btn btn-exito" onclick="exportarPagos()">📄 Exportar</button>
+                    </div>
+                </div>
+
+                <!-- Filtros de período -->
+                <div class="filtros-pago">
+                    <div class="form-group">
+                        <label>Período Inicio</label>
+                        <input type="date" id="fechaInicioPago" value="">
+                    </div>
+                    <div class="form-group">
+                        <label>Período Fin</label>
+                        <input type="date" id="fechaFinPago" value="">
+                    </div>
+                    <div class="form-group">
+                        <label>Empleado</label>
+                        <select id="filtroEmpleadoPago">
+                            <option value="">Todos los empleados</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-primario" onclick="filtrarPagos()">🔍 Filtrar</button>
+                </div>
+
+                <!-- Tarifas por tipo de ruta -->
+                <div class="tarifas-container">
+                    <h3>Tarifas por Tipo de Ruta</h3>
+                    <div class="tarifas-grid" id="tarifasGrid">
+                        <!-- Se llenan dinámicamente -->
+                    </div>
+                </div>
+
+                <!-- Resumen de pagos -->
+                <div class="pagos-resumen">
+                    <div class="pago-card">
+                        <h4>Total a Pagar</h4>
+                        <p class="monto-total" id="totalPagar">$0</p>
+                    </div>
+                    <div class="pago-card">
+                        <h4>Empleados</h4>
+                        <p class="numero" id="totalEmpleados">0</p>
+                    </div>
+                    <div class="pago-card">
+                        <h4>Paquetes Entregados</h4>
+                        <p class="numero" id="totalEntregados">0</p>
+                    </div>
+                    <div class="pago-card">
+                        <h4>Paquetes Devueltos</h4>
+                        <p class="numero" id="totalDevueltos">0</p>
+                    </div>
+                </div>
+
+                <!-- Lista de pagos por empleado -->
+                <div class="pagos-empleados">
+                    <h3>Pagos por Empleado</h3>
+                    <div class="tabla-container">
+                        <table class="tabla">
+                            <thead>
+                                <tr>
+                                    <th>Empleado</th>
+                                    <th>Entregados</th>
+                                    <th>Devueltos</th>
+                                    <th>Urbano</th>
+                                    <th>Distrital</th>
+                                    <th>Interprovincial</th>
+                                    <th>Interurbano</th>
+                                    <th>Total</th>
+                                    <th>Estado</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="cuerpoTablaPagos">
+                                <!-- Se llena dinámicamente -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Sección Configuración -->
+            <section id="seccion-configuracion" class="seccion">
+                <div class="seccion-header">
+                    <h2>Configuración del Sistema</h2>
+                    <div class="acciones">
+                        <button class="btn btn-primario" onclick="guardarConfigSistema()">💾 Guardar</button>
+                    </div>
+                </div>
+
+                <div class="config-grid">
+                    <div class="config-card">
+                        <h3>Información de la Empresa</h3>
+                        <form id="formEmpresa">
+                            <div class="form-group">
+                                <label>Nombre de la Empresa</label>
+                                <input type="text" value="Hermes Express" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Dirección</label>
+                                <input type="text" value="Calle Principal #123" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Teléfono</label>
+                        </div>
+                        <div class="config-item">
+                            <label>
+                                <input type="checkbox"> Modo Mantenimiento
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Modal Configurar Tarifas -->
+            <div id="modalTarifas" class="modal">
+                <div class="modal-contenido">
+                    <div class="modal-header">
+                        <h3>Configurar Tarifas por Ruta</h3>
+                        <span class="cerrar" onclick="cerrarModal('modalTarifas')">&times;</span>
+                    </div>
+                    <form id="formTarifas">
+                        <div class="form-group">
+                            <label>Tipo de Ruta</label>
+                            <select id="tipoRutaTarifa" required>
+                                <option value="urbano">Urbano</option>
+                                <option value="distrital">Distrital</option>
+                                <option value="interprovincial">Interprovincial</option>
+                                <option value="interurbano">Interurbano</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Tarifa Base ($)</label>
+                            <input type="number" id="tarifaBase" step="0.01" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Tarifa por Kg ($)</label>
+                            <input type="number" id="tarifaPorKg" step="0.01" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Comisión Empleado (%)</label>
+                            <input type="number" id="comisionEmpleado" step="0.01" min="0" max="100" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Descripción</label>
+                            <textarea id="descripcionTarifa" rows="3"></textarea>
+                        </div>
+                        <div class="modal-acciones">
+                            <button type="button" class="btn btn-secundario" onclick="cerrarModal('modalTarifas')">Cancelar</button>
+                            <button type="submit" class="btn btn-primario">Guardar Tarifa</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Modal Editar Cantidades por Zona -->
+            <div id="modalEditarCantidades" class="modal">
+                <div class="modal-contenido">
+                    <div class="modal-header">
+                        <h3>Editar Cantidades por Zona</h3>
+                        <span class="cerrar" onclick="cerrarModal('modalEditarCantidades')">&times;</span>
+                    </div>
+                    <div class="empleado-info">
+                        <h4 id="empleadoEditando">Empleado: </h4>
+                        <p>Período: <span id="periodoEditando"></span></p>
+                    </div>
+                    
+                    <div class="zonas-grid">
+                        <div class="zona-card">
+                            <h5>🏙️ Urbano</h5>
+                            <div class="cantidad-controls">
+                                <label>Entregados:</label>
+                                <div class="input-group">
+                                    <button type="button" onclick="ajustarCantidad('urbano', 'entregados', -1)">-</button>
+                                    <input type="number" id="urbano-entregados" min="0" value="0">
+                                    <button type="button" onclick="ajustarCantidad('urbano', 'entregados', 1)">+</button>
+                                </div>
+                            </div>
+                            <div class="cantidad-controls">
+                                <label>Devueltos:</label>
+                                <div class="input-group">
+                                    <button type="button" onclick="ajustarCantidad('urbano', 'devueltos', -1)">-</button>
+                                    <input type="number" id="urbano-devueltos" min="0" value="0">
+                                    <button type="button" onclick="ajustarCantidad('urbano', 'devueltos', 1)">+</button>
+                                </div>
+                            </div>
+                            <div class="zona-total">Total: $<span id="urbano-total">0</span></div>
+                        </div>
+
+                        <div class="zona-card">
+                            <h5>🏘️ Distrital</h5>
+                            <div class="cantidad-controls">
+                                <label>Entregados:</label>
+                                <div class="input-group">
+                                    <button type="button" onclick="ajustarCantidad('distrital', 'entregados', -1)">-</button>
+                                    <input type="number" id="distrital-entregados" min="0" value="0">
+                                    <button type="button" onclick="ajustarCantidad('distrital', 'entregados', 1)">+</button>
+                                </div>
+                            </div>
+                            <div class="cantidad-controls">
+                                <label>Devueltos:</label>
+                                <div class="input-group">
+                                    <button type="button" onclick="ajustarCantidad('distrital', 'devueltos', -1)">-</button>
+                                    <input type="number" id="distrital-devueltos" min="0" value="0">
+                                    <button type="button" onclick="ajustarCantidad('distrital', 'devueltos', 1)">+</button>
+                                </div>
+                            </div>
+                            <div class="zona-total">Total: $<span id="distrital-total">0</span></div>
+                        </div>
+
+                        <div class="zona-card">
+                            <h5>🌍 Interprovincial</h5>
+                            <div class="cantidad-controls">
+                                <label>Entregados:</label>
+                                <div class="input-group">
+                                    <button type="button" onclick="ajustarCantidad('interprovincial', 'entregados', -1)">-</button>
+                                    <input type="number" id="interprovincial-entregados" min="0" value="0">
+                                    <button type="button" onclick="ajustarCantidad('interprovincial', 'entregados', 1)">+</button>
+                                </div>
+                            </div>
+                            <div class="cantidad-controls">
+                                <label>Devueltos:</label>
+                                <div class="input-group">
+                                    <button type="button" onclick="ajustarCantidad('interprovincial', 'devueltos', -1)">-</button>
+                                    <input type="number" id="interprovincial-devueltos" min="0" value="0">
+                                    <button type="button" onclick="ajustarCantidad('interprovincial', 'devueltos', 1)">+</button>
+                                </div>
+                            </div>
+                            <div class="zona-total">Total: $<span id="interprovincial-total">0</span></div>
+                        </div>
+
+                        <div class="zona-card">
+                            <h5>🚗 Interurbano</h5>
+                            <div class="cantidad-controls">
+                                <label>Entregados:</label>
+                                <div class="input-group">
+                                    <button type="button" onclick="ajustarCantidad('interurbano', 'entregados', -1)">-</button>
+                                    <input type="number" id="interurbano-entregados" min="0" value="0">
+                                    <button type="button" onclick="ajustarCantidad('interurbano', 'entregados', 1)">+</button>
+                                </div>
+                            </div>
+                            <div class="cantidad-controls">
+                                <label>Devueltos:</label>
+                                <div class="input-group">
+                                    <button type="button" onclick="ajustarCantidad('interurbano', 'devueltos', -1)">-</button>
+                                    <input type="number" id="interurbano-devueltos" min="0" value="0">
+                                    <button type="button" onclick="ajustarCantidad('interurbano', 'devueltos', 1)">+</button>
+                                </div>
+                            </div>
+                            <div class="zona-total">Total: $<span id="interurbano-total">0</span></div>
+                        </div>
+                    </div>
+
+                    <div class="resumen-edicion">
+                        <div class="total-general">
+                            <h4>Total General: $<span id="totalGeneralEdicion">0</span></h4>
+                        </div>
+                    </div>
+
+                    <div class="modal-acciones">
+                        <button type="button" class="btn btn-secundario" onclick="cerrarModal('modalEditarCantidades')">Cancelar</button>
+                        <button type="button" class="btn btn-primario" onclick="guardarCantidades()">Guardar Cambios</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal para nuevo empleado -->
+            <div id="modalEmpleado" class="modal">
+                <div class="modal-contenido">
+                    <span class="cerrar" onclick="cerrarModal('modalEmpleado')">&times;</span>
+                    <h2>Nuevo Empleado</h2>
+                    <form id="formEmpleado">
+                        <div class="form-grupo">
+                            <label>Nombre:</label>
+                            <input type="text" id="nombreEmpleado" required>
+                        </div>
+                        <div class="form-grupo">
+                            <label>Usuario:</label>
+                            <input type="text" id="usuarioEmpleado" required>
+                        </div>
+                        <div class="form-grupo">
+                            <label>Email:</label>
+                            <input type="email" id="emailEmpleado" required>
+                        </div>
+                        <div class="form-grupo">
+                            <label>Contraseña:</label>
+                            <input type="password" id="claveEmpleado" required>
+                        </div>
+                        <div class="form-acciones">
+                            <button type="submit" class="btn btn-primario">Guardar</button>
+                            <button type="button" class="btn btn-secundario" onclick="cerrarModal('modalEmpleado')">Cancelar</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+            </form>
+        </div>
+    </div>
+
+    <script src="js/paneladmin.js"></script>
+</body>
+</html>

@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HERMES - Dashboard</title>
+    <link rel="stylesheet" href="css/dashboard.css">
+</head>
+<body>
+    <div class="contenedor">
+        <!-- Barra lateral -->
+        <nav class="barra-lateral">
+            <div class="logo">
+                <h2>HERMES</h2>
+                <p>Express</p>
+            </div>
+            
+            <ul class="menu">
+                <li><a href="#inicio" class="activo" onclick="mostrarSeccion('inicio')">
+                    <span class="icono">🏠</span>Inicio
+                </a></li>
+                <li><a href="#paquetes" onclick="mostrarSeccion('paquetes')">
+                    <span class="icono">📦</span>Paquetes
+                </a></li>
+                <li><a href="#rutas" onclick="mostrarSeccion('rutas')">
+                    <span class="icono">🗺️</span>Rutas
+                </a></li>
+                <li><a href="#vehiculos" onclick="mostrarSeccion('vehiculos')">
+                    <span class="icono">🚛</span>Vehículos
+                </a></li>
+                <li><a href="#reportes" onclick="mostrarSeccion('reportes')">
+                    <span class="icono">📊</span>Reportes
+                </a></li>
+            </ul>
+            
+            <div class="usuario-info">
+                <div class="avatar">👤</div>
+                <div class="info">
+                    <p id="nombreUsuario">Usuario</p>
+                    <small id="tipoUsuario">Empleado</small>
+                </div>
+                <button onclick="cerrarSesion()" class="btn-salir">🚪</button>
+            </div>
+        </nav>
+
+        <!-- Contenido principal -->
+        <main class="contenido-principal">
+            <header class="cabecera">
+                <h1 id="tituloSeccion">Dashboard</h1>
+                <div class="acciones">
+                    <button class="btn btn-primario" onclick="nuevoPaquete()">+ Nuevo Paquete</button>
+                    <button class="btn btn-secundario" onclick="actualizar()">🔄 Actualizar</button>
+                </div>
+            </header>
+
+            <!-- Sección Inicio -->
+            <section id="seccion-inicio" class="seccion activa">
+                <div class="tarjetas-resumen">
+                    <div class="tarjeta">
+                        <div class="icono-tarjeta">📦</div>
+                        <div class="info-tarjeta">
+                            <h3 id="totalPaquetes">0</h3>
+                            <p>Total Paquetes</p>
+                        </div>
+                    </div>
+                    <div class="tarjeta">
+                        <div class="icono-tarjeta">🚛</div>
+                        <div class="info-tarjeta">
+                            <h3 id="enTransito">0</h3>
+                            <p>En Tránsito</p>
+                        </div>
+                    </div>
+                    <div class="tarjeta">
+                        <div class="icono-tarjeta">✅</div>
+                        <div class="info-tarjeta">
+                            <h3 id="entregados">0</h3>
+                            <p>Entregados</p>
+                        </div>
+                    </div>
+                    <div class="tarjeta">
+                        <div class="icono-tarjeta">💰</div>
+                        <div class="info-tarjeta">
+                            <h3 id="ingresos">$0</h3>
+                            <p>Ingresos Hoy</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="graficos">
+                    <div class="grafico-container">
+                        <h3>Paquetes por Estado</h3>
+                        <canvas id="graficoEstados" width="400" height="200"></canvas>
+                    </div>
+                    <div class="actividad-reciente">
+                        <h3>Actividad Reciente</h3>
+                        <div id="listaActividad" class="lista-actividad">
+                            <!-- Se llena dinámicamente -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Sección Paquetes -->
+            <section id="seccion-paquetes" class="seccion">
+                <div class="filtros">
+                    <input type="text" id="buscarPaquete" placeholder="Buscar por código o destinatario...">
+                    <select id="filtroEstado">
+                        <option value="">Todos los estados</option>
+                        <option value="pendiente">Pendiente</option>
+                        <option value="en_transito">En Tránsito</option>
+                        <option value="entregado">Entregado</option>
+                        <option value="devuelto">Devuelto</option>
+                    </select>
+                </div>
+                
+                <div class="tabla-container">
+                    <table id="tablaPaquetes">
+                        <thead>
+                            <tr>
+                                <th>Código</th>
+                                <th>Remitente</th>
+                                <th>Destinatario</th>
+                                <th>Estado</th>
+                                <th>Peso</th>
+                                <th>Precio</th>
+                                <th>Fecha</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="cuerpoTablaPaquetes">
+                            <!-- Se llena dinámicamente -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Sección Rutas -->
+            <section id="seccion-rutas" class="seccion">
+                <div class="acciones-seccion">
+                    <button class="btn btn-primario" onclick="nuevaRuta()">+ Nueva Ruta</button>
+                </div>
+                <div id="listaRutas" class="lista-rutas">
+                    <!-- Se llena dinámicamente -->
+                </div>
+            </section>
+
+            <!-- Sección Vehículos -->
+            <section id="seccion-vehiculos" class="seccion">
+                <div class="acciones-seccion">
+                    <button class="btn btn-primario" onclick="nuevoVehiculo()">+ Nuevo Vehículo</button>
+                </div>
+                <div id="listaVehiculos" class="lista-vehiculos">
+                    <!-- Se llena dinámicamente -->
+                </div>
+            </section>
+
+            <!-- Sección Reportes -->
+            <section id="seccion-reportes" class="seccion">
+                <div class="filtros-reporte">
+                    <input type="date" id="fechaInicio">
+                    <input type="date" id="fechaFin">
+                    <button class="btn btn-primario" onclick="generarReporte()">Generar Reporte</button>
+                </div>
+                <div id="contenidoReporte" class="contenido-reporte">
+                    <!-- Se llena dinámicamente -->
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Modal para nuevo paquete -->
+    <div id="modalPaquete" class="modal">
+        <div class="modal-contenido">
+            <span class="cerrar" onclick="cerrarModal('modalPaquete')">&times;</span>
+            <h2>Nuevo Paquete</h2>
+            <form id="formPaquete">
+                <div class="form-grupo">
+                    <label>Remitente:</label>
+                    <input type="text" id="remitente" required>
+                </div>
+                <div class="form-grupo">
+                    <label>Destinatario:</label>
+                    <input type="text" id="destinatario" required>
+                </div>
+                <div class="form-grupo">
+                    <label>Dirección Origen:</label>
+                    <textarea id="direccionOrigen" required></textarea>
+                </div>
+                <div class="form-grupo">
+                    <label>Dirección Destino:</label>
+                    <textarea id="direccionDestino" required></textarea>
+                </div>
+                <div class="form-grupo">
+                    <label>Peso (kg):</label>
+                    <input type="number" id="peso" step="0.1" required>
+                </div>
+                <div class="form-grupo">
+                    <label>Precio:</label>
+                    <input type="number" id="precio" step="0.01" required>
+                </div>
+                <div class="form-acciones">
+                    <button type="submit" class="btn btn-primario">Guardar</button>
+                    <button type="button" class="btn btn-secundario" onclick="cerrarModal('modalPaquete')">Cancelar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="js/dashboard.js"></script>
+</body>
+</html>
