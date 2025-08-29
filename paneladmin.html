@@ -8,11 +8,9 @@
 </head>
 <body>
     <div class="contenedor">
-        <!-- Barra lateral -->
         <nav class="barra-lateral">
             <div class="logo">
-                <h2>HERMES</h2>
-                <p>Express</p>
+                <h2>HERMES EXPRESS LOGISTIC</h2>
             </div>
             
             <ul class="menu">
@@ -52,7 +50,6 @@
             </div>
         </nav>
 
-        <!-- Contenido principal -->
         <main class="contenido-principal">
             <header class="cabecera">
                 <h1 id="tituloSeccion">Panel de Administración</h1>
@@ -62,7 +59,6 @@
                 </div>
             </header>
 
-            <!-- Sección Dashboard -->
             <section id="seccion-dashboard" class="seccion activa">
                 <div class="metricas-principales">
                     <div class="tarjeta-metrica">
@@ -103,13 +99,11 @@
                     <div class="actividad-reciente">
                         <h3>Actividad Reciente</h3>
                         <div id="listaActividad" class="lista-actividad">
-                            <!-- Se llena dinámicamente -->
                         </div>
                     </div>
                 </div>
             </section>
 
-            <!-- Sección Paquetes -->
             <section id="seccion-paquetes" class="seccion">
                 <div class="filtros">
                     <input type="text" id="buscarPaquete" placeholder="Buscar por código o destinatario...">
@@ -137,13 +131,11 @@
                             </tr>
                         </thead>
                         <tbody id="cuerpoTablaPaquetes">
-                            <!-- Se llena dinámicamente -->
                         </tbody>
                     </table>
                 </div>
             </section>
 
-            <!-- Sección Empleados -->
             <section id="seccion-empleados" class="seccion">
                 <div class="controles-empleados">
                     <button class="btn btn-primario" onclick="nuevoEmpleado()">+ Nuevo Empleado</button>
@@ -165,13 +157,11 @@
                             </tr>
                         </thead>
                         <tbody id="cuerpoTablaEmpleados">
-                            <!-- Se llena dinámicamente -->
                         </tbody>
                     </table>
                 </div>
             </section>
 
-            <!-- Sección Vehículos -->
             <section id="seccion-vehiculos" class="seccion">
                 <div class="controles-vehiculos">
                     <button class="btn btn-primario" onclick="nuevoVehiculo()">+ Nuevo Vehículo</button>
@@ -193,13 +183,11 @@
                             </tr>
                         </thead>
                         <tbody id="cuerpoTablaVehiculos">
-                            <!-- Se llena dinámicamente -->
                         </tbody>
                     </table>
                 </div>
             </section>
 
-            <!-- Sección Rutas -->
             <section id="seccion-rutas" class="seccion">
                 <div class="controles-rutas">
                     <button class="btn btn-primario" onclick="nuevaRuta()">+ Nueva Ruta</button>
@@ -220,13 +208,11 @@
                             </tr>
                         </thead>
                         <tbody id="cuerpoTablaRutas">
-                            <!-- Se llena dinámicamente -->
                         </tbody>
                     </table>
                 </div>
             </section>
 
-            <!-- Sección Reportes -->
             <section id="seccion-reportes" class="seccion">
                 <div class="generador-reportes">
                     <h3>Generar Reportes</h3>
@@ -270,7 +256,6 @@
                 </div>
             </section>
 
-            <!-- Sección Pagos Empleados -->
             <section id="seccion-pagos" class="seccion">
                 <div class="seccion-header">
                     <h2>Gestión de Pagos a Empleados</h2>
@@ -348,14 +333,12 @@
                                 </tr>
                             </thead>
                             <tbody id="cuerpoTablaPagos">
-                                <!-- Se llena dinámicamente -->
-                            </tbody>
+                                </tbody>
                         </table>
                     </div>
                 </div>
             </section>
 
-            <!-- Sección Configuración -->
             <section id="seccion-configuracion" class="seccion">
                 <div class="seccion-header">
                     <h2>Configuración del Sistema</h2>
@@ -388,7 +371,6 @@
                 </div>
             </section>
 
-            <!-- Modal Configurar Tarifas -->
             <div id="modalTarifas" class="modal">
                 <div class="modal-contenido">
                     <div class="modal-header">
@@ -429,7 +411,6 @@
                 </div>
             </div>
 
-            <!-- Modal Editar Cantidades por Zona -->
             <div id="modalEditarCantidades" class="modal">
                 <div class="modal-contenido">
                     <div class="modal-header">
@@ -540,7 +521,6 @@
                 </div>
             </div>
 
-            <!-- Modal para nuevo paquete -->
             <div id="modalPaquete" class="modal">
                 <div class="modal-contenido">
                     <span class="cerrar" onclick="cerrarModal('modalPaquete')">&times;</span>
@@ -578,7 +558,6 @@
                 </div>
             </div>
 
-            <!-- Modal para nuevo vehículo -->
             <div id="modalVehiculo" class="modal">
                 <div class="modal-contenido">
                     <span class="cerrar" onclick="cerrarModal('modalVehiculo')">&times;</span>
@@ -616,7 +595,6 @@
                 </div>
             </div>
 
-            <!-- Modal para nueva ruta -->
             <div id="modalRuta" class="modal">
                 <div class="modal-contenido">
                     <span class="cerrar" onclick="cerrarModal('modalRuta')">&times;</span>
@@ -650,7 +628,6 @@
                 </div>
             </div>
 
-            <!-- Modal para nuevo empleado -->
             <div id="modalEmpleado" class="modal">
                 <div class="modal-contenido">
                     <span class="cerrar" onclick="cerrarModal('modalEmpleado')">&times;</span>
@@ -1002,7 +979,6 @@
                     <td><span class="estado estado-${empleado.activo ? 'activo' : 'inactivo'}">${empleado.activo ? 'Activo' : 'Inactivo'}</span></td>
                     <td>${new Date(empleado.fecha_registro).toLocaleDateString()}</td>
                     <td>
-                        <button class="btn btn-pequeno btn-primario" onclick="editarEmpleado(${empleado.id})">Editar</button>
                         <button class="btn btn-pequeno btn-secundario" onclick="eliminarEmpleado(${empleado.id})">Eliminar</button>
                     </td>
                 `;
@@ -1040,7 +1016,6 @@
                     <td><span class="estado estado-${vehiculo.estado}">${vehiculo.estado}</span></td>
                     <td>${vehiculo.empleado_nombre || 'Sin asignar'}</td>
                     <td>
-                        <button class="btn btn-pequeno btn-primario" onclick="editarVehiculo(${vehiculo.id})">Editar</button>
                         <button class="btn btn-pequeno btn-secundario" onclick="eliminarVehiculo(${vehiculo.id})">Eliminar</button>
                     </td>
                 `;
@@ -1077,7 +1052,6 @@
                     <td>${ruta.distancia}</td>
                     <td>${ruta.tiempo_estimado}</td>
                     <td>
-                        <button class="btn btn-pequeno btn-primario" onclick="editarRuta(${ruta.id})">Editar</button>
                         <button class="btn btn-pequeno btn-secundario" onclick="eliminarRuta(${ruta.id})">Eliminar</button>
                     </td>
                 `;
@@ -1164,18 +1138,6 @@
             }
         }
         
-        // Funciones placeholder para editar
-        function editarEmpleado(id) {
-            alert('Función editar empleado ID: ' + id + ' - Por implementar');
-        }
-        
-        function editarVehiculo(id) {
-            alert('Función editar vehículo ID: ' + id + ' - Por implementar');
-        }
-        
-        function editarRuta(id) {
-            alert('Función editar ruta ID: ' + id + ' - Por implementar');
-        }
         
         // Función para cargar y mostrar paquetes
         function cargarPaquetes() {
@@ -1209,7 +1171,6 @@
                     <td>$${parseFloat(paquete.precio).toFixed(2)}</td>
                     <td>${new Date(paquete.fecha_envio).toLocaleDateString()}</td>
                     <td>
-                        <button class="btn btn-pequeno btn-primario" onclick="editarPaquete(${paquete.id})">Editar</button>
                         <button class="btn btn-pequeno btn-secundario" onclick="eliminarPaquete(${paquete.id})">Eliminar</button>
                     </td>
                 `;
@@ -1217,10 +1178,6 @@
             });
         }
         
-        // Funciones placeholder para editar y eliminar
-        function editarPaquete(id) {
-            alert('Función editar paquete ID: ' + id + ' - Por implementar');
-        }
         
         function eliminarPaquete(id) {
             if (confirm('¿Estás seguro de que quieres eliminar este paquete?')) {

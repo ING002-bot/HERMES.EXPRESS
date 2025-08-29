@@ -8,10 +8,6 @@ if (!isset($_SESSION['usuario_id']) || !in_array($_SESSION['tipo'], ['admin', 'a
     exit;
 }
 
-// Función para debug
-function debug_log($message) {
-    error_log(date('Y-m-d H:i:s') . " - " . $message . "\n", 3, "debug.log");
-}
 
 $accion = $_GET['accion'] ?? $_POST['accion'] ?? '';
 
@@ -354,9 +350,6 @@ function crearPaquete() {
     global $pdo;
     
     try {
-        debug_log("Iniciando creación de paquete");
-        debug_log("POST data: " . print_r($_POST, true));
-        
         $remitente = limpiar_dato($_POST['remitente'] ?? '');
         $destinatario = limpiar_dato($_POST['destinatario'] ?? '');
         $direccion_origen = limpiar_dato($_POST['direccion_origen'] ?? '');
@@ -364,27 +357,19 @@ function crearPaquete() {
         $peso = floatval($_POST['peso'] ?? 0);
         $precio = floatval($_POST['precio'] ?? 0);
         
-        debug_log("Datos procesados - Remitente: $remitente, Peso: $peso, Precio: $precio");
-        
-        // Validar datos
         if (empty($remitente) || empty($destinatario) || empty($direccion_origen) || empty($direccion_destino) || $peso <= 0 || $precio <= 0) {
-            debug_log("Validación fallida");
             echo json_encode(['exito' => false, 'mensaje' => 'Todos los campos son obligatorios y deben ser válidos']);
             return;
         }
         
-        // Generar código único para el paquete
         $codigo = 'PKG' . date('Ymd') . str_pad(rand(1, 9999), 4, '0', STR_PAD_LEFT);
-        debug_log("Código generado: $codigo");
         
-        // Crear paquete - usar campos que existen en la BD
         $stmt = $pdo->prepare("
             INSERT INTO paquetes (codigo, remitente, destinatario, direccion_origen, direccion_destino, peso, precio, estado, fecha_envio) 
             VALUES (?, ?, ?, ?, ?, ?, ?, 'pendiente', CURDATE())
         ");
         
-        $result = $stmt->execute([$codigo, $remitente, $destinatario, $direccion_origen, $direccion_destino, $peso, $precio]);
-        debug_log("Resultado ejecución: " . ($result ? 'éxito' : 'fallo'));
+        $stmt->execute([$codigo, $remitente, $destinatario, $direccion_origen, $direccion_destino, $peso, $precio]);
         
         echo json_encode([
             'exito' => true,
@@ -393,11 +378,7 @@ function crearPaquete() {
         ]);
         
     } catch(PDOException $e) {
-        debug_log("Error PDO: " . $e->getMessage());
         echo json_encode(['exito' => false, 'mensaje' => 'Error al crear paquete: ' . $e->getMessage()]);
-    } catch(Exception $e) {
-        debug_log("Error general: " . $e->getMessage());
-        echo json_encode(['exito' => false, 'mensaje' => 'Error inesperado: ' . $e->getMessage()]);
     }
 }
 
@@ -520,9 +501,6 @@ function crearEmpleado() {
     global $pdo;
     
     try {
-        debug_log("Iniciando creación de empleado");
-        debug_log("POST data empleado: " . print_r($_POST, true));
-        
         $nombre = limpiar_dato($_POST['nombre'] ?? '');
         $usuario = limpiar_dato($_POST['usuario'] ?? '');
         $email = limpiar_dato($_POST['email'] ?? '');
@@ -530,24 +508,18 @@ function crearEmpleado() {
         $tipo = limpiar_dato($_POST['tipo'] ?? '');
         
         if (empty($nombre) || empty($usuario) || empty($email) || empty($clave)) {
-            debug_log("Validación empleado fallida");
             echo json_encode(['exito' => false, 'mensaje' => 'Todos los campos son obligatorios']);
             return;
         }
         
         $claveHash = password_hash($clave, PASSWORD_DEFAULT);
-        debug_log("Empleado validado, insertando en BD");
         
-        // Usar solo campos que existen en la tabla usuarios
         $stmt = $pdo->prepare("INSERT INTO usuarios (nombre, usuario, email, clave, tipo, activo) VALUES (?, ?, ?, ?, ?, 1)");
-        $result = $stmt->execute([$nombre, $usuario, $email, $claveHash, $tipo]);
-        
-        debug_log("Resultado inserción empleado: " . ($result ? 'éxito' : 'fallo'));
+        $stmt->execute([$nombre, $usuario, $email, $claveHash, $tipo]);
         
         echo json_encode(['exito' => true, 'mensaje' => 'Empleado creado exitosamente']);
         
     } catch(PDOException $e) {
-        debug_log("Error PDO empleado: " . $e->getMessage());
         echo json_encode(['exito' => false, 'mensaje' => 'Error al crear empleado: ' . $e->getMessage()]);
     }
 }
