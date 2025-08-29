@@ -9,7 +9,7 @@ CREATE TABLE usuarios (
     clave VARCHAR(255) NOT NULL,
     nombre VARCHAR(100) NOT NULL,
     email VARCHAR(100) NOT NULL,
-    tipo ENUM('admin', 'empleado') NOT NULL,
+    tipo ENUM('admin', 'asistente', 'empleado') NOT NULL,
     activo BOOLEAN DEFAULT TRUE,
     fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -61,8 +61,8 @@ CREATE TABLE vehiculos (
 -- Insertar datos de ejemplo
 INSERT INTO usuarios (usuario, clave, nombre, email, tipo) VALUES
 ('admin', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Administrador', 'admin@hermesexpress.com', 'admin'),
-('empleado1', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Juan Pérez', 'juan@hermesexpress.com', 'empleado'),
-('empleado2', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'María García', 'maria@hermesexpress.com', 'empleado');
+('asistente', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Asistente', 'asistente@hermesexpress.com', 'asistente'),
+('empleado', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Empleado', 'empleado@hermesexpress.com', 'empleado');
 
 INSERT INTO rutas (nombre, origen, destino, distancia, tiempo_estimado) VALUES
 ('Ruta Centro', 'Centro', 'Norte', 15.5, 45),

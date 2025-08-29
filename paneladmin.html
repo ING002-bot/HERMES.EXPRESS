@@ -16,24 +16,30 @@
             </div>
             
             <ul class="menu">
-                <li><a href="#dashboard" class="activo" onclick="mostrarSeccion('dashboard')">
+                <li><a href="javascript:void(0)" class="activo" onclick="mostrarSeccion('dashboard', this)">
                     <span class="icono">📊</span>Dashboard
                 </a></li>
-                <li><a href="#paquetes" onclick="mostrarSeccion('paquetes')">
+                <li><a href="javascript:void(0)" onclick="mostrarSeccion('paquetes', this)">
                     <span class="icono">📦</span>Paquetes
                 </a></li>
-                <li><a href="#empleados" onclick="mostrarSeccion('empleados')">
+                <li><a href="javascript:void(0)" onclick="mostrarSeccion('empleados', this)">
                     <span class="icono">👥</span>Empleados
                 </a></li>
-                <li><a href="#vehiculos" onclick="mostrarSeccion('vehiculos')">
+                <li><a href="javascript:void(0)" onclick="mostrarSeccion('vehiculos', this)">
                     <span class="icono">🚛</span>Vehículos
                 </a></li>
-                <li><a href="#rutas" onclick="mostrarSeccion('rutas')">
+                <li><a href="javascript:void(0)" onclick="mostrarSeccion('rutas', this)">
                     <span class="icono">🗺️</span>Rutas
                 </a></li>
-                <li><a href="#" onclick="mostrarSeccion('reportes')">📊 Reportes</a>
-                <li><a href="#" onclick="mostrarSeccion('pagos')">💰 Pagos Empleados</a>
-                <li><a href="#" onclick="mostrarSeccion('configuracion')">⚙️ Configuración</a>
+                <li><a href="javascript:void(0)" onclick="mostrarSeccion('reportes', this)">
+                    <span class="icono">📊</span>Reportes
+                </a></li>
+                <li><a href="javascript:void(0)" onclick="mostrarSeccion('pagos', this)">
+                    <span class="icono">💰</span>Pagos Empleados
+                </a></li>
+                <li><a href="javascript:void(0)" onclick="mostrarSeccion('configuracion', this)">
+                    <span class="icono">⚙️</span>Configuración
+                </a></li>
             </ul>
             
             <div class="usuario-info">
@@ -51,7 +57,7 @@
             <header class="cabecera">
                 <h1 id="tituloSeccion">Panel de Administración</h1>
                 <div class="acciones">
-                    <button class="btn btn-primario" onclick="nuevoPaquete()">+ Nuevo Paquete</button>
+                    <button class="btn btn-primario" onclick="abrirModal('modalPaquete')">+ Nuevo Paquete</button>
                     <button class="btn btn-secundario" onclick="actualizar()">🔄 Actualizar</button>
                 </div>
             </header>
@@ -141,10 +147,27 @@
             <section id="seccion-empleados" class="seccion">
                 <div class="controles-empleados">
                     <button class="btn btn-primario" onclick="nuevoEmpleado()">+ Nuevo Empleado</button>
+                    <button class="btn btn-secundario" onclick="cargarEmpleados()">🔄 Actualizar</button>
                 </div>
                 
-                <div id="contenedorEmpleados" class="grid-empleados">
-                    <!-- Se llena dinámicamente -->
+                <div class="tabla-container">
+                    <table id="tablaEmpleados">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Nombre</th>
+                                <th>Usuario</th>
+                                <th>Email</th>
+                                <th>Tipo</th>
+                                <th>Estado</th>
+                                <th>Fecha Registro</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="cuerpoTablaEmpleados">
+                            <!-- Se llena dinámicamente -->
+                        </tbody>
+                    </table>
                 </div>
             </section>
 
@@ -152,10 +175,27 @@
             <section id="seccion-vehiculos" class="seccion">
                 <div class="controles-vehiculos">
                     <button class="btn btn-primario" onclick="nuevoVehiculo()">+ Nuevo Vehículo</button>
+                    <button class="btn btn-secundario" onclick="cargarVehiculos()">🔄 Actualizar</button>
                 </div>
                 
-                <div id="contenedorVehiculos" class="grid-vehiculos">
-                    <!-- Se llena dinámicamente -->
+                <div class="tabla-container">
+                    <table id="tablaVehiculos">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Placa</th>
+                                <th>Marca</th>
+                                <th>Modelo</th>
+                                <th>Capacidad</th>
+                                <th>Estado</th>
+                                <th>Empleado Asignado</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="cuerpoTablaVehiculos">
+                            <!-- Se llena dinámicamente -->
+                        </tbody>
+                    </table>
                 </div>
             </section>
 
@@ -163,10 +203,26 @@
             <section id="seccion-rutas" class="seccion">
                 <div class="controles-rutas">
                     <button class="btn btn-primario" onclick="nuevaRuta()">+ Nueva Ruta</button>
+                    <button class="btn btn-secundario" onclick="cargarRutas()">🔄 Actualizar</button>
                 </div>
                 
-                <div id="contenedorRutas" class="grid-rutas">
-                    <!-- Se llena dinámicamente -->
+                <div class="tabla-container">
+                    <table id="tablaRutas">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Nombre</th>
+                                <th>Origen</th>
+                                <th>Destino</th>
+                                <th>Distancia (km)</th>
+                                <th>Tiempo Estimado (min)</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="cuerpoTablaRutas">
+                            <!-- Se llena dinámicamente -->
+                        </tbody>
+                    </table>
                 </div>
             </section>
 
@@ -175,19 +231,42 @@
                 <div class="generador-reportes">
                     <h3>Generar Reportes</h3>
                     <div class="opciones-reporte">
-                        <select id="tipoReporte">
-                            <option value="ventas">Reporte de Ventas</option>
-                            <option value="entregas">Reporte de Entregas</option>
-                            <option value="empleados">Reporte de Empleados</option>
-                        </select>
-                        <input type="date" id="reporteFechaInicio">
-                        <input type="date" id="reporteFechaFin">
-                        <button class="btn btn-primario" onclick="generarReporte()">Generar</button>
+                        <div class="form-grupo">
+                            <label>Tipo de Reporte:</label>
+                            <select id="tipoReporte">
+                                <option value="paquetes">Reporte de Paquetes</option>
+                                <option value="ventas">Reporte de Ventas</option>
+                                <option value="empleados">Reporte de Empleados</option>
+                                <option value="vehiculos">Reporte de Vehículos</option>
+                                <option value="empleados_paquetes">Empleados + Paquetes Entregados</option>
+                                <option value="rutas_paquetes">Rutas + Paquetes por Ruta</option>
+                                <option value="vehiculos_entregas">Vehículos + Entregas Realizadas</option>
+                            </select>
+                        </div>
+                        <div class="form-grupo">
+                            <label>Fecha Inicio:</label>
+                            <input type="date" id="reporteFechaInicio">
+                        </div>
+                        <div class="form-grupo">
+                            <label>Fecha Fin:</label>
+                            <input type="date" id="reporteFechaFin">
+                        </div>
+                        <div class="form-grupo">
+                            <label>Formato de Descarga:</label>
+                            <select id="formatoDescarga">
+                                <option value="ver">Solo Ver en Pantalla</option>
+                                <option value="excel">Descargar Excel (.xlsx)</option>
+                                <option value="pdf">Descargar PDF</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-primario" onclick="generarReporte()">Generar Reporte</button>
                     </div>
                 </div>
                 
                 <div id="vistaReporte" class="vista-reporte">
-                    <!-- Se llena dinámicamente -->
+                    <div id="contenidoReporte">
+                        <!-- Se llena dinámicamente -->
+                    </div>
                 </div>
             </section>
 
@@ -461,12 +540,122 @@
                 </div>
             </div>
 
+            <!-- Modal para nuevo paquete -->
+            <div id="modalPaquete" class="modal">
+                <div class="modal-contenido">
+                    <span class="cerrar" onclick="cerrarModal('modalPaquete')">&times;</span>
+                    <h2>Nuevo Paquete</h2>
+                    <form id="formPaquete" onsubmit="guardarPaquete(event)">
+                        <div class="form-grupo">
+                            <label>Remitente:</label>
+                            <input type="text" id="remitente" required>
+                        </div>
+                        <div class="form-grupo">
+                            <label>Destinatario:</label>
+                            <input type="text" id="destinatario" required>
+                        </div>
+                        <div class="form-grupo">
+                            <label>Dirección Origen:</label>
+                            <textarea id="direccionOrigen" required></textarea>
+                        </div>
+                        <div class="form-grupo">
+                            <label>Dirección Destino:</label>
+                            <textarea id="direccionDestino" required></textarea>
+                        </div>
+                        <div class="form-grupo">
+                            <label>Peso (kg):</label>
+                            <input type="number" id="peso" step="0.1" required>
+                        </div>
+                        <div class="form-grupo">
+                            <label>Precio:</label>
+                            <input type="number" id="precio" step="0.01" required>
+                        </div>
+                        <div class="form-acciones">
+                            <button type="submit" class="btn btn-primario">Guardar</button>
+                            <button type="button" class="btn btn-secundario" onclick="cerrarModal('modalPaquete')">Cancelar</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Modal para nuevo vehículo -->
+            <div id="modalVehiculo" class="modal">
+                <div class="modal-contenido">
+                    <span class="cerrar" onclick="cerrarModal('modalVehiculo')">&times;</span>
+                    <h2>Nuevo Vehículo</h2>
+                    <form id="formVehiculo" onsubmit="guardarVehiculo(event)">
+                        <div class="form-grupo">
+                            <label>Placa:</label>
+                            <input type="text" id="placaVehiculo" required>
+                        </div>
+                        <div class="form-grupo">
+                            <label>Marca:</label>
+                            <input type="text" id="marcaVehiculo" required>
+                        </div>
+                        <div class="form-grupo">
+                            <label>Modelo:</label>
+                            <input type="text" id="modeloVehiculo" required>
+                        </div>
+                        <div class="form-grupo">
+                            <label>Capacidad (kg):</label>
+                            <input type="number" id="capacidadVehiculo" step="0.1" required>
+                        </div>
+                        <div class="form-grupo">
+                            <label>Estado:</label>
+                            <select id="estadoVehiculo" required>
+                                <option value="disponible">Disponible</option>
+                                <option value="en_uso">En Uso</option>
+                                <option value="mantenimiento">Mantenimiento</option>
+                            </select>
+                        </div>
+                        <div class="form-acciones">
+                            <button type="submit" class="btn btn-primario">Guardar</button>
+                            <button type="button" class="btn btn-secundario" onclick="cerrarModal('modalVehiculo')">Cancelar</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Modal para nueva ruta -->
+            <div id="modalRuta" class="modal">
+                <div class="modal-contenido">
+                    <span class="cerrar" onclick="cerrarModal('modalRuta')">&times;</span>
+                    <h2>Nueva Ruta</h2>
+                    <form id="formRuta" onsubmit="guardarRuta(event)">
+                        <div class="form-grupo">
+                            <label>Nombre de la Ruta:</label>
+                            <input type="text" id="nombreRuta" required>
+                        </div>
+                        <div class="form-grupo">
+                            <label>Origen:</label>
+                            <input type="text" id="origenRuta" required>
+                        </div>
+                        <div class="form-grupo">
+                            <label>Destino:</label>
+                            <input type="text" id="destinoRuta" required>
+                        </div>
+                        <div class="form-grupo">
+                            <label>Distancia (km):</label>
+                            <input type="number" id="distanciaRuta" step="0.1" required>
+                        </div>
+                        <div class="form-grupo">
+                            <label>Tiempo Estimado (minutos):</label>
+                            <input type="number" id="tiempoRuta" required>
+                        </div>
+                        <div class="form-acciones">
+                            <button type="submit" class="btn btn-primario">Guardar</button>
+                            <button type="button" class="btn btn-secundario" onclick="cerrarModal('modalRuta')">Cancelar</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
             <!-- Modal para nuevo empleado -->
             <div id="modalEmpleado" class="modal">
                 <div class="modal-contenido">
                     <span class="cerrar" onclick="cerrarModal('modalEmpleado')">&times;</span>
                     <h2>Nuevo Empleado</h2>
-                    <form id="formEmpleado">
+                    <form id="formEmpleado" onsubmit="guardarEmpleado(event)">
                         <div class="form-grupo">
                             <label>Nombre:</label>
                             <input type="text" id="nombreEmpleado" required>
@@ -483,6 +672,13 @@
                             <label>Contraseña:</label>
                             <input type="password" id="claveEmpleado" required>
                         </div>
+                        <div class="form-grupo">
+                            <label>Tipo:</label>
+                            <select id="tipoEmpleado" required>
+                                <option value="empleado">Empleado</option>
+                                <option value="asistente">Asistente</option>
+                            </select>
+                        </div>
                         <div class="form-acciones">
                             <button type="submit" class="btn btn-primario">Guardar</button>
                             <button type="button" class="btn btn-secundario" onclick="cerrarModal('modalEmpleado')">Cancelar</button>
@@ -494,10 +690,653 @@
         </main>
     </div>
 
-            </form>
-        </div>
-    </div>
+    <script>
+        // Función para cerrar sesión - definida globalmente
+        function cerrarSesion() {
+            if (confirm('¿Está seguro que desea cerrar sesión?')) {
+                // Usar fetch para cerrar sesión sin problemas
+                fetch('php/cerrar_sesion.php', {
+                    method: 'GET',
+                    credentials: 'same-origin'
+                }).then(() => {
+                    window.location.href = 'login.html';
+                }).catch(() => {
+                    // Si falla, redirigir de todas formas
+                    window.location.href = 'login.html';
+                });
+            }
+        }
 
-    <script src="js/paneladmin.js"></script>
+        // Función para abrir modal
+        function abrirModal(modalId) {
+            document.getElementById(modalId).style.display = 'block';
+        }
+
+        // Función para cerrar modal
+        function cerrarModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+            // Limpiar formularios
+            const form = document.querySelector(`#${modalId} form`);
+            if (form) form.reset();
+        }
+
+        // Función para actualizar página
+        function actualizar() {
+            location.reload();
+        }
+        
+        // Función para nuevos empleados, vehículos, rutas
+        function nuevoEmpleado() {
+            document.getElementById('modalEmpleado').style.display = 'block';
+        }
+        
+        function nuevoVehiculo() {
+            abrirModal('modalVehiculo');
+        }
+        
+        function nuevaRuta() {
+            abrirModal('modalRuta');
+        }
+        
+        // Funciones para guardar nuevos registros
+        function guardarVehiculo(event) {
+            event.preventDefault();
+            
+            const formData = new FormData();
+            formData.append('accion', 'nuevo_vehiculo');
+            formData.append('placa', document.getElementById('placaVehiculo').value);
+            formData.append('marca', document.getElementById('marcaVehiculo').value);
+            formData.append('modelo', document.getElementById('modeloVehiculo').value);
+            formData.append('capacidad', document.getElementById('capacidadVehiculo').value);
+            formData.append('estado', document.getElementById('estadoVehiculo').value);
+            
+            fetch('php/admin.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.exito) {
+                    alert('Vehículo creado exitosamente');
+                    cerrarModal('modalVehiculo');
+                    cargarVehiculos();
+                } else {
+                    alert('Error: ' + data.mensaje);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error al crear vehículo');
+            });
+        }
+        
+        function guardarRuta(event) {
+            event.preventDefault();
+            
+            const formData = new FormData();
+            formData.append('accion', 'nueva_ruta');
+            formData.append('nombre', document.getElementById('nombreRuta').value);
+            formData.append('origen', document.getElementById('origenRuta').value);
+            formData.append('destino', document.getElementById('destinoRuta').value);
+            formData.append('distancia', document.getElementById('distanciaRuta').value);
+            formData.append('tiempo_estimado', document.getElementById('tiempoRuta').value);
+            
+            fetch('php/admin.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.exito) {
+                    alert('Ruta creada exitosamente');
+                    cerrarModal('modalRuta');
+                    cargarRutas();
+                } else {
+                    alert('Error: ' + data.mensaje);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error al crear ruta');
+            });
+        }
+        
+        function guardarEmpleado(event) {
+            event.preventDefault();
+            
+            const formData = new FormData();
+            formData.append('accion', 'nuevo_empleado');
+            formData.append('nombre', document.getElementById('nombreEmpleado').value);
+            formData.append('usuario', document.getElementById('usuarioEmpleado').value);
+            formData.append('email', document.getElementById('emailEmpleado').value);
+            formData.append('clave', document.getElementById('claveEmpleado').value);
+            formData.append('tipo', document.getElementById('tipoEmpleado').value);
+            
+            fetch('php/admin.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.exito) {
+                    alert('Empleado creado exitosamente');
+                    cerrarModal('modalEmpleado');
+                    cargarEmpleados();
+                } else {
+                    alert('Error: ' + data.mensaje);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error al crear empleado');
+            });
+        }
+        
+        function generarReporte() {
+            const tipo = document.getElementById('tipoReporte').value;
+            const fechaInicio = document.getElementById('reporteFechaInicio').value;
+            const fechaFin = document.getElementById('reporteFechaFin').value;
+            const formato = document.getElementById('formatoDescarga').value;
+            
+            const formData = new FormData();
+            formData.append('accion', 'generar_reporte');
+            formData.append('tipo', tipo);
+            formData.append('fecha_inicio', fechaInicio);
+            formData.append('fecha_fin', fechaFin);
+            formData.append('formato', formato);
+            
+            if (formato === 'ver') {
+                // Mostrar en pantalla
+                fetch('php/admin.php', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.exito) {
+                        mostrarReporte(data.datos, tipo);
+                    } else {
+                        alert('Error al generar reporte: ' + data.mensaje);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error al generar reporte');
+                });
+            } else {
+                // Descargar archivo
+                const url = 'php/admin.php?' + new URLSearchParams({
+                    accion: 'generar_reporte',
+                    tipo: tipo,
+                    fecha_inicio: fechaInicio,
+                    fecha_fin: fechaFin,
+                    formato: formato
+                });
+                
+                // Crear enlace temporal para descarga
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `reporte_${tipo}_${new Date().toISOString().split('T')[0]}.${formato === 'excel' ? 'xlsx' : 'pdf'}`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+        }
+        
+        function mostrarReporte(datos, tipo) {
+            const contenedor = document.getElementById('contenidoReporte');
+            let html = `<h4>Reporte de ${tipo.charAt(0).toUpperCase() + tipo.slice(1)}</h4>`;
+            
+            if (datos.length === 0) {
+                html += '<p>No hay datos para mostrar en el período seleccionado.</p>';
+            } else {
+                html += '<table class="tabla-reporte"><thead><tr>';
+                
+                // Headers según tipo de reporte
+                if (tipo === 'paquetes') {
+                    html += '<th>Código</th><th>Remitente</th><th>Destinatario</th><th>Estado</th><th>Precio</th><th>Fecha</th>';
+                } else if (tipo === 'ventas') {
+                    html += '<th>Fecha</th><th>Total Paquetes</th><th>Ingresos</th>';
+                } else if (tipo === 'empleados') {
+                    html += '<th>Nombre</th><th>Usuario</th><th>Tipo</th><th>Estado</th><th>Fecha Registro</th>';
+                } else if (tipo === 'vehiculos') {
+                    html += '<th>Placa</th><th>Marca</th><th>Modelo</th><th>Estado</th><th>Empleado</th>';
+                }
+                
+                html += '</tr></thead><tbody>';
+                
+                datos.forEach(item => {
+                    html += '<tr>';
+                    if (tipo === 'paquetes') {
+                        html += `<td>${item.codigo}</td><td>${item.remitente}</td><td>${item.destinatario}</td><td>${item.estado}</td><td>$${item.precio}</td><td>${new Date(item.fecha_envio).toLocaleDateString()}</td>`;
+                    } else if (tipo === 'ventas') {
+                        html += `<td>${item.fecha}</td><td>${item.total_paquetes}</td><td>$${item.ingresos}</td>`;
+                    } else if (tipo === 'empleados') {
+                        html += `<td>${item.nombre}</td><td>${item.usuario}</td><td>${item.tipo}</td><td>${item.activo ? 'Activo' : 'Inactivo'}</td><td>${new Date(item.fecha_registro).toLocaleDateString()}</td>`;
+                    } else if (tipo === 'vehiculos') {
+                        html += `<td>${item.placa}</td><td>${item.marca}</td><td>${item.modelo}</td><td>${item.estado}</td><td>${item.empleado_nombre || 'Sin asignar'}</td>`;
+                    }
+                    html += '</tr>';
+                });
+                
+                html += '</tbody></table>';
+            }
+            
+            contenedor.innerHTML = html;
+        }
+        
+        function calcularPagos() {
+            alert('Función de calcular pagos - Por implementar');
+        }
+        
+        function configurarTarifas() {
+            alert('Función de configurar tarifas - Por implementar');
+        }
+        
+        function exportarPagos() {
+            alert('Función de exportar pagos - Por implementar');
+        }
+        
+        // Función para guardar paquete
+        function guardarPaquete(event) {
+            event.preventDefault();
+            
+            const formData = new FormData();
+            formData.append('accion', 'nuevo_paquete');
+            formData.append('remitente', document.getElementById('remitente').value);
+            formData.append('destinatario', document.getElementById('destinatario').value);
+            formData.append('direccion_origen', document.getElementById('direccionOrigen').value);
+            formData.append('direccion_destino', document.getElementById('direccionDestino').value);
+            formData.append('peso', document.getElementById('peso').value);
+            formData.append('precio', document.getElementById('precio').value);
+            
+            fetch('php/admin.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.exito) {
+                    alert('Paquete guardado exitosamente con código: ' + data.codigo);
+                    document.getElementById('formPaquete').reset();
+                    cerrarModal('modalPaquete');
+                    cargarPaquetes(); // Recargar la tabla de paquetes
+                } else {
+                    alert('Error al guardar paquete: ' + (data.mensaje || 'Error desconocido'));
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error al guardar paquete');
+            });
+        }
+        
+        // Funciones para cargar datos de empleados, vehículos y rutas
+        function cargarEmpleados() {
+            fetch('php/admin.php?accion=empleados')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.exito) {
+                        mostrarEmpleados(data.datos);
+                    } else {
+                        console.error('Error al cargar empleados:', data.mensaje);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+        }
+        
+        function mostrarEmpleados(empleados) {
+            const tbody = document.getElementById('cuerpoTablaEmpleados');
+            tbody.innerHTML = '';
+            
+            empleados.forEach(empleado => {
+                const fila = document.createElement('tr');
+                fila.innerHTML = `
+                    <td>${empleado.id}</td>
+                    <td>${empleado.nombre}</td>
+                    <td>${empleado.usuario}</td>
+                    <td>${empleado.email || 'N/A'}</td>
+                    <td>${empleado.tipo}</td>
+                    <td><span class="estado estado-${empleado.activo ? 'activo' : 'inactivo'}">${empleado.activo ? 'Activo' : 'Inactivo'}</span></td>
+                    <td>${new Date(empleado.fecha_registro).toLocaleDateString()}</td>
+                    <td>
+                        <button class="btn btn-pequeno btn-primario" onclick="editarEmpleado(${empleado.id})">Editar</button>
+                        <button class="btn btn-pequeno btn-secundario" onclick="eliminarEmpleado(${empleado.id})">Eliminar</button>
+                    </td>
+                `;
+                tbody.appendChild(fila);
+            });
+        }
+        
+        function cargarVehiculos() {
+            fetch('php/admin.php?accion=vehiculos')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.exito) {
+                        mostrarVehiculos(data.datos);
+                    } else {
+                        console.error('Error al cargar vehículos:', data.mensaje);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+        }
+        
+        function mostrarVehiculos(vehiculos) {
+            const tbody = document.getElementById('cuerpoTablaVehiculos');
+            tbody.innerHTML = '';
+            
+            vehiculos.forEach(vehiculo => {
+                const fila = document.createElement('tr');
+                fila.innerHTML = `
+                    <td>${vehiculo.id}</td>
+                    <td>${vehiculo.placa}</td>
+                    <td>${vehiculo.marca}</td>
+                    <td>${vehiculo.modelo}</td>
+                    <td>${vehiculo.capacidad} kg</td>
+                    <td><span class="estado estado-${vehiculo.estado}">${vehiculo.estado}</span></td>
+                    <td>${vehiculo.empleado_nombre || 'Sin asignar'}</td>
+                    <td>
+                        <button class="btn btn-pequeno btn-primario" onclick="editarVehiculo(${vehiculo.id})">Editar</button>
+                        <button class="btn btn-pequeno btn-secundario" onclick="eliminarVehiculo(${vehiculo.id})">Eliminar</button>
+                    </td>
+                `;
+                tbody.appendChild(fila);
+            });
+        }
+        
+        function cargarRutas() {
+            fetch('php/admin.php?accion=rutas')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.exito) {
+                        mostrarRutas(data.datos);
+                    } else {
+                        console.error('Error al cargar rutas:', data.mensaje);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+        }
+        
+        function mostrarRutas(rutas) {
+            const tbody = document.getElementById('cuerpoTablaRutas');
+            tbody.innerHTML = '';
+            
+            rutas.forEach(ruta => {
+                const fila = document.createElement('tr');
+                fila.innerHTML = `
+                    <td>${ruta.id}</td>
+                    <td>${ruta.nombre}</td>
+                    <td>${ruta.origen}</td>
+                    <td>${ruta.destino}</td>
+                    <td>${ruta.distancia}</td>
+                    <td>${ruta.tiempo_estimado}</td>
+                    <td>
+                        <button class="btn btn-pequeno btn-primario" onclick="editarRuta(${ruta.id})">Editar</button>
+                        <button class="btn btn-pequeno btn-secundario" onclick="eliminarRuta(${ruta.id})">Eliminar</button>
+                    </td>
+                `;
+                tbody.appendChild(fila);
+            });
+        }
+        
+        // Funciones para eliminar registros
+        function eliminarEmpleado(id) {
+            if (confirm('¿Estás seguro de que quieres eliminar este empleado?')) {
+                const formData = new FormData();
+                formData.append('accion', 'eliminar_empleado');
+                formData.append('id', id);
+                
+                fetch('php/admin.php', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.exito) {
+                        alert('Empleado eliminado exitosamente');
+                        cargarEmpleados();
+                    } else {
+                        alert('Error al eliminar empleado: ' + data.mensaje);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error al eliminar empleado');
+                });
+            }
+        }
+        
+        function eliminarVehiculo(id) {
+            if (confirm('¿Estás seguro de que quieres eliminar este vehículo?')) {
+                const formData = new FormData();
+                formData.append('accion', 'eliminar_vehiculo');
+                formData.append('id', id);
+                
+                fetch('php/admin.php', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.exito) {
+                        alert('Vehículo eliminado exitosamente');
+                        cargarVehiculos();
+                    } else {
+                        alert('Error al eliminar vehículo: ' + data.mensaje);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error al eliminar vehículo');
+                });
+            }
+        }
+        
+        function eliminarRuta(id) {
+            if (confirm('¿Estás seguro de que quieres eliminar esta ruta?')) {
+                const formData = new FormData();
+                formData.append('accion', 'eliminar_ruta');
+                formData.append('id', id);
+                
+                fetch('php/admin.php', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.exito) {
+                        alert('Ruta eliminada exitosamente');
+                        cargarRutas();
+                    } else {
+                        alert('Error al eliminar ruta: ' + data.mensaje);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error al eliminar ruta');
+                });
+            }
+        }
+        
+        // Funciones placeholder para editar
+        function editarEmpleado(id) {
+            alert('Función editar empleado ID: ' + id + ' - Por implementar');
+        }
+        
+        function editarVehiculo(id) {
+            alert('Función editar vehículo ID: ' + id + ' - Por implementar');
+        }
+        
+        function editarRuta(id) {
+            alert('Función editar ruta ID: ' + id + ' - Por implementar');
+        }
+        
+        // Función para cargar y mostrar paquetes
+        function cargarPaquetes() {
+            fetch('php/admin.php?accion=todos_paquetes')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.exito) {
+                        mostrarPaquetes(data.datos);
+                    } else {
+                        console.error('Error al cargar paquetes:', data.mensaje);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+        }
+        
+        // Función para mostrar paquetes en la tabla
+        function mostrarPaquetes(paquetes) {
+            const tbody = document.getElementById('cuerpoTablaPaquetes');
+            tbody.innerHTML = '';
+            
+            paquetes.forEach(paquete => {
+                const fila = document.createElement('tr');
+                fila.innerHTML = `
+                    <td>${paquete.codigo}</td>
+                    <td>${paquete.remitente}</td>
+                    <td>${paquete.destinatario}</td>
+                    <td><span class="estado estado-${paquete.estado}">${paquete.estado}</span></td>
+                    <td>${paquete.peso} kg</td>
+                    <td>$${parseFloat(paquete.precio).toFixed(2)}</td>
+                    <td>${new Date(paquete.fecha_envio).toLocaleDateString()}</td>
+                    <td>
+                        <button class="btn btn-pequeno btn-primario" onclick="editarPaquete(${paquete.id})">Editar</button>
+                        <button class="btn btn-pequeno btn-secundario" onclick="eliminarPaquete(${paquete.id})">Eliminar</button>
+                    </td>
+                `;
+                tbody.appendChild(fila);
+            });
+        }
+        
+        // Funciones placeholder para editar y eliminar
+        function editarPaquete(id) {
+            alert('Función editar paquete ID: ' + id + ' - Por implementar');
+        }
+        
+        function eliminarPaquete(id) {
+            if (confirm('¿Estás seguro de que quieres eliminar este paquete?')) {
+                const formData = new FormData();
+                formData.append('accion', 'eliminar_paquete');
+                formData.append('id', id);
+                
+                fetch('php/admin.php', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.exito) {
+                        alert('Paquete eliminado exitosamente');
+                        cargarPaquetes(); // Recargar la tabla
+                    } else {
+                        alert('Error al eliminar paquete: ' + data.mensaje);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error al eliminar paquete');
+                });
+            }
+        }
+
+        // Función para mostrar secciones
+        function mostrarSeccion(seccion, elemento) {
+            // Prevenir comportamiento por defecto del enlace
+            if (event) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            
+            // No hacer nada si ya estamos en esa sección
+            const seccionActual = document.querySelector('.seccion.activa');
+            if (seccionActual && seccionActual.id === 'seccion-' + seccion) {
+                return false;
+            }
+            
+            // Ocultar todas las secciones
+            const secciones = document.querySelectorAll('.seccion');
+            secciones.forEach(s => s.classList.remove('activa'));
+            
+            // Mostrar la sección seleccionada
+            const seccionElemento = document.getElementById('seccion-' + seccion);
+            if (seccionElemento) {
+                seccionElemento.classList.add('activa');
+            }
+            
+            // Actualizar menú activo
+            const menuItems = document.querySelectorAll('.menu a');
+            menuItems.forEach(item => item.classList.remove('activo'));
+            
+            // Agregar clase activa al elemento clickeado
+            if (elemento) {
+                elemento.classList.add('activo');
+            }
+            
+            // Actualizar título
+            const titulos = {
+                'dashboard': 'Panel de Administración',
+                'paquetes': 'Gestión de Paquetes',
+                'empleados': 'Gestión de Empleados',
+                'vehiculos': 'Gestión de Vehículos',
+                'rutas': 'Gestión de Rutas',
+                'reportes': 'Reportes',
+                'pagos': 'Pagos Empleados',
+                'configuracion': 'Configuración'
+            };
+            document.getElementById('tituloSeccion').textContent = titulos[seccion] || 'Panel de Administración';
+            
+            return false;
+        }
+
+        // Cerrar modales al hacer clic fuera de ellos
+        window.onclick = function(event) {
+            const modales = document.querySelectorAll('.modal');
+            modales.forEach(modal => {
+                if (event.target === modal) {
+                    modal.style.display = 'none';
+                }
+            });
+        }
+
+        // Prevenir navegación hacia atrás después de cerrar sesión
+        window.history.pushState(null, null, window.location.href);
+        window.onpopstate = function(event) {
+            window.history.pushState(null, null, window.location.href);
+        };
+
+        // Verificar sesión al cargar la página
+        document.addEventListener('DOMContentLoaded', function() {
+            fetch('php/verificar_sesion.php')
+                .then(response => response.json())
+                .then(data => {
+                    if (!data.sesion_activa || data.usuario.tipo !== 'admin') {
+                        window.location.href = 'login.html';
+                        return;
+                    }
+                    
+                    // Actualizar información del usuario
+                    document.getElementById('nombreUsuario').textContent = data.usuario.nombre;
+                    
+                    // Cargar todos los datos al iniciar
+                    cargarPaquetes();
+                    cargarEmpleados();
+                    cargarVehiculos();
+                    cargarRutas();
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    window.location.href = 'login.html';
+                });
+        });
+    </script>
 </body>
 </html>

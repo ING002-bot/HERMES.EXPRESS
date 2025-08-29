@@ -238,6 +238,57 @@
         </main>
     </div>
 
+    <script>
+        // Función para cerrar sesión
+        function cerrarSesion() {
+            if (confirm('¿Estás seguro de que quieres cerrar sesión?')) {
+                fetch('php/cerrar_sesion.php', {
+                    method: 'GET',
+                    credentials: 'same-origin'
+                })
+                .then(() => {
+                    window.location.href = 'login.html';
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    // Si falla la petición, redirigir de todas formas
+                    window.location.href = 'login.html';
+                });
+            }
+        }
+
+        // Prevenir navegación hacia atrás después de cerrar sesión
+        window.history.pushState(null, null, window.location.href);
+        window.onpopstate = function(event) {
+            window.history.pushState(null, null, window.location.href);
+        };
+
+        // Verificar sesión al cargar la página
+        document.addEventListener('DOMContentLoaded', function() {
+            fetch('php/verificar_sesion.php')
+                .then(response => response.json())
+                .then(data => {
+                    if (!data.sesion_activa) {
+                        window.location.href = 'login.html';
+                        return;
+                    }
+                    
+                    // Verificar que sea empleado
+                    if (data.usuario.tipo !== 'empleado') {
+                        alert('Acceso denegado. Solo empleados pueden acceder a este panel.');
+                        window.location.href = 'login.html';
+                        return;
+                    }
+                    
+                    // Actualizar información del usuario
+                    document.getElementById('nombreUsuario').textContent = data.usuario.nombre;
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    window.location.href = 'login.html';
+                });
+        });
+    </script>
     <script src="js/panelempleado.js"></script>
 </body>
 </html>

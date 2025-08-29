@@ -80,7 +80,7 @@
                     <div class="tarjeta">
                         <div class="icono-tarjeta">💰</div>
                         <div class="info-tarjeta">
-                            <h3 id="ingresos">$0</h3>
+                            <h3 id="ingresos">S/ 0</h3>
                             <p>Ingresos Hoy</p>
                         </div>
                     </div>
@@ -206,6 +206,88 @@
         </div>
     </div>
 
+    <script>
+        // Función para cerrar sesión
+        function cerrarSesion() {
+            if (confirm('¿Está seguro que desea cerrar sesión?')) {
+                // Usar fetch para cerrar sesión sin problemas
+                fetch('php/cerrar_sesion.php', {
+                    method: 'GET',
+                    credentials: 'same-origin'
+                }).then(() => {
+                    window.location.href = 'login.html';
+                }).catch(() => {
+                    // Si falla, redirigir de todas formas
+                    window.location.href = 'login.html';
+                });
+            }
+        }
+
+        // Otras funciones del dashboard
+        function mostrarSeccion(seccion) {
+            // Ocultar todas las secciones
+            const secciones = document.querySelectorAll('.seccion');
+            secciones.forEach(s => s.classList.remove('activa'));
+            
+            // Mostrar la sección seleccionada
+            document.getElementById('seccion-' + seccion).classList.add('activa');
+            
+            // Actualizar menú activo
+            const menuItems = document.querySelectorAll('.menu a');
+            menuItems.forEach(item => item.classList.remove('activo'));
+            event.target.classList.add('activo');
+            
+            // Actualizar título
+            const titulos = {
+                'inicio': 'Dashboard',
+                'paquetes': 'Gestión de Paquetes',
+                'rutas': 'Gestión de Rutas',
+                'vehiculos': 'Gestión de Vehículos',
+                'reportes': 'Reportes'
+            };
+            document.getElementById('tituloSeccion').textContent = titulos[seccion] || 'Dashboard';
+        }
+
+        function nuevoPaquete() {
+            event.preventDefault();
+            event.stopPropagation();
+            document.getElementById('modalPaquete').style.display = 'block';
+            return false;
+        }
+
+        function cerrarModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+
+        function actualizar() {
+            location.reload();
+        }
+
+        // Prevenir navegación hacia atrás después de cerrar sesión
+        window.history.pushState(null, null, window.location.href);
+        window.onpopstate = function(event) {
+            window.history.pushState(null, null, window.location.href);
+        };
+
+        // Verificar sesión al cargar
+        document.addEventListener('DOMContentLoaded', function() {
+            fetch('php/verificar_sesion.php')
+                .then(response => response.json())
+                .then(data => {
+                    if (!data.sesion_activa || data.usuario.tipo !== 'asistente') {
+                        window.location.href = 'login.html';
+                        return;
+                    }
+                    
+                    // Actualizar información del usuario
+                    document.getElementById('nombreUsuario').textContent = data.usuario.nombre;
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    window.location.href = 'login.html';
+                });
+        });
+    </script>
     <script src="js/dashboard.js"></script>
 </body>
 </html>

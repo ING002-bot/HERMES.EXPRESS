@@ -1,18 +1,21 @@
 <?php
-require_once 'config.php';
+session_start();
+header('Content-Type: application/json');
 
-// Crear sesión automática si no existe
-if (!isset($_SESSION['id'])) {
-    $_SESSION['id'] = 1;
-    $_SESSION['nombre'] = 'Administrador';
-    $_SESSION['usuario'] = 'admin';
-    $_SESSION['tipo'] = 'admin';
+// Verificar si hay sesión activa
+if (!isset($_SESSION['usuario_id'])) {
+    echo json_encode([
+        'sesion_activa' => false,
+        'mensaje' => 'Sesión no válida',
+        'redirect' => 'login.html'
+    ]);
+    exit;
 }
 
 echo json_encode([
-    'exito' => true,
+    'sesion_activa' => true,
     'usuario' => [
-        'id' => $_SESSION['id'],
+        'id' => $_SESSION['usuario_id'],
         'nombre' => $_SESSION['nombre'],
         'usuario' => $_SESSION['usuario'],
         'tipo' => $_SESSION['tipo']
