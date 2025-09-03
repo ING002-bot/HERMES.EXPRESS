@@ -550,6 +550,16 @@
                             <label>Precio:</label>
                             <input type="number" id="precio" step="0.01" required>
                         </div>
+                        <div class="form-grupo">
+                            <label>Tipo de Ruta:</label>
+                            <select id="tipo_ruta" required>
+                                <option value="">Seleccione un tipo de ruta</option>
+                                <option value="urbano">Urbano</option>
+                                <option value="distrital">Distrital</option>
+                                <option value="interprovincial">Interprovincial</option>
+                                <option value="interurbano">Interurbano</option>
+                            </select>
+                        </div>
                         <div class="form-acciones">
                             <button type="submit" class="btn btn-primario">Guardar</button>
                             <button type="button" class="btn btn-secundario" onclick="cerrarModal('modalPaquete')">Cancelar</button>
@@ -716,16 +726,20 @@
         }
         
         // Funciones para guardar nuevos registros
-        function guardarVehiculo(event) {
-            event.preventDefault();
-            
+        function guardarVehiculo() {
             const formData = new FormData();
-            formData.append('accion', 'nuevo_vehiculo');
-            formData.append('placa', document.getElementById('placaVehiculo').value);
-            formData.append('marca', document.getElementById('marcaVehiculo').value);
-            formData.append('modelo', document.getElementById('modeloVehiculo').value);
-            formData.append('capacidad', document.getElementById('capacidadVehiculo').value);
-            formData.append('estado', document.getElementById('estadoVehiculo').value);
+            formData.append('accion', 'crear_vehiculo');
+            formData.append('placa', document.getElementById('placa').value);
+            formData.append('marca', document.getElementById('marca').value);
+            formData.append('modelo', document.getElementById('modelo').value);
+            formData.append('anio', document.getElementById('anio').value);
+            formData.append('capacidad', document.getElementById('capacidad').value);
+            formData.append('estado', document.getElementById('estado').value);
+            
+            const empleadoId = document.getElementById('empleadoId').value;
+            if (empleadoId) {
+                formData.append('empleado_id', empleadoId);
+            }
             
             fetch('php/admin.php', {
                 method: 'POST',
@@ -734,16 +748,17 @@
             .then(response => response.json())
             .then(data => {
                 if (data.exito) {
-                    alert('Vehículo creado exitosamente');
+                    alert('Vehículo guardado exitosamente');
+                    document.getElementById('formVehiculo').reset();
                     cerrarModal('modalVehiculo');
                     cargarVehiculos();
                 } else {
-                    alert('Error: ' + data.mensaje);
+                    alert('Error: ' + (data.mensaje || 'Error desconocido'));
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
-                alert('Error al crear vehículo');
+                alert('Error al guardar vehículo. Verifica la consola para más detalles.');
             });
         }
         
@@ -781,31 +796,102 @@
         function guardarEmpleado(event) {
             event.preventDefault();
             
-            const formData = new FormData();
+            // Obtener referencias a los elementos del formulario
+            const form = document.getElementById('formEmpleado');
+            const formData = new FormData(form);
             formData.append('accion', 'nuevo_empleado');
-            formData.append('nombre', document.getElementById('nombreEmpleado').value);
-            formData.append('usuario', document.getElementById('usuarioEmpleado').value);
-            formData.append('email', document.getElementById('emailEmpleado').value);
-            formData.append('clave', document.getElementById('claveEmpleado').value);
-            formData.append('tipo', document.getElementById('tipoEmpleado').value);
             
+            // Validar campos obligatorios
+            const requiredFields = ['nombre', 'usuario', 'email', 'clave', 'tipo'];
+            let isValid = true;
+            
+            requiredFields.forEach(field => {
+                const value = formData.get(field);
+                if (!value || value.trim() === '') {
+                    alert(`El campo ${field} es obligatorio`);
+                    isValid = false;
+                    return;
+                }
+            });
+            
+            if (!isValid) return;
+            
+            // Mostrar indicador de carga
+            const submitBtn = form.querySelector('button[type="submit"]');
+            const originalBtnText = submitBtn.innerHTML;
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
+            
+            // Enviar datos al servidor
             fetch('php/admin.php', {
                 method: 'POST',
                 body: formData
             })
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Error en la respuesta del servidor');
+                }
+                return response.json();
+            })
             .then(data => {
                 if (data.exito) {
-                    alert('Empleado creado exitosamente');
-                    cerrarModal('modalEmpleado');
-                    cargarEmpleados();
+                    // Mostrar mensaje de éxito
+                    const successAlert = document.createElement('div');
+                    successAlert.className = 'alert alert-success';
+                    successAlert.role = 'alert';
+                    successAlert.innerHTML = `
+                        <i class="fas fa-check-circle"></i> 
+                        ${data.mensaje || 'Empleado creado exitosamente'}
+                    `;
+                    
+                    // Insertar el mensaje antes del formulario
+                    form.parentNode.insertBefore(successAlert, form);
+                    
+                    // Limpiar el formulario
+                    form.reset();
+                    
+                    // Cerrar el modal después de 1.5 segundos
+                    setTimeout(() => {
+                        cerrarModal('modalEmpleado');
+                        cargarEmpleados();
+                        
+                        // Eliminar el mensaje de éxito después de cerrar el modal
+                        if (successAlert.parentNode) {
+                            successAlert.parentNode.removeChild(successAlert);
+                        }
+                    }, 1500);
+                    
                 } else {
-                    alert('Error: ' + data.mensaje);
+                    // Mostrar mensaje de error
+                    throw new Error(data.mensaje || 'Error desconocido al crear empleado');
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
-                alert('Error al crear empleado');
+                
+                // Mostrar mensaje de error al usuario
+                const errorAlert = document.createElement('div');
+                errorAlert.className = 'alert alert-danger';
+                errorAlert.role = 'alert';
+                errorAlert.innerHTML = `
+                    <i class="fas fa-exclamation-circle"></i> 
+                    ${error.message || 'Error al crear empleado. Por favor, inténtalo de nuevo.'}
+                `;
+                
+                // Insertar el mensaje antes del formulario
+                form.parentNode.insertBefore(errorAlert, form);
+                
+                // Eliminar el mensaje después de 5 segundos
+                setTimeout(() => {
+                    if (errorAlert.parentNode) {
+                        errorAlert.parentNode.removeChild(errorAlert);
+                    }
+                }, 5000);
+            })
+            .finally(() => {
+                // Restaurar el botón
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalBtnText;
             });
         }
         
@@ -926,6 +1012,7 @@
             formData.append('direccion_destino', document.getElementById('direccionDestino').value);
             formData.append('peso', document.getElementById('peso').value);
             formData.append('precio', document.getElementById('precio').value);
+            formData.append('tipo_ruta', document.getElementById('tipo_ruta').value);
             
             fetch('php/admin.php', {
                 method: 'POST',
@@ -1005,21 +1092,47 @@
             const tbody = document.getElementById('cuerpoTablaVehiculos');
             tbody.innerHTML = '';
             
-            vehiculos.forEach(vehiculo => {
+            if (!vehiculos || !Array.isArray(vehiculos)) {
+                console.error('Error: Los datos de vehículos no son válidos', vehiculos);
+                return;
+            }
+            
+            if (vehiculos.length === 0) {
                 const fila = document.createElement('tr');
-                fila.innerHTML = `
-                    <td>${vehiculo.id}</td>
-                    <td>${vehiculo.placa}</td>
-                    <td>${vehiculo.marca}</td>
-                    <td>${vehiculo.modelo}</td>
-                    <td>${vehiculo.capacidad} kg</td>
-                    <td><span class="estado estado-${vehiculo.estado}">${vehiculo.estado}</span></td>
-                    <td>${vehiculo.empleado_nombre || 'Sin asignar'}</td>
-                    <td>
-                        <button class="btn btn-pequeno btn-secundario" onclick="eliminarVehiculo(${vehiculo.id})">Eliminar</button>
-                    </td>
-                `;
+                fila.innerHTML = '<td colspan="8" class="texto-centrado">No hay vehículos registrados</td>';
                 tbody.appendChild(fila);
+                return;
+            }
+            
+            vehiculos.forEach(vehiculo => {
+                try {
+                    const fila = document.createElement('tr');
+                    const estadoClase = (vehiculo.estado || '').toLowerCase().replace(/ /g, '-');
+                    
+                    fila.innerHTML = `
+                        <td>${vehiculo.id || ''}</td>
+                        <td>${vehiculo.placa || ''}</td>
+                        <td>${vehiculo.marca || ''}</td>
+                        <td>${vehiculo.modelo || ''}</td>
+                        <td>${vehiculo.capacidad ? parseFloat(vehiculo.capacidad).toFixed(2) + ' kg' : '0.00 kg'}</td>
+                        <td>
+                            <span class="estado estado-${estadoClase}">
+                                ${vehiculo.estado_mostrar || vehiculo.estado || 'Desconocido'}
+                            </span>
+                        </td>
+                        <td>${vehiculo.empleado_nombre || 'Sin asignar'}</td>
+                        <td>
+                            <button class="btn btn-pequeno btn-secundario" 
+                                    onclick="eliminarVehiculo(${vehiculo.id})"
+                                    ${vehiculo.estado === 'en_ruta' ? 'disabled' : ''}>
+                                Eliminar
+                            </button>
+                        </td>
+                    `;
+                    tbody.appendChild(fila);
+                } catch (error) {
+                    console.error('Error al mostrar vehículo:', error, vehiculo);
+                }
             });
         }
         
