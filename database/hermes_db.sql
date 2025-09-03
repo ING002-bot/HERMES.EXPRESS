@@ -14,25 +14,6 @@ CREATE TABLE usuarios (
     fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Tabla de paquetes
-CREATE TABLE paquetes (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    codigo VARCHAR(20) UNIQUE NOT NULL,
-    remitente VARCHAR(100) NOT NULL,
-    destinatario VARCHAR(100) NOT NULL,
-    direccion_origen TEXT NOT NULL,
-    direccion_destino TEXT NOT NULL,
-    peso DECIMAL(8,2) NOT NULL,
-    estado ENUM('pendiente', 'en_transito', 'entregado', 'devuelto') DEFAULT 'pendiente',
-    precio DECIMAL(10,2) NOT NULL,
-    fecha_envio DATE NOT NULL,
-    fecha_entrega DATE NULL,
-    empleado_id INT,
-    notas TEXT,
-    fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (empleado_id) REFERENCES usuarios(id)
-);
-
 -- Tabla de rutas
 CREATE TABLE rutas (
     id INT PRIMARY KEY AUTO_INCREMENT,
@@ -58,6 +39,25 @@ CREATE TABLE vehiculos (
     FOREIGN KEY (empleado_id) REFERENCES usuarios(id)
 );
 
+-- Tabla de paquetes (sin tipo_ruta inicialmente)
+CREATE TABLE paquetes (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    codigo VARCHAR(20) UNIQUE NOT NULL,
+    remitente VARCHAR(100) NOT NULL,
+    destinatario VARCHAR(100) NOT NULL,
+    direccion_origen TEXT NOT NULL,
+    direccion_destino TEXT NOT NULL,
+    peso DECIMAL(8,2) NOT NULL,
+    estado ENUM('pendiente', 'en_transito', 'entregado', 'devuelto') DEFAULT 'pendiente',
+    precio DECIMAL(10,2) NOT NULL,
+    fecha_envio DATE NOT NULL,
+    fecha_entrega DATE NULL,
+    empleado_id INT,
+    notas TEXT,
+    fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (empleado_id) REFERENCES usuarios(id)
+);
+
 -- Insertar datos de ejemplo para usuarios
 INSERT INTO usuarios (usuario, clave, nombre, email, tipo) VALUES
 ('admin', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Administrador', 'admin@hermesexpress.com', 'admin'),
@@ -70,20 +70,29 @@ INSERT INTO rutas (nombre, origen, destino, distancia, tiempo_estimado) VALUES
 ('Ruta Sur', 'Centro', 'Sur', 22.3, 60),
 ('Ruta Este', 'Centro', 'Este', 18.7, 50);
 
--- Insertar vehículos corregido (usa empleado_id)
+-- Insertar vehículos (con columna existente empleado_id)
 INSERT INTO vehiculos (placa, marca, modelo, capacidad, estado, empleado_id) VALUES
 ('ABC-123', 'Toyota', 'Hiace', 1500.00, 'disponible', 2),
 ('DEF-456', 'Chevrolet', 'NPR', 3000.00, 'en_ruta', 3),
 ('GHI-789', 'Ford', 'Transit', 2000.00, 'mantenimiento', NULL);
 
--- Insertar paquetes (si ya agregaste tipo_ruta previamente)
--- Asegúrate que la columna tipo_ruta exista en paquetes antes
+-- Insertar paquetes sin tipo_ruta inicialmente
+INSERT INTO paquetes (codigo, remitente, destinatario, direccion_origen, direccion_destino, peso, estado, precio, fecha_envio, empleado_id) VALUES
+('HEA1', 'Remitente A', 'Destinatario A', 'Origen A', 'Destino A', 1.0, 'pendiente', 100.00, CURDATE(), NULL);
+
+-- Agregar la columna tipo_ruta
+ALTER TABLE paquetes
+  ADD COLUMN tipo_ruta VARCHAR(50) NOT NULL;
+-- También podrías usar ENUM si prefieres valores restringidos:
+-- ALTER TABLE paquetes ADD COLUMN tipo_ruta ENUM('urbano','distrital','interprovincial','interurbano') NOT NULL;
+
+-- Ahora insertar datos completos en paquetes
 INSERT INTO paquetes (codigo, remitente, destinatario, direccion_origen, direccion_destino, peso, estado, precio, fecha_envio, empleado_id, tipo_ruta) VALUES
 ('HE001', 'Carlos López', 'Ana Martínez', 'Calle 1 #123', 'Carrera 5 #456', 2.5, 'en_transito', 15000.00, CURDATE(), 2, 'urbano'),
 ('HE002', 'Pedro Ruiz', 'Sofía Torres', 'Avenida 2 #789', 'Calle 8 #321', 1.2, 'pendiente', 8000.00, CURDATE(), NULL, 'distrital'),
 ('HE003', 'Laura Gómez', 'Diego Silva', 'Carrera 3 #654', 'Avenida 9 #987', 3.8, 'entregado', 25000.00, DATE_SUB(CURDATE(), INTERVAL 1 DAY), 3, 'urbano');
 
--- Insertar tarifas de rutas (tabla tarifas_rutas)
+-- Tabla tarifas_rutas
 CREATE TABLE tarifas_rutas (
     tipo_ruta VARCHAR(50) PRIMARY KEY,
     tarifa_base DECIMAL(10,2) NOT NULL,
@@ -97,4 +106,3 @@ INSERT INTO tarifas_rutas (tipo_ruta, tarifa_base, tarifa_por_kg, comision_emple
 ('distrital', 8000.00, 800.00, 18.00, 'Entregas entre distritos de la misma provincia'),
 ('interprovincial', 15000.00, 1200.00, 25.00, 'Entregas entre diferentes provincias'),
 ('interurbano', 12000.00, 1000.00, 20.00, 'Entregas entre ciudades de la misma región');
-
