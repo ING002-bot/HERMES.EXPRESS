@@ -38,6 +38,9 @@
                 <li><a href="javascript:void(0)" onclick="mostrarSeccion('configuracion', this)">
                     <span class="icono">⚙️</span>Configuración
                 </a></li>
+                <li><a href="javascript:void(0)" onclick="mostrarSeccion('extraccion', this)">
+                    <span class="icono">📥</span>Extracción de Datos
+                </a></li>
             </ul>
             
             <div class="usuario-info">
@@ -676,6 +679,56 @@
 
         </main>
     </div>
+
+    <section id="seccion-extraccion" class="seccion">
+        <div class="seccion-header">
+            <h2>Extracción de Datos de SAVAR</h2>
+            <p>Extraiga información de SAVAR y guárdela en la base de datos local.</p>
+        </div>
+
+        <div class="extraccion-contenedor">
+            <div class="formulario-extraccion">
+                <div class="form-grupo">
+                    <label for="fechaInicio">Fecha de Inicio:</label>
+                    <input type="date" id="fechaInicio" class="form-control">
+                </div>
+                
+                <div class="form-grupo">
+                    <label for="fechaFin">Fecha de Fin:</label>
+                    <input type="date" id="fechaFin" class="form-control">
+                </div>
+                
+                <div class="form-grupo">
+                    <label for="usuarioSavar">Usuario SAVAR:</label>
+                    <input type="text" id="usuarioSavar" class="form-control" placeholder="Ingrese su usuario SAVAR">
+                </div>
+                
+                <div class="form-grupo">
+                    <label for="contrasenaSavar">Contraseña SAVAR:</label>
+                    <input type="password" id="contrasenaSavar" class="form-control" placeholder="Ingrese su contraseña SAVAR">
+                </div>
+                
+                <div class="acciones-extraccion">
+                    <button type="button" class="btn btn-primario" onclick="ejecutarExtraccion()">
+                        <span class="icono">▶️</span> Ejecutar Extracción
+                    </button>
+                    <div class="estado-extraccion" id="estadoExtraccion">
+                        <div class="spinner-border text-primary spinner-border-sm d-none" role="status" id="spinnerExtraccion">
+                            <span class="visually-hidden">Cargando...</span>
+                        </div>
+                        <span id="mensajeEstado">Listo para ejecutar</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="resultados-extraccion" id="resultadosExtraccion">
+                <h3>Resultados de la Extracción</h3>
+                <div class="log-extraccion" id="logExtraccion">
+                    <!-- Aquí se mostrará el progreso de la extracción -->
+                </div>
+            </div>
+        </div>
+    </section>
 
     <script>
         // Función para cerrar sesión - definida globalmente
@@ -1374,6 +1427,75 @@
                 if (event.target === modal) {
                     modal.style.display = 'none';
                 }
+            });
+        }
+
+        // Función para ejecutar la extracción de datos
+        function ejecutarExtraccion() {
+            const fechaInicio = document.getElementById('fechaInicio').value;
+            const fechaFin = document.getElementById('fechaFin').value;
+            const usuario = document.getElementById('usuarioSavar').value;
+            const contrasena = document.getElementById('contrasenaSavar').value;
+            const logElement = document.getElementById('logExtraccion');
+            const spinner = document.getElementById('spinnerExtraccion');
+            const mensajeEstado = document.getElementById('mensajeEstado');
+            
+            // Validar campos requeridos
+            if (!fechaInicio || !fechaFin || !usuario || !contrasena) {
+                alert('Por favor complete todos los campos requeridos');
+                return;
+            }
+            
+            // Mostrar indicador de carga
+            spinner.classList.remove('d-none');
+            mensajeEstado.textContent = 'Ejecutando extracción...';
+            logElement.innerHTML = '<div class="log-entry">Iniciando proceso de extracción...</div>';
+            
+            // Crear objeto con los datos del formulario
+            const datos = {
+                fechaInicio: fechaInicio,
+                fechaFin: fechaFin,
+                usuario: usuario,
+                contrasena: contrasena
+            };
+            
+            // Enviar solicitud al servidor
+            fetch('php/ejecutar_extraccion.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(datos)
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Ocultar spinner
+                spinner.classList.add('d-none');
+                
+                if (data.exito) {
+                    mensajeEstado.textContent = 'Extracción completada con éxito';
+                    logElement.innerHTML += `<div class="log-entry success">${data.mensaje}</div>`;
+                    
+                    // Mostrar resumen si está disponible
+                    if (data.resumen) {
+                        let resumenHTML = '<div class="resumen-extraccion">';
+                        resumenHTML += '<h4>Resumen de la extracción:</h4>';
+                        resumenHTML += `<p>Registros procesados: ${data.resumen.registros || 0}</p>`;
+                        resumenHTML += `<p>Paquetes encontrados: ${data.resumen.paquetes || 0}</p>`;
+                        resumenHTML += `<p>Errores: ${data.resumen.errores || 0}</p>`;
+                        resumenHTML += '</div>';
+                        logElement.innerHTML += resumenHTML;
+                    }
+                } else {
+                    mensajeEstado.textContent = 'Error en la extracción';
+                    logElement.innerHTML += `<div class="log-entry error">Error: ${data.mensaje || 'Error desconocido'}</div>`;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                spinner.classList.add('d-none');
+                mensajeEstado.textContent = 'Error en la conexión';
+                logElement.innerHTML += `<div class="log-entry error">Error de conexión: ${error.message}</div>`;
             });
         }
 
