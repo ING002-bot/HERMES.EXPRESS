@@ -11,16 +11,10 @@ document.addEventListener('DOMContentLoaded', function() {
     configurarEventosEmpleado();
 });
 
-// Verificar sesión del empleado (deshabilitado)
+// Verificar sesión del empleado
 function verificarSesion() {
-    // Crear datos de empleado por defecto
-    datosEmpleado = {
-        id: 2,
-        nombre: 'Empleado Demo',
-        usuario: 'empleado',
-        tipo: 'empleado'
-    };
-    document.getElementById('nombreUsuario').textContent = 'Empleado Demo';
+    // Esta función ahora está vacía ya que la verificación real se hace en el HTML
+    // Los datos del empleado se cargarán desde el servidor
 }
 
 // Cargar datos específicos del empleado

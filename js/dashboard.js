@@ -11,16 +11,10 @@ document.addEventListener('DOMContentLoaded', function() {
     configurarEventos();
 });
 
-// Verificar sesión al cargar (deshabilitado)
+// Verificar sesión al cargar
 function verificarSesion() {
-    // Crear datos de usuario por defecto
-    datosUsuario = {
-        id: 1,
-        nombre: 'Usuario Demo',
-        usuario: 'demo',
-        tipo: 'admin'
-    };
-    document.getElementById('nombreUsuario').textContent = 'Usuario Demo';
+    // Esta función ahora está vacía ya que la verificación real se hace en el HTML
+    // Los datos del usuario se cargarán desde el servidor
 }
 
 // Cargar todos los datos

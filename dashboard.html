@@ -208,20 +208,36 @@
     <script>
         // Cerrar sesión
         function cerrarSesion() {
-            if (!confirm('¿Estás seguro de que quieres cerrar sesión?')) return;
-            
-            // Limpiar almacenamiento
-            localStorage.removeItem('sesion_activa');
-            sessionStorage.clear();
-            
-            // Cerrar sesión y redirigir
-            fetch('php/cerrar_sesion.php', {
-                method: 'GET',
-                credentials: 'same-origin',
-                headers: {'Cache-Control': 'no-cache, no-store', 'Pragma': 'no-cache'}
-            })
-            .then(() => window.location.replace('login.html'))
-            .catch(() => window.location.replace('login.html'));
+            if (confirm('¿Está seguro que desea cerrar sesión?')) {
+                // Limpiar el almacenamiento local si es necesario
+                if (typeof(Storage) !== 'undefined') {
+                    localStorage.removeItem('sesion_activa');
+                    sessionStorage.clear();
+                }
+                
+                // Realizar la petición de cierre de sesión
+                fetch('php/cerrar_sesion.php', {
+                    method: 'GET',
+                    credentials: 'same-origin',
+                    headers: {
+                        'Cache-Control': 'no-cache, no-store',
+                        'Pragma': 'no-cache'
+                    }
+                })
+                .then(response => {
+                    // Asegurarse de que la redirección ocurra incluso si hay un error en la respuesta
+                    if (!response.ok) {
+                        throw new Error('Error en la respuesta del servidor');
+                    }
+                    // Forzar recarga sin caché
+                    window.location.replace('login.html');
+                })
+                .catch(error => {
+                    console.error('Error al cerrar sesión:', error);
+                    // Redirigir de todas formas
+                    window.location.replace('login.html');
+                });
+            }
         }
 
         // Otras funciones del dashboard
