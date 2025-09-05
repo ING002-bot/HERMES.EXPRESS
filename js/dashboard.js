@@ -286,12 +286,6 @@ function cerrarModal(modalId) {
     document.getElementById(modalId).style.display = 'none';
 }
 
-// Cerrar sesión (deshabilitado)
-function cerrarSesion() {
-    if (confirm('¿Estás seguro de que quieres salir?')) {
-        alert('Función de cerrar sesión deshabilitada');
-    }
-}
 
 // Actualizar datos
 function actualizar() {

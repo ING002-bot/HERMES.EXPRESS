@@ -238,22 +238,22 @@
     </div>
 
     <script>
-        // Función para cerrar sesión
+        // Cerrar sesión
         function cerrarSesion() {
-            if (confirm('¿Estás seguro de que quieres cerrar sesión?')) {
-                fetch('php/cerrar_sesion.php', {
-                    method: 'GET',
-                    credentials: 'same-origin'
-                })
-                .then(() => {
-                    window.location.href = 'login.html';
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    // Si falla la petición, redirigir de todas formas
-                    window.location.href = 'login.html';
-                });
-            }
+            if (!confirm('¿Estás seguro de que quieres cerrar sesión?')) return;
+            
+            // Limpiar almacenamiento
+            localStorage.removeItem('sesion_activa');
+            sessionStorage.clear();
+            
+            // Cerrar sesión y redirigir
+            fetch('php/cerrar_sesion.php', {
+                method: 'GET',
+                credentials: 'same-origin',
+                headers: {'Cache-Control': 'no-cache, no-store', 'Pragma': 'no-cache'}
+            })
+            .then(() => window.location.replace('login.html'))
+            .catch(() => window.location.replace('login.html'));
         }
 
         // Prevenir navegación hacia atrás después de cerrar sesión

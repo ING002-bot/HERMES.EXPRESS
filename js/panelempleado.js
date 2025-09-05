@@ -452,12 +452,6 @@ function verDetallePaquete(id) {
     mostrarNotificacion('Detalle de paquete - Por implementar', 'info');
 }
 
-// Cerrar sesión (deshabilitado)
-function cerrarSesion() {
-    if (confirm('¿Estás seguro de que quieres salir?')) {
-        alert('Función de cerrar sesión deshabilitada');
-    }
-}
 
 // Funciones auxiliares reutilizadas
 function formatearEstado(estado) {
