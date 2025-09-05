@@ -57,7 +57,6 @@
             <header class="cabecera">
                 <h1 id="tituloSeccion">Panel de Administración</h1>
                 <div class="acciones">
-                    <button class="btn btn-primario" onclick="abrirModal('modalPaquete')">+ Nuevo Paquete</button>
                     <button class="btn btn-secundario" onclick="actualizar()">🔄 Actualizar</button>
                 </div>
             </header>
@@ -521,53 +520,6 @@
                         <button type="button" class="btn btn-secundario" onclick="cerrarModal('modalEditarCantidades')">Cancelar</button>
                         <button type="button" class="btn btn-primario" onclick="guardarCantidades()">Guardar Cambios</button>
                     </div>
-                </div>
-            </div>
-
-            <div id="modalPaquete" class="modal">
-                <div class="modal-contenido">
-                    <span class="cerrar" onclick="cerrarModal('modalPaquete')">&times;</span>
-                    <h2>Nuevo Paquete</h2>
-                    <form id="formPaquete" onsubmit="guardarPaquete(event)">
-                        <div class="form-grupo">
-                            <label>Remitente:</label>
-                            <input type="text" id="remitente" required>
-                        </div>
-                        <div class="form-grupo">
-                            <label>Destinatario:</label>
-                            <input type="text" id="destinatario" required>
-                        </div>
-                        <div class="form-grupo">
-                            <label>Dirección Origen:</label>
-                            <textarea id="direccionOrigen" required></textarea>
-                        </div>
-                        <div class="form-grupo">
-                            <label>Dirección Destino:</label>
-                            <textarea id="direccionDestino" required></textarea>
-                        </div>
-                        <div class="form-grupo">
-                            <label>Peso (kg):</label>
-                            <input type="number" id="peso" step="0.1" required>
-                        </div>
-                        <div class="form-grupo">
-                            <label>Precio:</label>
-                            <input type="number" id="precio" step="0.01" required>
-                        </div>
-                        <div class="form-grupo">
-                            <label>Tipo de Ruta:</label>
-                            <select id="tipo_ruta" required>
-                                <option value="">Seleccione un tipo de ruta</option>
-                                <option value="urbano">Urbano</option>
-                                <option value="distrital">Distrital</option>
-                                <option value="interprovincial">Interprovincial</option>
-                                <option value="interurbano">Interurbano</option>
-                            </select>
-                        </div>
-                        <div class="form-acciones">
-                            <button type="submit" class="btn btn-primario">Guardar</button>
-                            <button type="button" class="btn btn-secundario" onclick="cerrarModal('modalPaquete')">Cancelar</button>
-                        </div>
-                    </form>
                 </div>
             </div>
 
@@ -1071,41 +1023,6 @@
             alert('Función de exportar pagos - Por implementar');
         }
         
-        // Función para guardar paquete
-        function guardarPaquete(event) {
-            event.preventDefault();
-            
-            const formData = new FormData();
-            formData.append('accion', 'nuevo_paquete');
-            formData.append('remitente', document.getElementById('remitente').value);
-            formData.append('destinatario', document.getElementById('destinatario').value);
-            formData.append('direccion_origen', document.getElementById('direccionOrigen').value);
-            formData.append('direccion_destino', document.getElementById('direccionDestino').value);
-            formData.append('peso', document.getElementById('peso').value);
-            formData.append('precio', document.getElementById('precio').value);
-            formData.append('tipo_ruta', document.getElementById('tipo_ruta').value);
-            
-            fetch('php/admin.php', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.exito) {
-                    alert('Paquete guardado exitosamente con código: ' + data.codigo);
-                    document.getElementById('formPaquete').reset();
-                    cerrarModal('modalPaquete');
-                    cargarPaquetes(); // Recargar la tabla de paquetes
-                } else {
-                    alert('Error al guardar paquete: ' + (data.mensaje || 'Error desconocido'));
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('Error al guardar paquete');
-            });
-        }
-        
         // Funciones para cargar datos de empleados, vehículos y rutas
         function cargarEmpleados() {
             fetch('php/admin.php?accion=empleados')
@@ -1322,73 +1239,6 @@
             }
         }
         
-        
-        // Función para cargar y mostrar paquetes
-        function cargarPaquetes() {
-            fetch('php/admin.php?accion=todos_paquetes')
-                .then(response => response.json())
-                .then(data => {
-                    if (data.exito) {
-                        mostrarPaquetes(data.datos);
-                    } else {
-                        console.error('Error al cargar paquetes:', data.mensaje);
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                });
-        }
-        
-        // Función para mostrar paquetes en la tabla
-        function mostrarPaquetes(paquetes) {
-            const tbody = document.getElementById('cuerpoTablaPaquetes');
-            tbody.innerHTML = '';
-            
-            paquetes.forEach(paquete => {
-                const fila = document.createElement('tr');
-                fila.innerHTML = `
-                    <td>${paquete.codigo}</td>
-                    <td>${paquete.remitente}</td>
-                    <td>${paquete.destinatario}</td>
-                    <td><span class="estado estado-${paquete.estado}">${paquete.estado}</span></td>
-                    <td>${paquete.peso} kg</td>
-                    <td>$${parseFloat(paquete.precio).toFixed(2)}</td>
-                    <td>${new Date(paquete.fecha_envio).toLocaleDateString()}</td>
-                    <td>
-                        <button class="btn btn-pequeno btn-secundario" onclick="eliminarPaquete(${paquete.id})">Eliminar</button>
-                    </td>
-                `;
-                tbody.appendChild(fila);
-            });
-        }
-        
-        
-        function eliminarPaquete(id) {
-            if (confirm('¿Estás seguro de que quieres eliminar este paquete?')) {
-                const formData = new FormData();
-                formData.append('accion', 'eliminar_paquete');
-                formData.append('id', id);
-                
-                fetch('php/admin.php', {
-                    method: 'POST',
-                    body: formData
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.exito) {
-                        alert('Paquete eliminado exitosamente');
-                        cargarPaquetes(); // Recargar la tabla
-                    } else {
-                        alert('Error al eliminar paquete: ' + data.mensaje);
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert('Error al eliminar paquete');
-                });
-            }
-        }
-
         // Función para mostrar secciones
         function mostrarSeccion(seccion, elemento) {
             // Prevenir comportamiento por defecto del enlace
@@ -1425,7 +1275,6 @@
             // Actualizar título
             const titulos = {
                 'dashboard': 'Panel de Administración',
-                'paquetes': 'Gestión de Paquetes',
                 'empleados': 'Gestión de Empleados',
                 'vehiculos': 'Gestión de Vehículos',
                 'rutas': 'Gestión de Rutas',
@@ -1445,75 +1294,6 @@
                 if (event.target === modal) {
                     modal.style.display = 'none';
                 }
-            });
-        }
-
-        // Función para ejecutar la extracción de datos
-        function ejecutarExtraccion() {
-            const fechaInicio = document.getElementById('fechaInicio').value;
-            const fechaFin = document.getElementById('fechaFin').value;
-            const usuario = document.getElementById('usuarioSavar').value;
-            const contrasena = document.getElementById('contrasenaSavar').value;
-            const logElement = document.getElementById('logExtraccion');
-            const spinner = document.getElementById('spinnerExtraccion');
-            const mensajeEstado = document.getElementById('mensajeEstado');
-            
-            // Validar campos requeridos
-            if (!fechaInicio || !fechaFin || !usuario || !contrasena) {
-                alert('Por favor complete todos los campos requeridos');
-                return;
-            }
-            
-            // Mostrar indicador de carga
-            spinner.classList.remove('d-none');
-            mensajeEstado.textContent = 'Ejecutando extracción...';
-            logElement.innerHTML = '<div class="log-entry">Iniciando proceso de extracción...</div>';
-            
-            // Crear objeto con los datos del formulario
-            const datos = {
-                fechaInicio: fechaInicio,
-                fechaFin: fechaFin,
-                usuario: usuario,
-                contrasena: contrasena
-            };
-            
-            // Enviar solicitud al servidor
-            fetch('php/ejecutar_extraccion.php', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(datos)
-            })
-            .then(response => response.json())
-            .then(data => {
-                // Ocultar spinner
-                spinner.classList.add('d-none');
-                
-                if (data.exito) {
-                    mensajeEstado.textContent = 'Extracción completada con éxito';
-                    logElement.innerHTML += `<div class="log-entry success">${data.mensaje}</div>`;
-                    
-                    // Mostrar resumen si está disponible
-                    if (data.resumen) {
-                        let resumenHTML = '<div class="resumen-extraccion">';
-                        resumenHTML += '<h4>Resumen de la extracción:</h4>';
-                        resumenHTML += `<p>Registros procesados: ${data.resumen.registros || 0}</p>`;
-                        resumenHTML += `<p>Paquetes encontrados: ${data.resumen.paquetes || 0}</p>`;
-                        resumenHTML += `<p>Errores: ${data.resumen.errores || 0}</p>`;
-                        resumenHTML += '</div>';
-                        logElement.innerHTML += resumenHTML;
-                    }
-                } else {
-                    mensajeEstado.textContent = 'Error en la extracción';
-                    logElement.innerHTML += `<div class="log-entry error">Error: ${data.mensaje || 'Error desconocido'}</div>`;
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                spinner.classList.add('d-none');
-                mensajeEstado.textContent = 'Error en la conexión';
-                logElement.innerHTML += `<div class="log-entry error">Error de conexión: ${error.message}</div>`;
             });
         }
 
@@ -1537,7 +1317,6 @@
                     document.getElementById('nombreUsuario').textContent = data.usuario.nombre;
                     
                     // Cargar todos los datos al iniciar
-                    cargarPaquetes();
                     cargarEmpleados();
                     cargarVehiculos();
                     cargarRutas();

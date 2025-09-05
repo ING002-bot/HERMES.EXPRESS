@@ -184,7 +184,12 @@
                 <div class="mapa-ruta">
                     <h3>Mapa de Entregas</h3>
                     <div id="mapaContainer" class="mapa-container">
-                        <p>🗺️ Mapa interactivo - Por implementar</p>
+                        <div id="map" style="height: 100%; width: 100%;"></div>
+                        <div id="info-panel">
+                            <button id="iniciarRutaBtn" class="btn btn-primario">Iniciar Ruta</button>
+                            <div id="distancia"></div>
+                            <div id="tiempo"></div>
+                        </div>
                     </div>
                 </div>
                 
@@ -237,6 +242,67 @@
         </main>
     </div>
 
+    <!-- Google Maps API -->
+    <script>
+        // Variables globales para el mapa
+        let map;
+        let directionsService;
+        let directionsRenderer;
+        let watchId;
+        let currentPosition = null;
+        let deliveryMarkers = [];
+        let currentLocationMarker = null;
+        let routePolyline = null;
+        window.mapInitialized = false;
+
+        // Función para inicializar el mapa
+        function initMap() {
+            if (window.mapInitialized) return;
+            
+            try {
+                // Configuración inicial del mapa centrado en Lima, Perú
+                const lima = { lat: -12.0464, lng: -77.0428 };
+                
+                map = new google.maps.Map(document.getElementById('map'), {
+                    zoom: 12,
+                    center: lima,
+                    mapTypeId: 'roadmap',
+                    styles: [
+                        {
+                            featureType: 'poi',
+                            elementType: 'labels',
+                            stylers: [{ visibility: 'off' }]
+                        }
+                    ]
+                });
+                
+                directionsService = new google.maps.DirectionsService();
+                directionsRenderer = new google.maps.DirectionsRenderer({
+                    map: map,
+                    suppressMarkers: true
+                });
+                
+                window.mapInitialized = true;
+                console.log('Mapa inicializado correctamente');
+                
+                // Disparar evento personalizado cuando el mapa está listo
+                const event = new Event('mapInitialized');
+                window.dispatchEvent(event);
+                
+            } catch (error) {
+                console.error('Error al inicializar el mapa:', error);
+            }
+        }
+        
+        // Cargar la API de Google Maps de forma asíncrona
+        (function() {
+            const script = document.createElement('script');
+            script.src = 'https://maps.googleapis.com/maps/api/js?key=AIzaSyAhKq8glWDGij47iJZy2_RB8jan9D1V-Sk&libraries=geometry,places&callback=initMap&loading=async';
+            script.async = true;
+            script.defer = true;
+            document.head.appendChild(script);
+        })();
+    </script>
     <script>
         // Cerrar sesión
         function cerrarSesion() {
