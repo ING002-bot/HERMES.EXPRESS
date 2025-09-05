@@ -47,7 +47,6 @@
             <header class="cabecera">
                 <h1 id="tituloSeccion">Panel de Empleado</h1>
                 <div class="acciones">
-                    <button class="btn btn-primario" onclick="actualizarEstado()">🔄 Actualizar</button>
                     <button class="btn btn-secundario" onclick="verNotificaciones()">🔔 Notificaciones</button>
                 </div>
             </header>
@@ -216,19 +215,12 @@
                         </div>
                         <div class="form-grupo">
                             <label>Email:</label>
-                            <input type="email" id="perfilEmail">
+                            <input type="email" id="perfilEmail" readonly>
                         </div>
                         <div class="form-grupo">
-                            <label>Nueva Contraseña:</label>
-                            <input type="password" id="nuevaClave" placeholder="Dejar vacío para no cambiar">
+                            <p class="nota-perfil">* Los datos del perfil son gestionados por el sistema</p>
                         </div>
-                        <div class="form-grupo">
-                            <label>Confirmar Contraseña:</label>
-                            <input type="password" id="confirmarClave">
-                        </div>
-                        <div class="form-acciones">
-                            <button type="submit" class="btn btn-primario">Actualizar Perfil</button>
-                        </div>
+                        <!-- Botón de actualización de perfil eliminado -->
                     </form>
                 </div>
                 

@@ -47,8 +47,7 @@
             <header class="cabecera">
                 <h1 id="tituloSeccion">Dashboard</h1>
                 <div class="acciones">
-                    <button class="btn btn-primario" onclick="nuevoPaquete()">+ Nuevo Paquete</button>
-                    <button class="btn btn-secundario" onclick="actualizar()">🔄 Actualizar</button>
+                    <!-- Botones de Nuevo Paquete y Actualizar eliminados -->
                 </div>
             </header>
 
@@ -167,43 +166,6 @@
         </main>
     </div>
 
-    <!-- Modal para nuevo paquete -->
-    <div id="modalPaquete" class="modal">
-        <div class="modal-contenido">
-            <span class="cerrar" onclick="cerrarModal('modalPaquete')">&times;</span>
-            <h2>Nuevo Paquete</h2>
-            <form id="formPaquete">
-                <div class="form-grupo">
-                    <label>Remitente:</label>
-                    <input type="text" id="remitente" required>
-                </div>
-                <div class="form-grupo">
-                    <label>Destinatario:</label>
-                    <input type="text" id="destinatario" required>
-                </div>
-                <div class="form-grupo">
-                    <label>Dirección Origen:</label>
-                    <textarea id="direccionOrigen" required></textarea>
-                </div>
-                <div class="form-grupo">
-                    <label>Dirección Destino:</label>
-                    <textarea id="direccionDestino" required></textarea>
-                </div>
-                <div class="form-grupo">
-                    <label>Peso (kg):</label>
-                    <input type="number" id="peso" step="0.1" required>
-                </div>
-                <div class="form-grupo">
-                    <label>Precio:</label>
-                    <input type="number" id="precio" step="0.01" required>
-                </div>
-                <div class="form-acciones">
-                    <button type="submit" class="btn btn-primario">Guardar</button>
-                    <button type="button" class="btn btn-secundario" onclick="cerrarModal('modalPaquete')">Cancelar</button>
-                </div>
-            </form>
-        </div>
-    </div>
 
     <script>
         // Cerrar sesión
@@ -263,13 +225,6 @@
                 'reportes': 'Reportes'
             };
             document.getElementById('tituloSeccion').textContent = titulos[seccion] || 'Dashboard';
-        }
-
-        function nuevoPaquete() {
-            event.preventDefault();
-            event.stopPropagation();
-            document.getElementById('modalPaquete').style.display = 'block';
-            return false;
         }
 
         function cerrarModal(modalId) {
