@@ -53,8 +53,7 @@ def test_savar_login():
         
         # Credenciales reales
         usuario = "CHI.HER"
-        contrasena = "10111222331"
-        
+        contrasena = "10111222331"        
         print("4. Completando credenciales...")
         username_field.clear()
         username_field.send_keys(usuario)

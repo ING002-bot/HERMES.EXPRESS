@@ -3,6 +3,21 @@
 
 /* Estilos específicos para panel de administrador */
 
+/* Estilos base del panel de administración */
+:root {
+    --sidebar-width: 280px;
+    --primary-color: #007bff;
+    --secondary-color: #6c757d;
+    --success-color: #28a745;
+    --warning-color: #ffc107;
+    --danger-color: #dc3545;
+    --light-color: #f8f9fa;
+    --dark-color: #343a40;
+    --border-radius: 8px;
+    --box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    --transition: all 0.3s ease;
+}
+
 /* Estilos para la sección de extracción de datos */
 .extraccion-contenedor {
     display: flex;

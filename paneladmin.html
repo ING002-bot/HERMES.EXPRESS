@@ -2,13 +2,31 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HERMES - Panel Administrador</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <meta name="theme-color" content="#007bff">
+    <meta name="description" content="Panel de Administración HERMES EXPRESS LOGISTIC">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    
+    <!-- Preload de fuentes críticas -->
+    <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/webfonts/fa-solid-900.woff2" as="font" type="font/woff2" crossorigin>
+    
+    <!-- Precargar CSS crítico -->
     <link rel="stylesheet" href="css/paneladmin.css">
+    <link rel="stylesheet" href="css/paneladmin-responsive.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <title>HERMES - Panel Administrador</title>
 </head>
 <body>
     <div class="contenedor">
-        <nav class="barra-lateral">
+        <!-- Botón de menú móvil -->
+        <button class="menu-movil" id="btnMenuMovil" aria-label="Menú">
+            <i class="fas fa-bars"></i>
+        </button>
+        
+        <nav class="barra-lateral" id="barraLateral">
             <div class="logo">
                 <h2>HERMES EXPRESS LOGISTIC</h2>
             </div>
@@ -1297,14 +1315,63 @@
             });
         }
 
-        // Prevenir navegación hacia atrás después de cerrar sesión
-        window.history.pushState(null, null, window.location.href);
-        window.onpopstate = function(event) {
-            window.history.pushState(null, null, window.location.href);
-        };
-
-        // Verificar sesión al cargar la página
+        // Código para el menú móvil
         document.addEventListener('DOMContentLoaded', function() {
+            const btnMenu = document.getElementById('btnMenuMovil');
+            const barraLateral = document.getElementById('barraLateral');
+            const contenidoPrincipal = document.querySelector('.contenido-principal');
+            let menuAbierto = false;
+
+            function toggleMenu() {
+                menuAbierto = !menuAbierto;
+                barraLateral.classList.toggle('activa', menuAbierto);
+                contenidoPrincipal.classList.toggle('desplazado', menuAbierto);
+                document.body.style.overflow = menuAbierto ? 'hidden' : '';
+                
+                // Cambiar ícono
+                const icono = btnMenu.querySelector('i');
+                if (menuAbierto) {
+                    icono.classList.remove('fa-bars');
+                    icono.classList.add('fa-times');
+                } else {
+                    icono.classList.remove('fa-times');
+                    icono.classList.add('fa-bars');
+                }
+            }
+
+            // Evento para el botón del menú
+            if (btnMenu) {
+                btnMenu.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    toggleMenu();
+                });
+            }
+
+            // Cerrar menú al hacer clic fuera
+            document.addEventListener('click', function(e) {
+                if (menuAbierto && !barraLateral.contains(e.target) && e.target !== btnMenu) {
+                    toggleMenu();
+                }
+            });
+
+            // Cerrar menú al redimensionar la ventana
+            let resizeTimer;
+            window.addEventListener('resize', function() {
+                clearTimeout(resizeTimer);
+                resizeTimer = setTimeout(function() {
+                    if (window.innerWidth > 992 && menuAbierto) {
+                        toggleMenu();
+                    }
+                }, 250);
+            });
+
+            // Prevenir navegación hacia atrás después de cerrar sesión
+            window.history.pushState(null, null, window.location.href);
+            window.onpopstate = function(event) {
+                window.history.pushState(null, null, window.location.href);
+            };
+
+            // Verificar sesión al cargar la página
             fetch('php/verificar_sesion.php')
                 .then(response => response.json())
                 .then(data => {

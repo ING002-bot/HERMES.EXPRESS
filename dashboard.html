@@ -2,16 +2,47 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <meta name="theme-color" content="#007bff">
+    <meta name="description" content="Panel de administración HERMES EXPRESS LOGISTIC">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    
+    <!-- Manifest para PWA -->
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#007bff">
+    <link rel="icon" href="/img/favicon.ico" type="image/x-icon">
+    <link rel="apple-touch-icon" href="/img/icon-192x192.png">
+    
+    <!-- Preload de fuentes críticas -->
+    <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/webfonts/fa-solid-900.woff2" as="font" type="font/woff2" crossorigin>
+    
+    <!-- Precargar CSS crítico -->
+    <link rel="preload" href="css/dashboard.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <link rel="stylesheet" href="css/dashboard-responsive.css">
+    <noscript>
+        <link rel="stylesheet" href="css/dashboard.css">
+        <link rel="stylesheet" href="css/dashboard-responsive.css">
+    </noscript>
+    
+    <!-- Cargar Font Awesome de forma asíncrona -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" media="print" onload="this.media='all'">
     <title>HERMES - Dashboard</title>
-    <link rel="stylesheet" href="css/dashboard.css">
 </head>
 <body>
     <div class="contenedor">
+        <!-- Botón de menú móvil -->
+        <button class="menu-movil" id="btnMenuMovil" aria-label="Menú">
+            <i class="fas fa-bars"></i>
+        </button>
+        
         <!-- Barra lateral -->
-        <nav class="barra-lateral">
+        <nav class="barra-lateral" id="barraLateral">
             <div class="logo">
-                <h2>HERMES EXPRESS LOGISTIC</h2>
+                <h2>HERMES EXPRESS</h2>
+                <small>LOGISTIC</small>
             </div>
             
             <ul class="menu">
@@ -168,6 +199,69 @@
 
 
     <script>
+        // Manejar el menú móvil
+        document.addEventListener('DOMContentLoaded', function() {
+            const btnMenu = document.getElementById('btnMenuMovil');
+            const barraLateral = document.getElementById('barraLateral');
+            const contenidoPrincipal = document.querySelector('.contenido-principal');
+            const enlacesMenu = document.querySelectorAll('.menu a');
+            let menuAbierto = false;
+
+            // Alternar menú móvil
+            function toggleMenu() {
+                menuAbierto = !menuAbierto;
+                barraLateral.classList.toggle('activa', menuAbierto);
+                contenidoPrincipal.classList.toggle('desplazado', menuAbierto);
+                
+                // Cambiar ícono del botón
+                const icono = btnMenu.querySelector('i');
+                if (menuAbierto) {
+                    icono.classList.remove('fa-bars');
+                    icono.classList.add('fa-times');
+                    document.body.style.overflow = 'hidden'; // Evitar scroll del body cuando el menú está abierto
+                } else {
+                    icono.classList.remove('fa-times');
+                    icono.classList.add('fa-bars');
+                    document.body.style.overflow = ''; // Restaurar scroll
+                }
+            }
+
+            // Cerrar menú al hacer clic en un enlace
+            function cerrarMenu() {
+                if (window.innerWidth <= 992) {
+                    menuAbierto = true;
+                    toggleMenu();
+                }
+            }
+
+            // Event listeners
+            btnMenu.addEventListener('click', toggleMenu);
+            enlacesMenu.forEach(enlace => {
+                enlace.addEventListener('click', cerrarMenu);
+            });
+
+            // Cerrar menú al hacer clic fuera
+            contenidoPrincipal.addEventListener('click', function(e) {
+                if (menuAbierto && !e.target.closest('.barra-lateral')) {
+                    toggleMenu();
+                }
+            });
+
+            // Ajustar menú al cambiar el tamaño de la ventana
+            window.addEventListener('resize', function() {
+                if (window.innerWidth > 992) {
+                    // Restablecer estilos en pantallas grandes
+                    barraLateral.classList.remove('activa');
+                    contenidoPrincipal.classList.remove('desplazado');
+                    document.body.style.overflow = '';
+                    menuAbierto = false;
+                    const icono = btnMenu.querySelector('i');
+                    icono.classList.remove('fa-times');
+                    icono.classList.add('fa-bars');
+                }
+            });
+        });
+
         // Cerrar sesión
         function cerrarSesion() {
             if (confirm('¿Está seguro que desea cerrar sesión?')) {
@@ -240,6 +334,30 @@
         window.onpopstate = function(event) {
             window.history.pushState(null, null, window.location.href);
         };
+
+        // Registrar Service Worker para caché y funcionalidad offline
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(registration => {
+                        console.log('ServiceWorker registration successful');
+                    })
+                    .catch(err => {
+                        console.log('ServiceWorker registration failed: ', err);
+                    });
+            });
+        }
+
+        // Detectar si la aplicación se está ejecutando en modo standalone (PWA)
+        window.addEventListener('load', function() {
+            let isInStandaloneMode = window.matchMedia('(display-mode: standalone)').matches || 
+                                   window.navigator.standalone;
+            
+            if (isInStandaloneMode) {
+                console.log('La aplicación se está ejecutando en modo PWA');
+                document.documentElement.classList.add('pwa-mode');
+            }
+        });
 
         // Verificar sesión al cargar
         document.addEventListener('DOMContentLoaded', function() {
