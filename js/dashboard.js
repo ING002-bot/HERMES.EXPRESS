@@ -1,23 +1,31 @@
-// Variables globales
+// ===============================
+// VARIABLES GLOBALES
+// ===============================
 let datosUsuario = {};
 let datosPaquetes = [];
 let datosRutas = [];
 let datosVehiculos = [];
 
-// Inicializar cuando carga la página
+// ===============================
+// INICIALIZACIÓN
+// ===============================
 document.addEventListener('DOMContentLoaded', function() {
     verificarSesion();
     cargarDatos();
     configurarEventos();
 });
 
-// Verificar sesión al cargar
+// ===============================
+// SESIÓN
+// ===============================
 function verificarSesion() {
-    // Esta función ahora está vacía ya que la verificación real se hace en el HTML
+    // La verificación real se hace en el HTML
     // Los datos del usuario se cargarán desde el servidor
 }
 
-// Cargar todos los datos
+// ===============================
+// CARGA DE DATOS PRINCIPALES
+// ===============================
 function cargarDatos() {
     cargarResumen();
     cargarPaquetes();
@@ -26,7 +34,9 @@ function cargarDatos() {
     cargarActividad();
 }
 
-// Cargar resumen del dashboard
+// ===============================
+// RESUMEN DEL DASHBOARD
+// ===============================
 function cargarResumen() {
     fetch('php/dashboard.php?accion=resumen')
         .then(response => response.json())
@@ -36,15 +46,16 @@ function cargarResumen() {
                 document.getElementById('enTransito').textContent = data.datos.en_transito;
                 document.getElementById('entregados').textContent = data.datos.entregados;
                 document.getElementById('ingresos').textContent = '$' + formatearNumero(data.datos.ingresos);
-                
-                // Crear gráfico
+
                 crearGraficoEstados(data.datos.estados);
             }
         })
         .catch(error => console.error('Error:', error));
 }
 
-// Cargar lista de paquetes
+// ===============================
+// PAQUETES
+// ===============================
 function cargarPaquetes() {
     fetch('php/dashboard.php?accion=paquetes')
         .then(response => response.json())
@@ -57,11 +68,10 @@ function cargarPaquetes() {
         .catch(error => console.error('Error:', error));
 }
 
-// Mostrar paquetes en la tabla
 function mostrarPaquetes(paquetes) {
     const tbody = document.getElementById('cuerpoTablaPaquetes');
     tbody.innerHTML = '';
-    
+
     paquetes.forEach(paquete => {
         const fila = document.createElement('tr');
         fila.innerHTML = `
@@ -81,7 +91,9 @@ function mostrarPaquetes(paquetes) {
     });
 }
 
-// Cargar rutas
+// ===============================
+// RUTAS
+// ===============================
 function cargarRutas() {
     fetch('php/dashboard.php?accion=rutas')
         .then(response => response.json())
@@ -94,11 +106,10 @@ function cargarRutas() {
         .catch(error => console.error('Error:', error));
 }
 
-// Mostrar rutas
 function mostrarRutas(rutas) {
     const container = document.getElementById('listaRutas');
     container.innerHTML = '';
-    
+
     rutas.forEach(ruta => {
         const div = document.createElement('div');
         div.className = 'item-ruta';
@@ -117,7 +128,9 @@ function mostrarRutas(rutas) {
     });
 }
 
-// Cargar vehículos
+// ===============================
+// VEHÍCULOS
+// ===============================
 function cargarVehiculos() {
     fetch('php/dashboard.php?accion=vehiculos')
         .then(response => response.json())
@@ -130,11 +143,10 @@ function cargarVehiculos() {
         .catch(error => console.error('Error:', error));
 }
 
-// Mostrar vehículos
 function mostrarVehiculos(vehiculos) {
     const container = document.getElementById('listaVehiculos');
     container.innerHTML = '';
-    
+
     vehiculos.forEach(vehiculo => {
         const div = document.createElement('div');
         div.className = 'item-vehiculo';
@@ -153,7 +165,9 @@ function mostrarVehiculos(vehiculos) {
     });
 }
 
-// Cargar actividad reciente
+// ===============================
+// ACTIVIDAD RECIENTE
+// ===============================
 function cargarActividad() {
     fetch('php/dashboard.php?accion=actividad')
         .then(response => response.json())
@@ -165,11 +179,10 @@ function cargarActividad() {
         .catch(error => console.error('Error:', error));
 }
 
-// Mostrar actividad reciente
 function mostrarActividad(actividades) {
     const container = document.getElementById('listaActividad');
     container.innerHTML = '';
-    
+
     actividades.forEach(actividad => {
         const div = document.createElement('div');
         div.className = 'actividad-item';
@@ -184,47 +197,43 @@ function mostrarActividad(actividades) {
     });
 }
 
-// Configurar eventos
+// ===============================
+// EVENTOS Y FILTROS
+// ===============================
 function configurarEventos() {
-    // Búsqueda de paquetes
     document.getElementById('buscarPaquete').addEventListener('input', filtrarPaquetes);
     document.getElementById('filtroEstado').addEventListener('change', filtrarPaquetes);
-    
-    // Formulario de nuevo paquete
     document.getElementById('formPaquete').addEventListener('submit', guardarPaquete);
 }
 
-// Filtrar paquetes
 function filtrarPaquetes() {
     const busqueda = document.getElementById('buscarPaquete').value.toLowerCase();
     const estado = document.getElementById('filtroEstado').value;
-    
+
     let paquetesFiltrados = datosPaquetes.filter(paquete => {
-        const coincideBusqueda = paquete.codigo.toLowerCase().includes(busqueda) ||
-                                paquete.destinatario.toLowerCase().includes(busqueda) ||
-                                paquete.remitente.toLowerCase().includes(busqueda);
-        
+        const coincideBusqueda =
+            paquete.codigo.toLowerCase().includes(busqueda) ||
+            paquete.destinatario.toLowerCase().includes(busqueda) ||
+            paquete.remitente.toLowerCase().includes(busqueda);
+
         const coincidenEstado = !estado || paquete.estado === estado;
-        
+
         return coincideBusqueda && coincidenEstado;
     });
-    
+
     mostrarPaquetes(paquetesFiltrados);
 }
 
-// Mostrar sección
+// ===============================
+// UTILIDADES DE UI
+// ===============================
 function mostrarSeccion(seccion) {
-    // Ocultar todas las secciones
     document.querySelectorAll('.seccion').forEach(s => s.classList.remove('activa'));
-    
-    // Mostrar sección seleccionada
     document.getElementById(`seccion-${seccion}`).classList.add('activa');
-    
-    // Actualizar menú
+
     document.querySelectorAll('.menu a').forEach(a => a.classList.remove('activo'));
     document.querySelector(`[onclick="mostrarSeccion('${seccion}')"]`).classList.add('activo');
-    
-    // Actualizar título
+
     const titulos = {
         'inicio': 'Dashboard',
         'paquetes': 'Gestión de Paquetes',
@@ -235,16 +244,42 @@ function mostrarSeccion(seccion) {
     document.getElementById('tituloSeccion').textContent = titulos[seccion];
 }
 
-// Nuevo paquete
+function cerrarModal(modalId) {
+    document.getElementById(modalId).style.display = 'none';
+}
+
+function mostrarNotificacion(mensaje, tipo) {
+    const notificacion = document.createElement('div');
+    notificacion.className = `notificacion notificacion-${tipo}`;
+    notificacion.textContent = mensaje;
+    notificacion.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 15px 20px;
+        border-radius: 5px;
+        color: white;
+        font-weight: bold;
+        z-index: 1001;
+        animation: slideIn 0.3s ease;
+        background: ${tipo === 'exito' ? '#28a745' : '#dc3545'};
+    `;
+
+    document.body.appendChild(notificacion);
+    setTimeout(() => notificacion.remove(), 3000);
+}
+
+// ===============================
+// FORMULARIO PAQUETES
+// ===============================
 function nuevoPaquete() {
     document.getElementById('modalPaquete').style.display = 'block';
     document.getElementById('formPaquete').reset();
 }
 
-// Guardar paquete
 function guardarPaquete(e) {
     e.preventDefault();
-    
+
     const formData = new FormData();
     formData.append('accion', 'nuevo_paquete');
     formData.append('remitente', document.getElementById('remitente').value);
@@ -253,78 +288,59 @@ function guardarPaquete(e) {
     formData.append('direccion_destino', document.getElementById('direccionDestino').value);
     formData.append('peso', document.getElementById('peso').value);
     formData.append('precio', document.getElementById('precio').value);
-    
-    fetch('php/dashboard.php', {
-        method: 'POST',
-        body: formData
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.exito) {
-            cerrarModal('modalPaquete');
-            cargarPaquetes();
-            cargarResumen();
-            mostrarNotificacion('Paquete creado exitosamente', 'exito');
-        } else {
-            mostrarNotificacion(data.mensaje, 'error');
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        mostrarNotificacion('Error al guardar el paquete', 'error');
-    });
+
+    fetch('php/dashboard.php', { method: 'POST', body: formData })
+        .then(response => response.json())
+        .then(data => {
+            if (data.exito) {
+                cerrarModal('modalPaquete');
+                cargarPaquetes();
+                cargarResumen();
+                mostrarNotificacion('Paquete creado exitosamente', 'exito');
+            } else {
+                mostrarNotificacion(data.mensaje, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            mostrarNotificacion('Error al guardar el paquete', 'error');
+        });
 }
 
-// Cerrar modal
-function cerrarModal(modalId) {
-    document.getElementById(modalId).style.display = 'none';
-}
-
-
-// Actualizar datos
-function actualizar() {
-    cargarDatos();
-    mostrarNotificacion('Datos actualizados', 'exito');
-}
-
-// Crear gráfico de estados
+// ===============================
+// GRÁFICOS
+// ===============================
 function crearGraficoEstados(estados) {
     const canvas = document.getElementById('graficoEstados');
     const ctx = canvas.getContext('2d');
-    
-    // Limpiar canvas
+
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
+
     const colores = {
         'pendiente': '#ffc107',
         'en_transito': '#17a2b8',
         'entregado': '#28a745',
         'devuelto': '#dc3545'
     };
-    
+
     const total = Object.values(estados).reduce((sum, val) => sum + val, 0);
     let anguloInicial = 0;
-    
     const centerX = canvas.width / 2;
     const centerY = canvas.height / 2;
     const radio = Math.min(centerX, centerY) - 20;
-    
-    // Dibujar gráfico de pastel
+
     Object.entries(estados).forEach(([estado, cantidad]) => {
         if (cantidad > 0) {
             const angulo = (cantidad / total) * 2 * Math.PI;
-            
             ctx.beginPath();
             ctx.arc(centerX, centerY, radio, anguloInicial, anguloInicial + angulo);
             ctx.lineTo(centerX, centerY);
             ctx.fillStyle = colores[estado];
             ctx.fill();
-            
             anguloInicial += angulo;
         }
     });
-    
-    // Dibujar leyenda
+
     let y = 20;
     Object.entries(estados).forEach(([estado, cantidad]) => {
         if (cantidad > 0) {
@@ -338,7 +354,9 @@ function crearGraficoEstados(estados) {
     });
 }
 
-// Funciones auxiliares
+// ===============================
+// FUNCIONES AUXILIARES
+// ===============================
 function formatearNumero(numero) {
     return new Intl.NumberFormat('es-CO').format(numero);
 }
@@ -360,65 +378,20 @@ function formatearEstado(estado) {
     return estados[estado] || estado;
 }
 
-function mostrarNotificacion(mensaje, tipo) {
-    // Crear elemento de notificación
-    const notificacion = document.createElement('div');
-    notificacion.className = `notificacion notificacion-${tipo}`;
-    notificacion.textContent = mensaje;
-    notificacion.style.cssText = `
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        padding: 15px 20px;
-        border-radius: 5px;
-        color: white;
-        font-weight: bold;
-        z-index: 1001;
-        animation: slideIn 0.3s ease;
-        background: ${tipo === 'exito' ? '#28a745' : '#dc3545'};
-    `;
-    
-    document.body.appendChild(notificacion);
-    
-    // Eliminar después de 3 segundos
-    setTimeout(() => {
-        notificacion.remove();
-    }, 3000);
-}
+// ===============================
+// PLACEHOLDERS (por implementar)
+// ===============================
+function editarPaquete(id) { mostrarNotificacion('Función de editar paquete - Por implementar', 'info'); }
+function verPaquete(id) { mostrarNotificacion('Función de ver paquete - Por implementar', 'info'); }
+function nuevaRuta() { mostrarNotificacion('Función de nueva ruta - Por implementar', 'info'); }
+function editarRuta(id) { mostrarNotificacion('Función de editar ruta - Por implementar', 'info'); }
+function eliminarRuta(id) { mostrarNotificacion('Función de eliminar ruta - Por implementar', 'info'); }
+function nuevoVehiculo() { mostrarNotificacion('Función de nuevo vehículo - Por implementar', 'info'); }
+function editarVehiculo(id) { mostrarNotificacion('Función de editar vehículo - Por implementar', 'info'); }
+function eliminarVehiculo(id) { mostrarNotificacion('Función de eliminar vehículo - Por implementar', 'info'); }
+function generarReporte() { mostrarNotificacion('Función de generar reporte - Por implementar', 'info'); }
 
-// Funciones placeholder para funcionalidades adicionales
-function editarPaquete(id) {
-    mostrarNotificacion('Función de editar paquete - Por implementar', 'info');
-}
-
-function verPaquete(id) {
-    mostrarNotificacion('Función de ver paquete - Por implementar', 'info');
-}
-
-function nuevaRuta() {
-    mostrarNotificacion('Función de nueva ruta - Por implementar', 'info');
-}
-
-function editarRuta(id) {
-    mostrarNotificacion('Función de editar ruta - Por implementar', 'info');
-}
-
-function eliminarRuta(id) {
-    mostrarNotificacion('Función de eliminar ruta - Por implementar', 'info');
-}
-
-function nuevoVehiculo() {
-    mostrarNotificacion('Función de nuevo vehículo - Por implementar', 'info');
-}
-
-function editarVehiculo(id) {
-    mostrarNotificacion('Función de editar vehículo - Por implementar', 'info');
-}
-
-function eliminarVehiculo(id) {
-    mostrarNotificacion('Función de eliminar vehículo - Por implementar', 'info');
-}
-
-function generarReporte() {
-    mostrarNotificacion('Función de generar reporte - Por implementar', 'info');
+function actualizar() {
+    cargarDatos();
+    mostrarNotificacion('Datos actualizados', 'exito');
 }

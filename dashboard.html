@@ -1,374 +1,282 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <meta name="theme-color" content="#007bff">
-    <meta name="description" content="Panel de administración HERMES EXPRESS LOGISTIC">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    
-    <!-- Manifest para PWA -->
-    <link rel="manifest" href="/manifest.json">
-    <link rel="icon" href="/img/favicon.ico" type="image/x-icon">
-    <link rel="apple-touch-icon" href="/img/icon-192x192.png">
-    
-    <!-- Preload de fuentes críticas -->
-    <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/webfonts/fa-solid-900.woff2" as="font" type="font/woff2" crossorigin>
-    
-    <!-- Precargar CSS crítico -->
-    <link rel="stylesheet" href="css/paneladmin.css">
-    <link rel="stylesheet" href="css/paneladmin-responsive.css">
-    
-    <!-- Cargar Font Awesome de forma asíncrona -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" media="print" onload="this.media='all'">
-    <title>HERMES - Panel de Control</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <meta name="theme-color" content="#007bff">
+  <meta name="description" content="Panel de administración HERMES EXPRESS LOGISTIC">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+  <link rel="manifest" href="/manifest.json">
+  <link rel="icon" href="/img/favicon.ico" type="image/x-icon">
+  <link rel="apple-touch-icon" href="/img/icon-192x192.png">
+
+  <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/webfonts/fa-solid-900.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="css/paneladmin.css">
+  <link rel="stylesheet" href="css/paneladmin-responsive.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" media="print" onload="this.media='all'">
+
+  <title>HERMES - Panel de Control</title>
 </head>
 <body>
-    <div class="contenedor">
-        <!-- Botón de menú móvil -->
-        <button class="menu-movil" id="btnMenuMovil" aria-label="Menú">
-            <i class="fas fa-bars"></i>
-        </button>
-        
-        <!-- Barra lateral -->
-        <nav class="barra-lateral" id="barraLateral">
-            <div class="logo">
-                <h2>HERMES EXPRESS LOGISTIC</h2>
+  <div class="contenedor">
+    <button class="menu-movil" id="btnMenuMovil" aria-label="Menú">
+      <i class="fas fa-bars"></i>
+    </button>
+
+    <nav class="barra-lateral" id="barraLateral">
+      <div class="logo">
+        <h2>HERMES EXPRESS LOGISTIC</h2>
+      </div>
+      <ul class="menu">
+        <li><a href="javascript:void(0)" class="activo" onclick="mostrarSeccion('dashboard', this)"><span class="icono">📊</span>Dashboard</a></li>
+        <li><a href="javascript:void(0)" onclick="mostrarSeccion('paquetes', this)"><span class="icono">📦</span>Paquetes</a></li>
+        <li><a href="javascript:void(0)" onclick="mostrarSeccion('rutas', this)"><span class="icono">🗺️</span>Rutas</a></li>
+        <li><a href="javascript:void(0)" onclick="mostrarSeccion('vehiculos', this)"><span class="icono">🚛</span>Vehículos</a></li>
+        <li><a href="javascript:void(0)" onclick="mostrarSeccion('reportes', this)"><span class="icono">📊</span>Reportes</a></li>
+      </ul>
+      <div class="usuario-info">
+        <div class="avatar">👤</div>
+        <div class="info">
+          <p id="nombreUsuario">Usuario</p>
+          <small>Asistente</small>
+        </div>
+        <button onclick="cerrarSesion()" class="btn-salir">🚪</button>
+      </div>
+    </nav>
+
+    <main class="contenido-principal">
+      <header class="cabecera">
+        <h1 id="tituloSeccion">Panel de Control</h1>
+        <div class="acciones"></div>
+      </header>
+
+      <section id="seccion-dashboard" class="seccion activa">
+        <div class="metricas-principales">
+          <div class="tarjeta-metrica">
+            <div class="icono-metrica">📦</div>
+            <div class="info-metrica">
+              <h3 id="totalPaquetes">0</h3>
+              <p>Total Paquetes</p>
             </div>
-            
-            <ul class="menu">
-                <li><a href="javascript:void(0)" class="activo" onclick="mostrarSeccion('dashboard', this)">
-                    <span class="icono">📊</span>Dashboard
-                </a></li>
-                <li><a href="javascript:void(0)" onclick="mostrarSeccion('paquetes', this)">
-                    <span class="icono">📦</span>Paquetes
-                </a></li>
-                <li><a href="javascript:void(0)" onclick="mostrarSeccion('rutas', this)">
-                    <span class="icono">🗺️</span>Rutas
-                </a></li>
-                <li><a href="javascript:void(0)" onclick="mostrarSeccion('vehiculos', this)">
-                    <span class="icono">🚛</span>Vehículos
-                </a></li>
-                <li><a href="javascript:void(0)" onclick="mostrarSeccion('reportes', this)">
-                    <span class="icono">📊</span>Reportes
-                </a></li>
-            </ul>
-            
-            <div class="usuario-info">
-                <div class="avatar">👤</div>
-                <div class="info">
-                    <p id="nombreUsuario">Usuario</p>
-                    <small>Asistente</small>
-                </div>
-                <button onclick="cerrarSesion()" class="btn-salir">🚪</button>
+          </div>
+          <div class="tarjeta-metrica">
+            <div class="icono-metrica">💰</div>
+            <div class="info-metrica">
+              <h3 id="ingresosMes">$0</h3>
+              <p>Ingresos del Mes</p>
             </div>
-        </nav>
+          </div>
+          <div class="tarjeta-metrica">
+            <div class="icono-metrica">👥</div>
+            <div class="info-metrica">
+              <h3 id="empleadosActivos">0</h3>
+              <p>Empleados Activos</p>
+            </div>
+          </div>
+          <div class="tarjeta-metrica">
+            <div class="icono-metrica">🚛</div>
+            <div class="info-metrica">
+              <h3 id="vehiculosOperativos">0</h3>
+              <p>Vehículos Operativos</p>
+            </div>
+          </div>
+        </div>
 
-        <!-- Contenido principal -->
-        <main class="contenido-principal">
-            <header class="cabecera">
-                <h1 id="tituloSeccion">Panel de Control</h1>
-                <div class="acciones">
-                    <!-- Botón de actualización eliminado -->
-                </div>
-            </header>
+        <div class="graficos-admin">
+          <div class="grafico-ventas">
+            <h3>Ingresos por Mes</h3>
+            <canvas id="graficoVentas" width="600" height="300"></canvas>
+          </div>
+          <div class="actividad-reciente">
+            <h3>Actividad Reciente</h3>
+            <div id="listaActividad" class="lista-actividad"></div>
+          </div>
+        </div>
+      </section>
 
-            <section id="seccion-dashboard" class="seccion activa">
-                <div class="metricas-principales">
-                    <div class="tarjeta-metrica">
-                        <div class="icono-metrica">📦</div>
-                        <div class="info-metrica">
-                            <h3 id="totalPaquetes">0</h3>
-                            <p>Total Paquetes</p>
-                        </div>
-                    </div>
-                    <div class="tarjeta-metrica">
-                        <div class="icono-metrica">💰</div>
-                        <div class="info-metrica">
-                            <h3 id="ingresosMes">$0</h3>
-                            <p>Ingresos del Mes</p>
-                        </div>
-                    </div>
-                    <div class="tarjeta-metrica">
-                        <div class="icono-metrica">👥</div>
-                        <div class="info-metrica">
-                            <h3 id="empleadosActivos">0</h3>
-                            <p>Empleados Activos</p>
-                        </div>
-                    </div>
-                    <div class="tarjeta-metrica">
-                        <div class="icono-metrica">🚛</div>
-                        <div class="info-metrica">
-                            <h3 id="vehiculosOperativos">0</h3>
-                            <p>Vehículos Operativos</p>
-                        </div>
-                    </div>
-                </div>
+      <section id="seccion-paquetes" class="seccion">
+        <div class="filtros">
+          <input type="text" id="buscarPaquete" placeholder="Buscar por código o destinatario...">
+          <select id="filtroEstado">
+            <option value="">Todos los estados</option>
+            <option value="pendiente">Pendiente</option>
+            <option value="en_transito">En Tránsito</option>
+            <option value="entregado">Entregado</option>
+            <option value="devuelto">Devuelto</option>
+          </select>
+        </div>
+        <div class="tabla-container">
+          <table id="tablaPaquetes">
+            <thead>
+              <tr>
+                <th>Código</th>
+                <th>Remitente</th>
+                <th>Destinatario</th>
+                <th>Estado</th>
+                <th>Peso</th>
+                <th>Precio</th>
+                <th>Fecha</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="cuerpoTablaPaquetes"></tbody>
+          </table>
+        </div>
+      </section>
 
-                <div class="graficos-admin">
-                    <div class="grafico-ventas">
-                        <h3>Ingresos por Mes</h3>
-                        <canvas id="graficoVentas" width="600" height="300"></canvas>
-                    </div>
-                    <div class="actividad-reciente">
-                        <h3>Actividad Reciente</h3>
-                        <div id="listaActividad" class="lista-actividad">
-                        </div>
-                    </div>
-                </div>
-            </section>
+      <section id="seccion-rutas" class="seccion">
+        <div class="acciones-seccion">
+          <button class="btn btn-primario" onclick="nuevaRuta()">+ Nueva Ruta</button>
+        </div>
+        <div id="listaRutas" class="lista-rutas"></div>
+      </section>
 
-            <section id="seccion-paquetes" class="seccion">
-                <div class="filtros">
-                    <input type="text" id="buscarPaquete" placeholder="Buscar por código o destinatario...">
-                    <select id="filtroEstado">
-                        <option value="">Todos los estados</option>
-                        <option value="pendiente">Pendiente</option>
-                        <option value="en_transito">En Tránsito</option>
-                        <option value="entregado">Entregado</option>
-                        <option value="devuelto">Devuelto</option>
-                    </select>
-                </div>
-                
-                <div class="tabla-container">
-                    <table id="tablaPaquetes">
-                        <thead>
-                            <tr>
-                                <th>Código</th>
-                                <th>Remitente</th>
-                                <th>Destinatario</th>
-                                <th>Estado</th>
-                                <th>Peso</th>
-                                <th>Precio</th>
-                                <th>Fecha</th>
-                                <th>Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody id="cuerpoTablaPaquetes">
-                            <!-- Se llena dinámicamente -->
-                        </tbody>
-                    </table>
-                </div>
-            </section>
+      <section id="seccion-vehiculos" class="seccion">
+        <div class="acciones-seccion">
+          <button class="btn btn-primario" onclick="nuevoVehiculo()">+ Nuevo Vehículo</button>
+        </div>
+        <div id="listaVehiculos" class="lista-vehiculos"></div>
+      </section>
 
-            <!-- Sección Rutas -->
-            <section id="seccion-rutas" class="seccion">
-                <div class="acciones-seccion">
-                    <button class="btn btn-primario" onclick="nuevaRuta()">+ Nueva Ruta</button>
-                </div>
-                <div id="listaRutas" class="lista-rutas">
-                    <!-- Se llena dinámicamente -->
-                </div>
-            </section>
+      <section id="seccion-reportes" class="seccion">
+        <div class="filtros-reporte">
+          <input type="date" id="fechaInicio">
+          <input type="date" id="fechaFin">
+          <button class="btn btn-primario" onclick="generarReporte()">Generar Reporte</button>
+        </div>
+        <div id="contenidoReporte" class="contenido-reporte"></div>
+      </section>
+    </main>
+  </div>
 
-            <!-- Sección Vehículos -->
-            <section id="seccion-vehiculos" class="seccion">
-                <div class="acciones-seccion">
-                    <button class="btn btn-primario" onclick="nuevoVehiculo()">+ Nuevo Vehículo</button>
-                </div>
-                <div id="listaVehiculos" class="lista-vehiculos">
-                    <!-- Se llena dinámicamente -->
-                </div>
-            </section>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const btnMenu = document.getElementById('btnMenuMovil');
+      const barraLateral = document.getElementById('barraLateral');
+      const contenidoPrincipal = document.querySelector('.contenido-principal');
+      const enlacesMenu = document.querySelectorAll('.menu a');
+      let menuAbierto = false;
 
-            <!-- Sección Reportes -->
-            <section id="seccion-reportes" class="seccion">
-                <div class="filtros-reporte">
-                    <input type="date" id="fechaInicio">
-                    <input type="date" id="fechaFin">
-                    <button class="btn btn-primario" onclick="generarReporte()">Generar Reporte</button>
-                </div>
-                <div id="contenidoReporte" class="contenido-reporte">
-                    <!-- Se llena dinámicamente -->
-                </div>
-            </section>
-        </main>
-    </div>
-
-
-    <script>
-        // Manejar el menú móvil
-        document.addEventListener('DOMContentLoaded', function() {
-            const btnMenu = document.getElementById('btnMenuMovil');
-            const barraLateral = document.getElementById('barraLateral');
-            const contenidoPrincipal = document.querySelector('.contenido-principal');
-            const enlacesMenu = document.querySelectorAll('.menu a');
-            let menuAbierto = false;
-
-            // Alternar menú móvil
-            function toggleMenu() {
-                menuAbierto = !menuAbierto;
-                barraLateral.classList.toggle('activa', menuAbierto);
-                contenidoPrincipal.classList.toggle('desplazado', menuAbierto);
-                
-                // Cambiar ícono del botón
-                const icono = btnMenu.querySelector('i');
-                if (menuAbierto) {
-                    icono.classList.remove('fa-bars');
-                    icono.classList.add('fa-times');
-                    document.body.style.overflow = 'hidden'; // Evitar scroll del body cuando el menú está abierto
-                } else {
-                    icono.classList.remove('fa-times');
-                    icono.classList.add('fa-bars');
-                    document.body.style.overflow = ''; // Restaurar scroll
-                }
-            }
-
-            // Cerrar menú al hacer clic en un enlace
-            function cerrarMenu() {
-                if (window.innerWidth <= 992) {
-                    menuAbierto = true;
-                    toggleMenu();
-                }
-            }
-
-            // Event listeners
-            btnMenu.addEventListener('click', toggleMenu);
-            enlacesMenu.forEach(enlace => {
-                enlace.addEventListener('click', cerrarMenu);
-            });
-
-            // Cerrar menú al hacer clic fuera
-            contenidoPrincipal.addEventListener('click', function(e) {
-                if (menuAbierto && !e.target.closest('.barra-lateral')) {
-                    toggleMenu();
-                }
-            });
-
-            // Ajustar menú al cambiar el tamaño de la ventana
-            window.addEventListener('resize', function() {
-                if (window.innerWidth > 992) {
-                    // Restablecer estilos en pantallas grandes
-                    barraLateral.classList.remove('activa');
-                    contenidoPrincipal.classList.remove('desplazado');
-                    document.body.style.overflow = '';
-                    menuAbierto = false;
-                    const icono = btnMenu.querySelector('i');
-                    icono.classList.remove('fa-times');
-                    icono.classList.add('fa-bars');
-                }
-            });
-        });
-
-        // Cerrar sesión
-        function cerrarSesion() {
-            if (confirm('¿Está seguro que desea cerrar sesión?')) {
-                // Limpiar el almacenamiento local si es necesario
-                if (typeof(Storage) !== 'undefined') {
-                    localStorage.removeItem('sesion_activa');
-                    sessionStorage.clear();
-                }
-                
-                // Realizar la petición de cierre de sesión
-                fetch('php/cerrar_sesion.php', {
-                    method: 'GET',
-                    credentials: 'same-origin',
-                    headers: {
-                        'Cache-Control': 'no-cache, no-store',
-                        'Pragma': 'no-cache'
-                    }
-                })
-                .then(response => {
-                    // Asegurarse de que la redirección ocurra incluso si hay un error en la respuesta
-                    if (!response.ok) {
-                        throw new Error('Error en la respuesta del servidor');
-                    }
-                    // Forzar recarga sin caché
-                    window.location.replace('login.html');
-                })
-                .catch(error => {
-                    console.error('Error al cerrar sesión:', error);
-                    // Redirigir de todas formas
-                    window.location.replace('login.html');
-                });
-            }
+      function toggleMenu() {
+        menuAbierto = !menuAbierto;
+        barraLateral.classList.toggle('activa', menuAbierto);
+        contenidoPrincipal.classList.toggle('desplazado', menuAbierto);
+        const icono = btnMenu.querySelector('i');
+        if (menuAbierto) {
+          icono.classList.replace('fa-bars', 'fa-times');
+          document.body.style.overflow = 'hidden';
+        } else {
+          icono.classList.replace('fa-times', 'fa-bars');
+          document.body.style.overflow = '';
         }
+      }
 
-        // Otras funciones del dashboard
-        function mostrarSeccion(seccion) {
-            // Ocultar todas las secciones
-            const secciones = document.querySelectorAll('.seccion');
-            secciones.forEach(s => s.classList.remove('activa'));
-            
-            // Mostrar la sección seleccionada
-            document.getElementById('seccion-' + seccion).classList.add('activa');
-            
-            // Actualizar menú activo
-            const menuItems = document.querySelectorAll('.menu a');
-            menuItems.forEach(item => item.classList.remove('activo'));
-            event.target.classList.add('activo');
-            
-            // Actualizar título
-            const titulos = {
-                'inicio': 'Dashboard',
-                'paquetes': 'Gestión de Paquetes',
-                'rutas': 'Gestión de Rutas',
-                'vehiculos': 'Gestión de Vehículos',
-                'reportes': 'Reportes'
-            };
-            document.getElementById('tituloSeccion').textContent = titulos[seccion] || 'Dashboard';
+      function cerrarMenu() {
+        if (window.innerWidth <= 992) {
+          menuAbierto = true;
+          toggleMenu();
         }
+      }
 
-        function cerrarModal(modalId) {
-            document.getElementById(modalId).style.display = 'none';
+      btnMenu.addEventListener('click', toggleMenu);
+      enlacesMenu.forEach(enlace => enlace.addEventListener('click', cerrarMenu));
+      contenidoPrincipal.addEventListener('click', e => {
+        if (menuAbierto && !e.target.closest('.barra-lateral')) toggleMenu();
+      });
+
+      window.addEventListener('resize', () => {
+        if (window.innerWidth > 992) {
+          barraLateral.classList.remove('activa');
+          contenidoPrincipal.classList.remove('desplazado');
+          document.body.style.overflow = '';
+          menuAbierto = false;
+          const icono = btnMenu.querySelector('i');
+          icono.classList.replace('fa-times', 'fa-bars');
         }
+      });
+    });
 
-        function actualizar() {
-            location.reload();
+    function cerrarSesion() {
+      if (confirm('¿Está seguro que desea cerrar sesión?')) {
+        if (typeof Storage !== 'undefined') {
+          localStorage.removeItem('sesion_activa');
+          sessionStorage.clear();
         }
+        fetch('php/cerrar_sesion.php', {
+          method: 'GET',
+          credentials: 'same-origin',
+          headers: { 'Cache-Control': 'no-cache,no-store', 'Pragma': 'no-cache' }
+        })
+        .then(r => {
+          if (!r.ok) throw new Error('Error');
+          window.location.replace('login.html');
+        })
+        .catch(() => window.location.replace('login.html'));
+      }
+    }
 
-        // Prevenir navegación hacia atrás después de cerrar sesión
-        window.history.pushState(null, null, window.location.href);
-        window.onpopstate = function(event) {
-            window.history.pushState(null, null, window.location.href);
-        };
+    function mostrarSeccion(seccion) {
+      document.querySelectorAll('.seccion').forEach(s => s.classList.remove('activa'));
+      document.getElementById('seccion-' + seccion).classList.add('activa');
+      document.querySelectorAll('.menu a').forEach(i => i.classList.remove('activo'));
+      event.target.classList.add('activo');
+      const titulos = {
+        inicio: 'Dashboard',
+        paquetes: 'Gestión de Paquetes',
+        rutas: 'Gestión de Rutas',
+        vehiculos: 'Gestión de Vehículos',
+        reportes: 'Reportes'
+      };
+      document.getElementById('tituloSeccion').textContent = titulos[seccion] || 'Dashboard';
+    }
 
-        // Registrar Service Worker para caché y funcionalidad offline
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', function() {
-                navigator.serviceWorker.register('/sw.js')
-                    .then(registration => {
-                        console.log('ServiceWorker registration successful');
-                    })
-                    .catch(err => {
-                        console.log('ServiceWorker registration failed: ', err);
-                    });
-            });
-        }
+    function cerrarModal(id) {
+      document.getElementById(id).style.display = 'none';
+    }
 
-        // Detectar si la aplicación se está ejecutando en modo standalone (PWA)
-        window.addEventListener('load', function() {
-            let isInStandaloneMode = window.matchMedia('(display-mode: standalone)').matches || 
-                                   window.navigator.standalone;
-            
-            if (isInStandaloneMode) {
-                console.log('La aplicación se está ejecutando en modo PWA');
-                document.documentElement.classList.add('pwa-mode');
-            }
-        });
+    function actualizar() {
+      location.reload();
+    }
 
-        // Verificar sesión al cargar
-        document.addEventListener('DOMContentLoaded', function() {
-            fetch('php/verificar_sesion.php')
-                .then(response => response.json())
-                .then(data => {
-                    if (!data.sesion_activa || data.usuario.tipo !== 'asistente') {
-                        window.location.href = 'login.html';
-                        return;
-                    }
-                    
-                    // Actualizar información del usuario
-                    document.getElementById('nombreUsuario').textContent = data.usuario.nombre;
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    window.location.href = 'login.html';
-                });
-        });
-    </script>
-    <script src="js/dashboard.js"></script>
+    window.history.pushState(null, null, window.location.href);
+    window.onpopstate = () => {
+      window.history.pushState(null, null, window.location.href);
+    };
+
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+          .then(() => console.log('ServiceWorker ok'))
+          .catch(err => console.log('SW fail:', err));
+      });
+    }
+
+    window.addEventListener('load', () => {
+      let pwa = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+      if (pwa) {
+        console.log('Modo PWA');
+        document.documentElement.classList.add('pwa-mode');
+      }
+    });
+
+    document.addEventListener('DOMContentLoaded', () => {
+      fetch('php/verificar_sesion.php')
+        .then(r => r.json())
+        .then(d => {
+          if (!d.sesion_activa || d.usuario.tipo !== 'asistente') {
+            window.location.href = 'login.html';
+            return;
+          }
+          document.getElementById('nombreUsuario').textContent = d.usuario.nombre;
+        })
+        .catch(() => window.location.href = 'login.html');
+    });
+  </script>
+
+  <script src="js/dashboard.js"></script>
 </body>
 </html>

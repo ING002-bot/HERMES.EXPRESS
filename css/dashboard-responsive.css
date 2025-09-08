@@ -1,5 +1,3 @@
-/* Estilos responsivos para el dashboard */
-
 /* Variables CSS */
 :root {
     --sidebar-width: 280px;
@@ -16,7 +14,7 @@
     --box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 }
 
-/* Estilos base para móviles */
+/* Estilos base */
 .contenedor {
     display: flex;
     min-height: 100vh;
@@ -25,7 +23,6 @@
     transition: var(--transition);
 }
 
-/* Barra lateral */
 .barra-lateral {
     position: fixed;
     top: 0;
@@ -39,7 +36,6 @@
     overflow-y: auto;
 }
 
-/* Contenido principal */
 .contenido-principal {
     flex: 1;
     padding: 20px;
@@ -49,7 +45,6 @@
     box-sizing: border-box;
 }
 
-/* Botón de menú móvil */
 .menu-movil {
     display: none;
     position: fixed;
@@ -68,160 +63,56 @@
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
 }
 
-/* Media Queries */
-
-/* Pantallas pequeñas (móviles) */
+/* Móviles */
 @media (max-width: 768px) {
-    .contenedor {
-        flex-direction: column;
-    }
-    
-    .barra-lateral {
-        transform: translateX(-100%);
-    }
-    
-    .barra-lateral.activa {
-        transform: translateX(0);
-    }
-    
-    .menu-movil {
-        display: flex;
-    }
-    
-    .contenido-principal {
-        padding: 70px 15px 15px;
-    }
-    
-    .contenido-principal.desplazado {
-        transform: translateX(var(--sidebar-width));
-    }
-    
-    /* Ajustes para tarjetas en móviles */
-    .tarjeta {
-        margin-bottom: 15px;
-    }
-    
-    /* Ajustes para tablas */
-    .tabla-responsive {
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-    }
-    
-    /* Ajustes para formularios */
-    .formulario .form-grupo {
-        margin-bottom: 15px;
-    }
-    
-    .formulario .form-control {
-        width: 100%;
-    }
+    .contenedor { flex-direction: column; }
+    .barra-lateral { transform: translateX(-100%); }
+    .barra-lateral.activa { transform: translateX(0); }
+    .menu-movil { display: flex; }
+    .contenido-principal { padding: 70px 15px 15px; }
+    .contenido-principal.desplazado { transform: translateX(var(--sidebar-width)); }
+    .tarjeta { margin-bottom: 15px; }
+    .tabla-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .formulario .form-grupo { margin-bottom: 15px; }
+    .formulario .form-control { width: 100%; }
 }
 
 /* Tablets */
 @media (min-width: 769px) and (max-width: 992px) {
-    .contenedor {
-        padding-left: 0;
-    }
-    
-    .barra-lateral {
-        transform: translateX(-100%);
-    }
-    
-    .barra-lateral.activa {
-        transform: translateX(0);
-    }
-    
-    .menu-movil {
-        display: flex;
-    }
-    
-    .contenido-principal {
-        margin-left: 0;
-        padding: 30px 20px;
-    }
-    
-    .contenido-principal.desplazado {
-        transform: translateX(var(--sidebar-width));
-    }
+    .contenedor { padding-left: 0; }
+    .barra-lateral { transform: translateX(-100%); }
+    .barra-lateral.activa { transform: translateX(0); }
+    .menu-movil { display: flex; }
+    .contenido-principal { margin-left: 0; padding: 30px 20px; }
+    .contenido-principal.desplazado { transform: translateX(var(--sidebar-width)); }
 }
 
 /* Pantallas medianas */
 @media (min-width: 993px) and (max-width: 1199px) {
-    .contenedor {
-        padding-left: var(--sidebar-width);
-    }
-    
-    .barra-lateral {
-        transform: translateX(0);
-    }
-    
-    .contenido-principal {
-        margin-left: 0;
-    }
-    
-    .menu-movil {
-        display: none;
-    }
+    .contenedor { padding-left: var(--sidebar-width); }
+    .barra-lateral { transform: translateX(0); }
+    .contenido-principal { margin-left: 0; }
+    .menu-movil { display: none; }
 }
 
 /* Pantallas grandes */
 @media (min-width: 1200px) {
-    .contenedor {
-        padding-left: var(--sidebar-width);
-    }
-    
-    .barra-lateral {
-        transform: translateX(0);
-    }
-    
-    .contenido-principal {
-        margin-left: 0;
-        padding: 30px;
-        max-width: 1400px;
-        margin: 0 auto 0 var(--sidebar-width);
-    }
-    
-    .menu-movil {
-        display: none;
-    }
+    .contenedor { padding-left: var(--sidebar-width); }
+    .barra-lateral { transform: translateX(0); }
+    .contenido-principal { margin-left: 0; padding: 30px; max-width: 1400px; margin: 0 auto 0 var(--sidebar-width); }
+    .menu-movil { display: none; }
 }
 
-/* Ajustes generales para mejorar la experiencia táctil */
+/* Mejoras táctiles */
 @media (hover: none) {
-    button, 
-    .btn, 
-    [role="button"],
-    a {
-        min-height: 44px;
-        min-width: 44px;
-    }
-    
-    input, 
-    select, 
-    textarea, 
-    button {
-        font-size: 16px; /* Evita el zoom en iOS */
-    }
+    button, .btn, [role="button"], a { min-height: 44px; min-width: 44px; }
+    input, select, textarea, button { font-size: 16px; }
 }
 
-/* Ajustes para el modo oscuro en dispositivos que lo soporten */
+/* Modo oscuro */
 @media (prefers-color-scheme: dark) {
-    :root {
-        --light-color: #2c3e50;
-        --dark-color: #ecf0f1;
-    }
-    
-    body {
-        background-color: #1a1a1a;
-        color: #f0f0f0;
-    }
-    
-    .barra-lateral {
-        background: #2c3e50;
-    }
-    
-    .tarjeta {
-        background: #2c3e50;
-        color: #f0f0f0;
-    }
+    :root { --light-color: #2c3e50; --dark-color: #ecf0f1; }
+    body { background-color: #1a1a1a; color: #f0f0f0; }
+    .barra-lateral { background: #2c3e50; }
+    .tarjeta { background: #2c3e50; color: #f0f0f0; }
 }
