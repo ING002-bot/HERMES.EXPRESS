@@ -53,9 +53,16 @@
                 <li><a href="javascript:void(0)" onclick="mostrarSeccion('pagos', this)">
                     <span class="icono">💰</span>Pagos Empleados
                 </a></li>
-                <li><a href="javascript:void(0)" onclick="mostrarSeccion('configuracion', this)">
-                    <span class="icono">⚙️</span>Configuración
-                </a></li>
+                <li>
+                    <a href="#" onclick="mostrarSeccion('usuarios', this)" class="menu-item">
+                        <i class="fas fa-users-cog"></i> Gestión de Usuarios
+                    </a>
+                </li>
+                <li>
+                    <a href="#" onclick="mostrarSeccion('configuracion', this)" class="menu-item">
+                        <i class="fas fa-cog"></i> Configuración
+                    </a>
+                </li>
                 <li><a href="javascript:void(0)" onclick="mostrarSeccion('extraccion', this)">
                     <span class="icono">📥</span>Extracción de Datos
                 </a></li>
@@ -359,6 +366,97 @@
                 </div>
             </section>
 
+            <!-- Sección de Gestión de Usuarios -->
+            <section id="seccion-usuarios" class="seccion">
+                <div class="seccion-header">
+                    <h2>Gestión de Usuarios</h2>
+                    <div class="acciones">
+                        <button id="btnNuevoUsuario" class="btn btn-primario">
+                            <i class="fas fa-user-plus"></i> Nuevo Usuario
+                        </button>
+                        <button id="btnActualizarUsuarios" class="btn btn-secundario">
+                            <i class="fas fa-sync-alt"></i> Actualizar
+                        </button>
+                    </div>
+                </div>
+
+                <div id="alertContainer"></div>
+
+                <div class="card">
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table id="usuariosTable" class="table table-striped table-hover" style="width:100%">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Usuario</th>
+                                        <th>Nombre</th>
+                                        <th>Email</th>
+                                        <th>Tipo</th>
+                                        <th>Estado</th>
+                                        <th>Fecha Creación</th>
+                                        <th>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Los datos se cargarán dinámicamente -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Modal para Crear/Editar Usuario -->
+            <div class="modal fade" id="usuarioModal" tabindex="-1" aria-labelledby="usuarioModalLabel" aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="usuarioModalLabel">Nuevo Usuario</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                        </div>
+                        <form id="usuarioForm">
+                            <input type="hidden" id="usuario_id" name="usuario_id">
+                            <div class="modal-body">
+                                <div class="mb-3">
+                                    <label for="usuario" class="form-label">Nombre de Usuario</label>
+                                    <input type="text" class="form-control" id="usuario" name="usuario" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="nombre" class="form-label">Nombre Completo</label>
+                                    <input type="text" class="form-control" id="nombre" name="nombre" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="email" class="form-label">Email</label>
+                                    <input type="email" class="form-control" id="email" name="email" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="tipo" class="form-label">Tipo de Usuario</label>
+                                    <select class="form-select" id="tipo" name="tipo" required>
+                                        <option value="admin">Administrador</option>
+                                        <option value="asistente">Asistente</option>
+                                        <option value="empleado">Empleado</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="clave" class="form-label">Contraseña</label>
+                                    <input type="password" class="form-control" id="clave" name="clave" required>
+                                    <small class="text-muted">Mínimo 6 caracteres</small>
+                                </div>
+                                <div class="form-check form-switch mb-3">
+                                    <input class="form-check-input" type="checkbox" id="activo" name="activo" checked>
+                                    <label class="form-check-label" for="activo">Usuario Activo</label>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                <button type="submit" class="btn btn-primary">Guardar</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
             <section id="seccion-configuracion" class="seccion">
                 <div class="seccion-header">
                     <h2>Configuración del Sistema</h2>
@@ -611,11 +709,16 @@
                 </div>
             </div>
 
-            <div id="modalEmpleado" class="modal">
-                <div class="modal-contenido">
-                    <span class="cerrar" onclick="cerrarModal('modalEmpleado')">&times;</span>
-                    <h2>Nuevo Empleado</h2>
-                    <form id="formEmpleado" onsubmit="guardarEmpleado(event)">
+            <!-- Modal para Empleado -->
+            <div class="modal fade" id="modalEmpleado" tabindex="-1" aria-labelledby="modalEmpleadoLabel" aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="modalEmpleadoLabel">Nuevo Empleado</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <form id="formEmpleado" onsubmit="guardarEmpleado(event)">
                         <div class="form-grupo">
                             <label>Nombre:</label>
                             <input type="text" id="nombreEmpleado" required>
@@ -629,23 +732,25 @@
                             <input type="email" id="emailEmpleado" required>
                         </div>
                         <div class="form-grupo">
-                            <label>Contraseña:</label>
-                            <input type="password" id="claveEmpleado" required>
-                        </div>
-                        <div class="form-grupo">
-                            <label>Tipo:</label>
-                            <select id="tipoEmpleado" required>
+                            <label class="form-label">Tipo:</label>
+                            <select id="tipoEmpleado" class="form-select" required>
                                 <option value="empleado">Empleado</option>
                                 <option value="asistente">Asistente</option>
                             </select>
                         </div>
-                        <div class="form-acciones">
-                            <button type="submit" class="btn btn-primario">Guardar</button>
-                            <button type="button" class="btn btn-secundario" onclick="cerrarModal('modalEmpleado')">Cancelar</button>
+                        <div class="form-grupo">
+                            <label class="form-label">Contraseña:</label>
+                            <input type="password" id="claveEmpleado" class="form-control" required>
                         </div>
-                    </form>
-                </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Guardar</button>
+                    </div>
+                </form>
             </div>
+        </div>
+    </div>
 
         </main>
     </div>
@@ -700,7 +805,27 @@
         </div>
     </section>
 
+    <!-- Scripts en el orden correcto -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
     <script>
+        // Verificar que todas las dependencias estén cargadas
+        if (typeof jQuery == 'undefined') {
+            console.error('Error: jQuery no se ha cargado correctamente');
+        } else {
+            console.log('jQuery versión:', $.fn.jquery);
+        }
+        
+        if (typeof bootstrap === 'undefined') {
+            console.error('Error: Bootstrap no se ha cargado correctamente');
+        } else {
+            console.log('Bootstrap cargado correctamente');
+        }
+        
         // Función para cerrar sesión - definida globalmente
         function cerrarSesion() {
             if (confirm('¿Está seguro que desea cerrar sesión?')) {
@@ -755,7 +880,19 @@
         
         // Función para nuevos empleados, vehículos, rutas
         function nuevoEmpleado() {
-            document.getElementById('modalEmpleado').style.display = 'block';
+            // Resetear el formulario
+            const form = document.getElementById('formEmpleado');
+            form.reset();
+            
+            // Cambiar el título del modal
+            document.getElementById('modalEmpleadoLabel').textContent = 'Nuevo Empleado';
+            
+            // Establecer la acción como 'crear'
+            form.setAttribute('data-accion', 'crear');
+            
+            // Mostrar el modal usando Bootstrap 5
+            const modal = new bootstrap.Modal(document.getElementById('modalEmpleado'));
+            modal.show();
         }
         
         function nuevoVehiculo() {
@@ -1043,34 +1180,66 @@
         
         // Funciones para cargar datos de empleados, vehículos y rutas
         function cargarEmpleados() {
-            fetch('php/admin.php?accion=empleados')
-                .then(response => response.json())
+            console.log('Cargando empleados...');
+            return fetch('php/admin.php?accion=empleados')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`Error HTTP: ${response.status}`);
+                    }
+                    return response.json();
+                })
                 .then(data => {
-                    if (data.exito) {
+                    console.log('Datos recibidos:', data);
+                    if (data.exito && Array.isArray(data.datos)) {
                         mostrarEmpleados(data.datos);
                     } else {
-                        console.error('Error al cargar empleados:', data.mensaje);
+                        const errorMsg = data.mensaje || 'Formato de datos inesperado';
+                        console.error('Error en la respuesta:', errorMsg);
+                        throw new Error(errorMsg);
                     }
+                    return data;
                 })
                 .catch(error => {
-                    console.error('Error:', error);
+                    console.error('Error al cargar empleados:', error);
+                    // Mostrar mensaje de error al usuario
+                    alert('Error al cargar la lista de empleados. Por favor, intente nuevamente.');
+                    throw error; // Re-lanzar el error para que pueda ser manejado por quien llame a esta función
                 });
         }
         
         function mostrarEmpleados(empleados) {
+            console.log('Mostrando empleados:', empleados);
             const tbody = document.getElementById('cuerpoTablaEmpleados');
+            if (!tbody) {
+                console.error('No se encontró el elemento tbody con ID "cuerpoTablaEmpleados"');
+                return;
+            }
+            
             tbody.innerHTML = '';
+            
+            if (!Array.isArray(empleados) || empleados.length === 0) {
+                const fila = document.createElement('tr');
+                fila.innerHTML = '<td colspan="8" class="text-center">No hay empleados registrados</td>';
+                tbody.appendChild(fila);
+                return;
+            }
             
             empleados.forEach(empleado => {
                 const fila = document.createElement('tr');
+                const fechaRegistro = empleado.fecha_registro ? new Date(empleado.fecha_registro).toLocaleDateString() : 'N/A';
+                const tipoUsuario = empleado.tipo === 'admin' ? 'Administrador' : 
+                                  empleado.tipo === 'asistente' ? 'Asistente' : 'Empleado';
+                
                 fila.innerHTML = `
-                    <td>${empleado.id}</td>
-                    <td>${empleado.nombre}</td>
-                    <td>${empleado.usuario}</td>
+                    <td>${empleado.id || ''}</td>
+                    <td>${empleado.nombre || 'N/A'}</td>
+                    <td>${empleado.usuario || 'N/A'}</td>
                     <td>${empleado.email || 'N/A'}</td>
-                    <td>${empleado.tipo}</td>
-                    <td><span class="estado estado-${empleado.activo ? 'activo' : 'inactivo'}">${empleado.activo ? 'Activo' : 'Inactivo'}</span></td>
-                    <td>${new Date(empleado.fecha_registro).toLocaleDateString()}</td>
+                    <td>${tipoUsuario}</td>
+                    <td><span class="estado estado-${empleado.activo ? 'activo' : 'inactivo'}">
+                        ${empleado.activo ? 'Activo' : 'Inactivo'}
+                    </span></td>
+                    <td>${fechaRegistro}</td>
                     <td>
                         <button class="btn btn-pequeno btn-secundario" onclick="eliminarEmpleado(${empleado.id})">Eliminar</button>
                     </td>
@@ -1081,16 +1250,23 @@
         
         function cargarVehiculos() {
             fetch('php/admin.php?accion=vehiculos')
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Error en la respuesta del servidor');
+                    }
+                    return response.json();
+                })
                 .then(data => {
                     if (data.exito) {
-                        mostrarVehiculos(data.datos);
+                        mostrarVehiculos(data.vehiculos);
                     } else {
                         console.error('Error al cargar vehículos:', data.mensaje);
+                        alert('Error al cargar vehículos: ' + (data.mensaje || 'Error desconocido'));
                     }
                 })
                 .catch(error => {
-                    console.error('Error:', error);
+                    console.error('Error al cargar vehículos:', error);
+                    alert('Error al cargar vehículos: ' + error.message);
                 });
         }
         
@@ -1315,11 +1491,40 @@
             });
         }
 
-        // Código para el menú móvil
+        // Código para el menú móvil y carga de datos
         document.addEventListener('DOMContentLoaded', function() {
+            // Elementos del menú móvil
             const btnMenu = document.getElementById('btnMenuMovil');
             const barraLateral = document.getElementById('barraLateral');
             const contenidoPrincipal = document.querySelector('.contenido-principal');
+            
+            // Cargar datos cuando se muestre la sección correspondiente
+            const secciones = document.querySelectorAll('.seccion');
+            const observador = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        switch(entry.target.id) {
+                            case 'seccion-empleados':
+                                cargarEmpleados().catch(console.error);
+                                break;
+                            case 'seccion-vehiculos':
+                                cargarVehiculos().catch(console.error);
+                                break;
+                            // Agrega más casos según sea necesario
+                        }
+                    }
+                });
+            }, { threshold: 0.1 });
+            
+            // Observar cada sección
+            secciones.forEach(seccion => {
+                observador.observe(seccion);
+            });
+            
+            // Cargar empleados por defecto si estamos en la sección de empleados
+            if (window.location.hash === '#seccion-empleados') {
+                cargarEmpleados().catch(console.error);
+            }
             let menuAbierto = false;
 
             function toggleMenu() {
@@ -1392,6 +1597,46 @@
                     console.error('Error:', error);
                     window.location.href = 'login.html';
                 });
+        });
+    </script>
+    
+    <!-- jQuery (debe cargarse primero) -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    
+    <!-- DataTables y sus dependencias -->
+    <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
+    
+    <!-- Nuestros scripts -->
+    <script src="js/gestion_usuarios.js"></script>
+    
+    <!-- Inicialización de la página -->
+    <script>
+        $(document).ready(function() {
+            // Verificar que todas las dependencias estén cargadas
+            if (typeof jQuery == 'undefined') {
+                console.error('Error: jQuery no se ha cargado correctamente');
+            } else {
+                console.log('jQuery versión:', $.fn.jquery);
+            }
+            
+            if (typeof bootstrap === 'undefined') {
+                console.error('Error: Bootstrap no se ha cargado correctamente');
+            } else {
+                console.log('Bootstrap cargado correctamente');
+            }
+            
+            // Cargar datos iniciales si es necesario
+            if (window.location.hash) {
+                const seccion = window.location.hash.substring(1);
+                const elementoMenu = document.querySelector(`a[onclick*="${seccion}"]`);
+                if (elementoMenu) {
+                    mostrarSeccion(seccion, elementoMenu);
+                }
+            } else {
+                // Por defecto, mostrar el dashboard
+                mostrarSeccion('dashboard', document.querySelector('a[onclick*="dashboard"]'));
+            }
         });
     </script>
 </body>

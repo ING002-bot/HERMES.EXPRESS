@@ -231,7 +231,7 @@ function obtenerVehiculos() {
                        ELSE v.estado
                    END as estado_mostrar
             FROM vehiculos v
-            LEFT JOIN usuarios u ON v.empleado_asignado = u.id
+            LEFT JOIN usuarios u ON v.empleado_id = u.id
             ORDER BY v.placa
         
         ");
