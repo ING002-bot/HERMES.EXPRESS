@@ -8,9 +8,10 @@
     <meta name="description" content="Panel de Empleado HERMES EXPRESS LOGISTIC">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <title>HERMES - Panel Empleado</title>
-    <link rel="stylesheet" href="css/panelempleado.css">
-    <link rel="stylesheet" href="css/panelempleado-responsive.css">
+    <title>HERMES - Panel de Empleado</title>
+    <!-- Precargar CSS crítico -->
+    <link rel="stylesheet" href="css/paneladmin.css">
+    <link rel="stylesheet" href="css/paneladmin-responsive.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
@@ -27,19 +28,19 @@
             </div>
             
             <ul class="menu">
-                <li><a href="#inicio" class="activo" onclick="mostrarSeccion('inicio')">
+                <li><a href="javascript:void(0)" class="activo" onclick="mostrarSeccion('inicio', this)">
                     <span class="icono">🏠</span>Inicio
                 </a></li>
-                <li><a href="#mis-paquetes" onclick="mostrarSeccion('mis-paquetes')">
+                <li><a href="javascript:void(0)" onclick="mostrarSeccion('mis-paquetes', this)">
                     <span class="icono">📦</span>Mis Paquetes
                 </a></li>
-                <li><a href="#entregar" onclick="mostrarSeccion('entregar')">
+                <li><a href="javascript:void(0)" onclick="mostrarSeccion('entregar', this)">
                     <span class="icono">✅</span>Entregar
                 </a></li>
-                <li><a href="#ruta" onclick="mostrarSeccion('ruta')">
+                <li><a href="javascript:void(0)" onclick="mostrarSeccion('ruta', this)">
                     <span class="icono">🗺️</span>Mi Ruta
                 </a></li>
-                <li><a href="#perfil" onclick="mostrarSeccion('perfil')">
+                <li><a href="javascript:void(0)" onclick="mostrarSeccion('perfil', this)">
                     <span class="icono">👤</span>Perfil
                 </a></li>
             </ul>
@@ -59,47 +60,48 @@
             <header class="cabecera">
                 <h1 id="tituloSeccion">Panel de Empleado</h1>
                 <div class="acciones">
-                    <button class="btn btn-secundario" onclick="verNotificaciones()">🔔 Notificaciones</button>
+                    <button class="btn btn-secundario" onclick="verNotificaciones()">
+                        <i class="fas fa-bell"></i> Notificaciones
+                    </button>
                 </div>
             </header>
 
-            <!-- Sección Inicio -->
             <section id="seccion-inicio" class="seccion activa">
-                <div class="tarjetas-resumen">
-                    <div class="tarjeta">
-                        <div class="icono-tarjeta">📦</div>
-                        <div class="info-tarjeta">
+                <div class="metricas-principales">
+                    <div class="tarjeta-metrica">
+                        <div class="icono-metrica">📦</div>
+                        <div class="info-metrica">
                             <h3 id="misPaquetes">0</h3>
                             <p>Mis Paquetes</p>
                         </div>
                     </div>
-                    <div class="tarjeta">
-                        <div class="icono-tarjeta">🚛</div>
-                        <div class="info-tarjeta">
+                    <div class="tarjeta-metrica">
+                        <div class="icono-metrica">🚛</div>
+                        <div class="info-metrica">
                             <h3 id="enRuta">0</h3>
                             <p>En Ruta</p>
                         </div>
                     </div>
-                    <div class="tarjeta">
-                        <div class="icono-tarjeta">✅</div>
-                        <div class="info-tarjeta">
+                    <div class="tarjeta-metrica">
+                        <div class="icono-metrica">✅</div>
+                        <div class="info-metrica">
                             <h3 id="entregadosHoy">0</h3>
                             <p>Entregados Hoy</p>
                         </div>
                     </div>
-                    <div class="tarjeta">
-                        <div class="icono-tarjeta">⏰</div>
-                        <div class="info-tarjeta">
+                    <div class="tarjeta-metrica">
+                        <div class="icono-metrica">⏰</div>
+                        <div class="info-metrica">
                             <h3 id="pendientes">0</h3>
                             <p>Pendientes</p>
                         </div>
                     </div>
                 </div>
 
-                <div class="panel-trabajo">
+                <div class="graficos-admin">
                     <div class="tareas-hoy">
                         <h3>Tareas de Hoy</h3>
-                        <div id="listaTareas" class="lista-tareas">
+                        <div id="listaTareas" class="lista-actividad">
                             <!-- Se llena dinámicamente -->
                         </div>
                     </div>
@@ -110,14 +112,17 @@
                             <!-- Se llena dinámicamente -->
                         </div>
                         <div class="acciones-vehiculo">
-                            <button class="btn btn-primario" onclick="iniciarRuta()">Iniciar Ruta</button>
-                            <button class="btn btn-secundario" onclick="reportarProblema()">Reportar Problema</button>
+                            <button class="btn btn-primario" onclick="iniciarRuta()">
+                                <i class="fas fa-route"></i> Iniciar Ruta
+                            </button>
+                            <button class="btn btn-secundario" onclick="reportarProblema()">
+                                <i class="fas fa-exclamation-triangle"></i> Reportar Problema
+                            </button>
                         </div>
                     </div>
                 </div>
             </section>
 
-            <!-- Sección Mis Paquetes -->
             <section id="seccion-mis-paquetes" class="seccion">
                 <div class="filtros">
                     <input type="text" id="buscarMiPaquete" placeholder="Buscar por código o destinatario...">

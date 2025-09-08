@@ -12,7 +12,6 @@
     
     <!-- Manifest para PWA -->
     <link rel="manifest" href="/manifest.json">
-    <meta name="theme-color" content="#007bff">
     <link rel="icon" href="/img/favicon.ico" type="image/x-icon">
     <link rel="apple-touch-icon" href="/img/icon-192x192.png">
     
@@ -20,16 +19,12 @@
     <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/webfonts/fa-solid-900.woff2" as="font" type="font/woff2" crossorigin>
     
     <!-- Precargar CSS crítico -->
-    <link rel="preload" href="css/dashboard.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
-    <link rel="stylesheet" href="css/dashboard-responsive.css">
-    <noscript>
-        <link rel="stylesheet" href="css/dashboard.css">
-        <link rel="stylesheet" href="css/dashboard-responsive.css">
-    </noscript>
+    <link rel="stylesheet" href="css/paneladmin.css">
+    <link rel="stylesheet" href="css/paneladmin-responsive.css">
     
     <!-- Cargar Font Awesome de forma asíncrona -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" media="print" onload="this.media='all'">
-    <title>HERMES - Dashboard</title>
+    <title>HERMES - Panel de Control</title>
 </head>
 <body>
     <div class="contenedor">
@@ -41,24 +36,23 @@
         <!-- Barra lateral -->
         <nav class="barra-lateral" id="barraLateral">
             <div class="logo">
-                <h2>HERMES EXPRESS</h2>
-                <small>LOGISTIC</small>
+                <h2>HERMES EXPRESS LOGISTIC</h2>
             </div>
             
             <ul class="menu">
-                <li><a href="#inicio" class="activo" onclick="mostrarSeccion('inicio')">
-                    <span class="icono">🏠</span>Inicio
+                <li><a href="javascript:void(0)" class="activo" onclick="mostrarSeccion('dashboard', this)">
+                    <span class="icono">📊</span>Dashboard
                 </a></li>
-                <li><a href="#paquetes" onclick="mostrarSeccion('paquetes')">
+                <li><a href="javascript:void(0)" onclick="mostrarSeccion('paquetes', this)">
                     <span class="icono">📦</span>Paquetes
                 </a></li>
-                <li><a href="#rutas" onclick="mostrarSeccion('rutas')">
+                <li><a href="javascript:void(0)" onclick="mostrarSeccion('rutas', this)">
                     <span class="icono">🗺️</span>Rutas
                 </a></li>
-                <li><a href="#vehiculos" onclick="mostrarSeccion('vehiculos')">
+                <li><a href="javascript:void(0)" onclick="mostrarSeccion('vehiculos', this)">
                     <span class="icono">🚛</span>Vehículos
                 </a></li>
-                <li><a href="#reportes" onclick="mostrarSeccion('reportes')">
+                <li><a href="javascript:void(0)" onclick="mostrarSeccion('reportes', this)">
                     <span class="icono">📊</span>Reportes
                 </a></li>
             </ul>
@@ -67,7 +61,7 @@
                 <div class="avatar">👤</div>
                 <div class="info">
                     <p id="nombreUsuario">Usuario</p>
-                    <small id="tipoUsuario">Empleado</small>
+                    <small>Asistente</small>
                 </div>
                 <button onclick="cerrarSesion()" class="btn-salir">🚪</button>
             </div>
@@ -76,60 +70,57 @@
         <!-- Contenido principal -->
         <main class="contenido-principal">
             <header class="cabecera">
-                <h1 id="tituloSeccion">Dashboard</h1>
+                <h1 id="tituloSeccion">Panel de Control</h1>
                 <div class="acciones">
-                    <!-- Botones de Nuevo Paquete y Actualizar eliminados -->
+                    <!-- Botón de actualización eliminado -->
                 </div>
             </header>
 
-            <!-- Sección Inicio -->
-            <section id="seccion-inicio" class="seccion activa">
-                <div class="tarjetas-resumen">
-                    <div class="tarjeta">
-                        <div class="icono-tarjeta">📦</div>
-                        <div class="info-tarjeta">
+            <section id="seccion-dashboard" class="seccion activa">
+                <div class="metricas-principales">
+                    <div class="tarjeta-metrica">
+                        <div class="icono-metrica">📦</div>
+                        <div class="info-metrica">
                             <h3 id="totalPaquetes">0</h3>
                             <p>Total Paquetes</p>
                         </div>
                     </div>
-                    <div class="tarjeta">
-                        <div class="icono-tarjeta">🚛</div>
-                        <div class="info-tarjeta">
-                            <h3 id="enTransito">0</h3>
-                            <p>En Tránsito</p>
+                    <div class="tarjeta-metrica">
+                        <div class="icono-metrica">💰</div>
+                        <div class="info-metrica">
+                            <h3 id="ingresosMes">$0</h3>
+                            <p>Ingresos del Mes</p>
                         </div>
                     </div>
-                    <div class="tarjeta">
-                        <div class="icono-tarjeta">✅</div>
-                        <div class="info-tarjeta">
-                            <h3 id="entregados">0</h3>
-                            <p>Entregados</p>
+                    <div class="tarjeta-metrica">
+                        <div class="icono-metrica">👥</div>
+                        <div class="info-metrica">
+                            <h3 id="empleadosActivos">0</h3>
+                            <p>Empleados Activos</p>
                         </div>
                     </div>
-                    <div class="tarjeta">
-                        <div class="icono-tarjeta">💰</div>
-                        <div class="info-tarjeta">
-                            <h3 id="ingresos">S/ 0</h3>
-                            <p>Ingresos Hoy</p>
+                    <div class="tarjeta-metrica">
+                        <div class="icono-metrica">🚛</div>
+                        <div class="info-metrica">
+                            <h3 id="vehiculosOperativos">0</h3>
+                            <p>Vehículos Operativos</p>
                         </div>
                     </div>
                 </div>
 
-                <div class="graficos">
-                    <div class="grafico-container">
-                        <h3>Paquetes por Estado</h3>
-                        <canvas id="graficoEstados" width="400" height="200"></canvas>
+                <div class="graficos-admin">
+                    <div class="grafico-ventas">
+                        <h3>Ingresos por Mes</h3>
+                        <canvas id="graficoVentas" width="600" height="300"></canvas>
                     </div>
                     <div class="actividad-reciente">
                         <h3>Actividad Reciente</h3>
                         <div id="listaActividad" class="lista-actividad">
-                            <!-- Se llena dinámicamente -->
                         </div>
                     </div>
                 </div>
             </section>
 
-            <!-- Sección Paquetes -->
             <section id="seccion-paquetes" class="seccion">
                 <div class="filtros">
                     <input type="text" id="buscarPaquete" placeholder="Buscar por código o destinatario...">
