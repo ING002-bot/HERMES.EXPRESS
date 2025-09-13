@@ -201,9 +201,9 @@ function obtenerEmpleados() {
     
     try {
         $stmt = $pdo->query("
-            SELECT id, nombre, usuario, email, tipo, activo, fecha_registro
+            SELECT id, nombre, usuario, email, tipo, activo, fecha_creacion
             FROM usuarios 
-            WHERE tipo IN ('empleado', 'admin')
+            WHERE tipo IN ('empleado', 'asistente', 'admin')
             ORDER BY nombre
         ");
         $empleados = $stmt->fetchAll();

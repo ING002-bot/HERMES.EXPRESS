@@ -19,7 +19,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Inicializar DataTable
     const usuariosTable = $('#usuariosTable').DataTable({
-        order: [[0, 'desc']], // Ordenar por ID de forma descendente por defecto
+        order: [[0, 'desc']],
         processing: true,
         serverSide: true,
         responsive: true,
@@ -41,104 +41,62 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         },
         ajax: {
-            url: 'php/usuarios.php',
+            url: '/HERMES.EXPRESS/php/usuarios.php',
             type: 'GET',
-            data: function(d) {
-                d.action = 'listar';
-            },
-            dataSrc: function(json) {
-                // Verificar si hay un error en la respuesta
-                if (json.error) {
-                    console.error('Error del servidor:', json.error);
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error',
-                        text: json.error,
-                        confirmButtonText: 'Aceptar'
-                    });
-                    return [];
-                }
-                
-                // Verificar si la respuesta tiene el formato esperado
-                if (json.draw !== undefined && json.data !== undefined) {
-                    return json.data;
-                }
-                
-                // Si no es el formato esperado, intentar mostrarlo de todas formas
-                console.warn('Formato de respuesta inesperado:', json);
-                return [];
-            },
+            data: { action: 'listar' },
             error: function(xhr, error, thrown) {
-                console.error('Error en la petición AJAX:', error);
-                console.error('Estado de la respuesta:', xhr.status, xhr.statusText);
-                console.error('Respuesta del servidor:', xhr.responseText);
-                
-                let errorMessage = 'No se pudieron cargar los datos de usuarios.';
-                
-                if (xhr.responseText) {
-                    try {
-                        const errorResponse = JSON.parse(xhr.responseText);
-                        if (errorResponse.error) {
-                            errorMessage = errorResponse.error;
-                        }
-                    } catch (e) {
-                        errorMessage = xhr.responseText;
-                    }
-                }
-                
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error',
-                    text: errorMessage,
-                    confirmButtonText: 'Reintentar',
-                    showCancelButton: true,
-                    cancelButtonText: 'Cerrar'
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        if (typeof usuariosTable !== 'undefined' && usuariosTable) {
-                            usuariosTable.ajax.reload();
-                        }
-                    }
-                });
-                
-                return [];
+                console.error('Error al cargar los datos:', error);
+                mostrarAlerta('danger', 'Error al cargar los datos de usuarios');
             }
         },
         columns: [
-            { data: 'id', className: 'text-center' },
-            { data: 'usuario', className: 'text-nowrap' },
-            { data: 'nombre', className: 'text-nowrap' },
-            { data: 'email', className: 'text-nowrap' },
+            { 
+                data: 'id',
+                className: 'text-center',
+                width: '5%'
+            },
+            { 
+                data: 'usuario',
+                render: function(data) {
+                    return `<strong>${data}</strong>`;
+                }
+            },
+            { 
+                data: 'nombre',
+                render: function(data) {
+                    return data || '<span class="text-muted">No especificado</span>';
+                }
+            },
+            { 
+                data: 'email',
+                render: function(data) {
+                    return data || '-';
+                }
+            },
             { 
                 data: 'tipo',
                 className: 'text-center',
                 render: function(data) {
                     const tipos = {
-                        'admin': '<span class="badge bg-primary">Administrador</span>',
-                        'asistente': '<span class="badge bg-info text-dark">Asistente</span>',
-                        'empleado': '<span class="badge bg-secondary">Empleado</span>'
+                        'admin': '<span class="badge bg-danger">Administrador</span>',
+                        'asistente': '<span class="badge bg-primary">Asistente</span>'
                     };
                     return tipos[data] || data;
                 }
             },
-            {
+            { 
                 data: 'activo',
                 className: 'text-center',
                 render: function(data) {
-                    return data ? 
-                        '<span class="badge bg-success">Activo</span>' : 
-                        '<span class="badge bg-danger">Inactivo</span>';
+                    return data == 1 
+                        ? '<span class="badge bg-success">Activo</span>' 
+                        : '<span class="badge bg-secondary">Inactivo</span>';
                 }
             },
-            {
+            { 
                 data: 'fecha_creacion',
-                className: 'text-nowrap',
                 render: function(data) {
-                    return new Date(data).toLocaleDateString('es-ES', {
-                        year: 'numeric',
-                        month: 'short',
-                        day: '2-digit'
-                    });
+                    return data ? new Date(data).toLocaleDateString('es-ES') : '-';
                 }
             },
             {
@@ -146,18 +104,17 @@ document.addEventListener('DOMContentLoaded', function() {
                 orderable: false,
                 className: 'text-center',
                 render: function(data, type, row) {
-                    if (row.id === 1) {
-                        return '<span class="text-muted">No editable</span>';
+                    if (row.id === 1 || row.usuario === 'admin') {
+                        return '<span class="badge bg-secondary">Protegido</span>';
                     }
                     
                     return `
-                        <button class="btn btn-sm btn-primary btn-editar" data-id="${row.id}" title="Editar">
+                        <button class="btn btn-sm btn-primary btn-editar me-1" data-id="${row.id}" title="Editar">
                             <i class="fas fa-edit"></i>
                         </button>
-                        <button class="btn btn-sm btn-danger btn-eliminar ms-1" data-id="${row.id}" title="Eliminar">
+                        <button class="btn btn-sm btn-danger btn-eliminar" data-id="${row.id}" title="Eliminar">
                             <i class="fas fa-trash"></i>
-                        </button>
-                    `;
+                        </button>`;
                 }
             }
         ],
@@ -182,11 +139,23 @@ document.addEventListener('DOMContentLoaded', function() {
     $(document).on('click', '.btn-editar', function() {
         const id = $(this).data('id');
         
-        fetch(`../php/usuarios.php?action=obtener&id=${id}`)
+        // Prevenir edición del administrador (ID 1)
+        if (id == 1) {
+            mostrarAlerta('warning', 'No se puede editar el usuario administrador principal');
+            return;
+        }
+        
+        fetch(`/HERMES.EXPRESS/php/usuarios.php?action=obtener&id=${id}`)
             .then(response => response.json())
             .then(data => {
                 if (data.error) {
                     mostrarAlerta('danger', data.error);
+                    return;
+                }
+                
+                // Si por alguna razón llegamos aquí con el admin, prevenir la edición
+                if (data.id == 1) {
+                    mostrarAlerta('warning', 'No se puede editar el usuario administrador principal');
                     return;
                 }
                 
@@ -211,11 +180,19 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Eliminar usuario
-    $(document).on('click', '.btn-eliminar', function() {
+    $(document).on('click', '.btn-eliminar', function(e) {
         const id = $(this).data('id');
         
+        // Prevenir eliminación del administrador (ID 1)
+        if (id == 1) {
+            e.preventDefault();
+            e.stopPropagation();
+            mostrarAlerta('warning', 'No se puede eliminar el usuario administrador principal');
+            return false;
+        }
+        
         if (confirm('¿Está seguro de eliminar este usuario?')) {
-            fetch(`../php/usuarios.php?action=eliminar&id=${id}`, {
+            fetch(`/HERMES.EXPRESS/php/usuarios.php?action=eliminar&id=${id}`, {
                 method: 'DELETE'
             })
             .then(response => response.json())
@@ -232,11 +209,22 @@ document.addEventListener('DOMContentLoaded', function() {
                 mostrarAlerta('danger', 'Error al eliminar el usuario');
             });
         }
+        
+        return false;
     });
 
     // Enviar formulario
     $('#usuarioForm').submit(function(e) {
         e.preventDefault();
+        
+        const id = $('#usuario_id').val();
+        
+        // Prevenir modificación del administrador (ID 1)
+        if (id == 1) {
+            mostrarAlerta('warning', 'No se puede modificar el usuario administrador principal');
+            $('#usuarioModal').modal('hide');
+            return false;
+        }
         
         const formData = {
             usuario: $('#usuario').val(),
@@ -253,7 +241,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         const action = $(this).attr('data-action');
-        let url = `../php/usuarios.php?action=${action}`;
+        let url = `/HERMES.EXPRESS/php/usuarios.php?action=${action}`;
         const method = action === 'crear' ? 'POST' : 'PUT';
         
         if (action === 'actualizar') {

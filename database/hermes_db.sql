@@ -69,10 +69,10 @@ INSERT INTO rutas (nombre, origen, destino, distancia, tiempo_estimado) VALUES
 ('Ruta Sur', 'Centro', 'Sur', 22.3, 60),
 ('Ruta Este', 'Centro', 'Este', 18.7, 50);
 
--- Insertar vehículos (con columna existente empleado_id)
+-- Insertar vehículos (con empleado_id como NULL inicialmente)
 INSERT INTO vehiculos (placa, marca, modelo, capacidad, estado, empleado_id) VALUES
-('ABC-123', 'Toyota', 'Hiace', 1500.00, 'disponible', 2),
-('DEF-456', 'Chevrolet', 'NPR', 3000.00, 'en_ruta', 3),
+('ABC-123', 'Toyota', 'Hiace', 1500.00, 'disponible', NULL),
+('DEF-456', 'Chevrolet', 'NPR', 3000.00, 'en_ruta', NULL),
 ('GHI-789', 'Ford', 'Transit', 2000.00, 'mantenimiento', NULL);
 
 -- Insertar paquetes sin tipo_ruta inicialmente
@@ -86,10 +86,11 @@ ALTER TABLE paquetes
 -- ALTER TABLE paquetes ADD COLUMN tipo_ruta ENUM('urbano','distrital','interprovincial','interurbano') NOT NULL;
 
 -- Ahora insertar datos completos en paquetes
+-- Usando solo empleado_id que existen (1) o NULL
 INSERT INTO paquetes (codigo, remitente, destinatario, direccion_origen, direccion_destino, peso, estado, precio, fecha_envio, empleado_id, tipo_ruta) VALUES
-('HE001', 'Carlos López', 'Ana Martínez', 'Calle 1 #123', 'Carrera 5 #456', 2.5, 'en_transito', 15000.00, CURDATE(), 2, 'urbano'),
+('HE001', 'Carlos López', 'Ana Martínez', 'Calle 1 #123', 'Carrera 5 #456', 2.5, 'en_transito', 15000.00, CURDATE(), 1, 'urbano'),
 ('HE002', 'Pedro Ruiz', 'Sofía Torres', 'Avenida 2 #789', 'Calle 8 #321', 1.2, 'pendiente', 8000.00, CURDATE(), NULL, 'distrital'),
-('HE003', 'Laura Gómez', 'Diego Silva', 'Carrera 3 #654', 'Avenida 9 #987', 3.8, 'entregado', 25000.00, DATE_SUB(CURDATE(), INTERVAL 1 DAY), 3, 'urbano');
+('HE003', 'Laura Gómez', 'Diego Silva', 'Carrera 3 #654', 'Avenida 9 #987', 3.8, 'entregado', 25000.00, DATE_SUB(CURDATE(), INTERVAL 1 DAY), 1, 'urbano');
 
 -- Tabla tarifas_rutas
 CREATE TABLE tarifas_rutas (

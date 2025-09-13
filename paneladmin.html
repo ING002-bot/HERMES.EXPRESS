@@ -38,17 +38,11 @@
                 <li><a href="javascript:void(0)" onclick="mostrarSeccion('paquetes', this)">
                     <span class="icono">📦</span>Paquetes
                 </a></li>
-                <li><a href="javascript:void(0)" onclick="mostrarSeccion('empleados', this)">
-                    <span class="icono">👥</span>Empleados
-                </a></li>
                 <li><a href="javascript:void(0)" onclick="mostrarSeccion('vehiculos', this)">
                     <span class="icono">🚛</span>Vehículos
                 </a></li>
                 <li><a href="javascript:void(0)" onclick="mostrarSeccion('rutas', this)">
                     <span class="icono">🗺️</span>Rutas
-                </a></li>
-                <li><a href="javascript:void(0)" onclick="mostrarSeccion('reportes', this)">
-                    <span class="icono">📊</span>Reportes
                 </a></li>
                 <li><a href="javascript:void(0)" onclick="mostrarSeccion('pagos', this)">
                     <span class="icono">💰</span>Pagos Empleados
@@ -56,11 +50,6 @@
                 <li>
                     <a href="#" onclick="mostrarSeccion('usuarios', this)" class="menu-item">
                         <i class="fas fa-users-cog"></i> Gestión de Usuarios
-                    </a>
-                </li>
-                <li>
-                    <a href="#" onclick="mostrarSeccion('configuracion', this)" class="menu-item">
-                        <i class="fas fa-cog"></i> Configuración
                     </a>
                 </li>
                 <li><a href="javascript:void(0)" onclick="mostrarSeccion('extraccion', this)">
@@ -103,13 +92,6 @@
                         </div>
                     </div>
                     <div class="tarjeta-metrica">
-                        <div class="icono-metrica">👥</div>
-                        <div class="info-metrica">
-                            <h3 id="empleadosActivos">0</h3>
-                            <p>Empleados Activos</p>
-                        </div>
-                    </div>
-                    <div class="tarjeta-metrica">
                         <div class="icono-metrica">🚛</div>
                         <div class="info-metrica">
                             <h3 id="vehiculosOperativos">0</h3>
@@ -132,15 +114,25 @@
             </section>
 
             <section id="seccion-paquetes" class="seccion">
-                <div class="filtros">
-                    <input type="text" id="buscarPaquete" placeholder="Buscar por código o destinatario...">
-                    <select id="filtroEstado">
-                        <option value="">Todos los estados</option>
-                        <option value="pendiente">Pendiente</option>
-                        <option value="en_transito">En Tránsito</option>
-                        <option value="entregado">Entregado</option>
-                        <option value="devuelto">Devuelto</option>
-                    </select>
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div class="filtros" style="margin-right: auto;">
+                        <input type="text" id="buscarPaquete" placeholder="Buscar por código o destinatario...">
+                        <select id="filtroEstado">
+                            <option value="">Todos los estados</option>
+                            <option value="pendiente">Pendiente</option>
+                            <option value="en_transito">En Tránsito</option>
+                            <option value="entregado">Entregado</option>
+                            <option value="devuelto">Devuelto</option>
+                        </select>
+                    </div>
+                    <div class="d-flex">
+                        <button class="btn btn-exportar me-2" onclick="exportarAPDF('paquetes')">
+                            <i class="fas fa-file-pdf me-1"></i> PDF
+                        </button>
+                        <button class="btn btn-exportar me-2" onclick="exportarAExcel('paquetes')">
+                            <i class="fas fa-file-excel me-1"></i> Excel
+                        </button>
+                    </div>
                 </div>
                 
                 <div class="tabla-container">
@@ -163,36 +155,12 @@
                 </div>
             </section>
 
-            <section id="seccion-empleados" class="seccion">
-                <div class="controles-empleados">
-                    <button class="btn btn-primario" onclick="nuevoEmpleado()">+ Nuevo Empleado</button>
-                    <button class="btn btn-secundario" onclick="cargarEmpleados()">🔄 Actualizar</button>
-                </div>
-                
-                <div class="tabla-container">
-                    <table id="tablaEmpleados">
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>Nombre</th>
-                                <th>Usuario</th>
-                                <th>Email</th>
-                                <th>Tipo</th>
-                                <th>Estado</th>
-                                <th>Fecha Registro</th>
-                                <th>Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody id="cuerpoTablaEmpleados">
-                        </tbody>
-                    </table>
-                </div>
-            </section>
-
             <section id="seccion-vehiculos" class="seccion">
-                <div class="controles-vehiculos">
-                    <button class="btn btn-primario" onclick="nuevoVehiculo()">+ Nuevo Vehículo</button>
-                    <button class="btn btn-secundario" onclick="cargarVehiculos()">🔄 Actualizar</button>
+                <div class="controles-vehiculos d-flex justify-content-end align-items-center mb-3">
+                    <button class="btn btn-primario me-2" onclick="nuevoVehiculo()">+ Nuevo Vehículo</button>
+                    <button class="btn btn-exportar" onclick="exportarAExcel('vehiculos')">
+                        <i class="fas fa-file-excel me-1"></i> Excel
+                    </button>
                 </div>
                 
                 <div class="tabla-container">
@@ -216,9 +184,8 @@
             </section>
 
             <section id="seccion-rutas" class="seccion">
-                <div class="controles-rutas">
-                    <button class="btn btn-primario" onclick="nuevaRuta()">+ Nueva Ruta</button>
-                    <button class="btn btn-secundario" onclick="cargarRutas()">🔄 Actualizar</button>
+                <div class="controles-rutas d-flex justify-content-end align-items-center mb-3">
+                    <button class="btn btn-primario me-2" onclick="nuevaRuta()">+ Nueva Ruta</button>
                 </div>
                 
                 <div class="tabla-container">
@@ -240,48 +207,6 @@
                 </div>
             </section>
 
-            <section id="seccion-reportes" class="seccion">
-                <div class="generador-reportes">
-                    <h3>Generar Reportes</h3>
-                    <div class="opciones-reporte">
-                        <div class="form-grupo">
-                            <label>Tipo de Reporte:</label>
-                            <select id="tipoReporte">
-                                <option value="paquetes">Reporte de Paquetes</option>
-                                <option value="ventas">Reporte de Ventas</option>
-                                <option value="empleados">Reporte de Empleados</option>
-                                <option value="vehiculos">Reporte de Vehículos</option>
-                                <option value="empleados_paquetes">Empleados + Paquetes Entregados</option>
-                                <option value="rutas_paquetes">Rutas + Paquetes por Ruta</option>
-                                <option value="vehiculos_entregas">Vehículos + Entregas Realizadas</option>
-                            </select>
-                        </div>
-                        <div class="form-grupo">
-                            <label>Fecha Inicio:</label>
-                            <input type="date" id="reporteFechaInicio">
-                        </div>
-                        <div class="form-grupo">
-                            <label>Fecha Fin:</label>
-                            <input type="date" id="reporteFechaFin">
-                        </div>
-                        <div class="form-grupo">
-                            <label>Formato de Descarga:</label>
-                            <select id="formatoDescarga">
-                                <option value="ver">Solo Ver en Pantalla</option>
-                                <option value="excel">Descargar Excel (.xlsx)</option>
-                                <option value="pdf">Descargar PDF</option>
-                            </select>
-                        </div>
-                        <button class="btn btn-primario" onclick="generarReporte()">Generar Reporte</button>
-                    </div>
-                </div>
-                
-                <div id="vistaReporte" class="vista-reporte">
-                    <div id="contenidoReporte">
-                        <!-- Se llena dinámicamente -->
-                    </div>
-                </div>
-            </section>
 
             <section id="seccion-pagos" class="seccion">
                 <div class="seccion-header">
@@ -368,15 +293,21 @@
 
             <!-- Sección de Gestión de Usuarios -->
             <section id="seccion-usuarios" class="seccion">
+                <div class="controles-usuarios d-flex justify-content-end align-items-center mb-3">
+                    <button class="btn btn-primario me-2" onclick="mostrarFormularioUsuario('nuevo')">
+                        <i class="fas fa-plus"></i> Nuevo Usuario
+                    </button>
+                    <button class="btn btn-exportar me-2" onclick="exportarAPDF('usuarios')">
+                        <i class="fas fa-file-pdf me-1"></i> PDF
+                    </button>
+                    <button class="btn btn-exportar me-2" onclick="exportarAExcel('usuarios')">
+                        <i class="fas fa-file-excel me-1"></i> Excel
+                    </button>
+                </div>
                 <div class="seccion-header">
                     <h2>Gestión de Usuarios</h2>
                     <div class="acciones">
-                        <button id="btnNuevoUsuario" class="btn btn-primario">
-                            <i class="fas fa-user-plus"></i> Nuevo Usuario
-                        </button>
-                        <button id="btnActualizarUsuarios" class="btn btn-secundario">
-                            <i class="fas fa-sync-alt"></i> Actualizar
-                        </button>
+                        <!-- Botón de actualización eliminado -->
                     </div>
                 </div>
 
@@ -456,38 +387,6 @@
                     </div>
                 </div>
             </div>
-
-            <section id="seccion-configuracion" class="seccion">
-                <div class="seccion-header">
-                    <h2>Configuración del Sistema</h2>
-                    <div class="acciones">
-                        <button class="btn btn-primario" onclick="guardarConfigSistema()">💾 Guardar</button>
-                    </div>
-                </div>
-
-                <div class="config-grid">
-                    <div class="config-card">
-                        <h3>Información de la Empresa</h3>
-                        <form id="formEmpresa">
-                            <div class="form-group">
-                                <label>Nombre de la Empresa</label>
-                                <input type="text" value="Hermes Express" required>
-                            </div>
-                            <div class="form-group">
-                                <label>Dirección</label>
-                                <input type="text" value="Calle Principal #123" required>
-                            </div>
-                            <div class="form-group">
-                                <label>Teléfono</label>
-                        </div>
-                        <div class="config-item">
-                            <label>
-                                <input type="checkbox"> Modo Mantenimiento
-                            </label>
-                        </div>
-                    </div>
-                </div>
-            </section>
 
             <div id="modalTarifas" class="modal">
                 <div class="modal-contenido">
@@ -1249,24 +1148,46 @@
         }
         
         function cargarVehiculos() {
-            fetch('php/admin.php?accion=vehiculos')
+            console.log('Iniciando carga de vehículos...');
+            return fetch('php/admin.php?accion=vehiculos')
                 .then(response => {
+                    console.log('Respuesta recibida, estado:', response.status);
                     if (!response.ok) {
-                        throw new Error('Error en la respuesta del servidor');
+                        throw new Error(`Error en la respuesta del servidor: ${response.status} ${response.statusText}`);
                     }
-                    return response.json();
+                    return response.json().catch(e => {
+                        console.error('Error al parsear JSON:', e);
+                        throw new Error('La respuesta no es un JSON válido');
+                    });
                 })
                 .then(data => {
-                    if (data.exito) {
-                        mostrarVehiculos(data.vehiculos);
+                    console.log('Datos recibidos de vehículos:', data);
+                    if (data && data.exito) {
+                        if (Array.isArray(data.datos)) {
+                            console.log(`Mostrando ${data.datos.length} vehículos`);
+                            mostrarVehiculos(data.datos);
+                        } else {
+                            console.error('Los datos no son un array:', data.datos);
+                            throw new Error('Formato de datos incorrecto: se esperaba un array de vehículos');
+                        }
                     } else {
-                        console.error('Error al cargar vehículos:', data.mensaje);
-                        alert('Error al cargar vehículos: ' + (data.mensaje || 'Error desconocido'));
+                        const errorMsg = data && data.mensaje ? data.mensaje : 'Error desconocido';
+                        console.error('Error en la respuesta:', errorMsg);
+                        throw new Error(errorMsg);
                     }
                 })
                 .catch(error => {
-                    console.error('Error al cargar vehículos:', error);
-                    alert('Error al cargar vehículos: ' + error.message);
+                    console.error('Error en cargarVehiculos:', error);
+                    const tbody = document.getElementById('cuerpoTablaVehiculos');
+                    if (tbody) {
+                        tbody.innerHTML = `
+                            <tr>
+                                <td colspan="8" class="error">
+                                    Error al cargar vehículos: ${error.message}
+                                </td>
+                            </tr>`;
+                    }
+                    throw error; // Re-lanzar para manejo posterior si es necesario
                 });
         }
         
@@ -1473,8 +1394,7 @@
                 'vehiculos': 'Gestión de Vehículos',
                 'rutas': 'Gestión de Rutas',
                 'reportes': 'Reportes',
-                'pagos': 'Pagos Empleados',
-                'configuracion': 'Configuración'
+                'pagos': 'Pagos Empleados'
             };
             document.getElementById('tituloSeccion').textContent = titulos[seccion] || 'Panel de Administración';
             
@@ -1607,8 +1527,14 @@
     <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
     
+    <!-- Bibliotecas para exportación -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
     <!-- Nuestros scripts -->
     <script src="js/gestion_usuarios.js"></script>
+    <script src="js/exportar.js"></script>
     
     <!-- Inicialización de la página -->
     <script>
