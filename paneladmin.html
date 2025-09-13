@@ -777,6 +777,56 @@
             location.reload();
         }
         
+        // Función para mostrar el formulario de usuario
+        function mostrarFormularioUsuario(accion, id = '') {
+            // Verificar si Bootstrap está cargado
+            if (typeof bootstrap === 'undefined' || !bootstrap.Modal) {
+                console.error('Bootstrap no está cargado correctamente');
+                alert('Error: No se pudo cargar el formulario. Por favor, recarga la página.');
+                return;
+            }
+            
+            const modalElement = document.getElementById('usuarioModal');
+            if (!modalElement) {
+                console.error('No se encontró el elemento del modal');
+                return;
+            }
+            
+            const titulo = document.getElementById('usuarioModalLabel');
+            const form = document.getElementById('usuarioForm');
+            
+            if (!titulo || !form) {
+                console.error('No se encontraron los elementos necesarios del formulario');
+                return;
+            }
+            
+            try {
+                const modal = new bootstrap.Modal(modalElement);
+                
+                if (accion === 'nuevo') {
+                    titulo.textContent = 'Nuevo Usuario';
+                    form.reset();
+                    // Establecer valores por defecto
+                    const usuarioId = document.getElementById('usuario_id');
+                    const tipo = document.getElementById('tipo');
+                    const activo = document.getElementById('activo');
+                    
+                    if (usuarioId) usuarioId.value = '';
+                    if (tipo) tipo.value = 'empleado';
+                    if (activo) activo.checked = true;
+                } else if (accion === 'editar') {
+                    titulo.textContent = 'Editar Usuario';
+                    // Cargar datos del usuario con el ID proporcionado
+                    console.log('Editando usuario con ID:', id);
+                }
+                
+                modal.show();
+            } catch (error) {
+                console.error('Error al mostrar el formulario:', error);
+                alert('Ocurrió un error al intentar abrir el formulario');
+            }
+        }
+        
         // Función para nuevos empleados, vehículos, rutas
         function nuevoEmpleado() {
             // Resetear el formulario
@@ -1108,9 +1158,9 @@
         
         function mostrarEmpleados(empleados) {
             console.log('Mostrando empleados:', empleados);
-            const tbody = document.getElementById('cuerpoTablaEmpleados');
+            const tbody = document.querySelector('#usuariosTable tbody');
             if (!tbody) {
-                console.error('No se encontró el elemento tbody con ID "cuerpoTablaEmpleados"');
+                console.error('No se encontró el elemento tbody dentro de la tabla con ID "usuariosTable"');
                 return;
             }
             

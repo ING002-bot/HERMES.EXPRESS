@@ -50,57 +50,34 @@ function exportarAPDF(seccion) {
         doc.setTextColor(100);
         doc.text(`Generado el: ${fecha}`, 14, 30);
         
-        // Obtener datos de la tabla
-        const headers = [];
-        const data = [];
-        
-        // Obtener encabezados
-        const headerRow = tabla.querySelector('thead tr');
-        if (headerRow) {
-            const ths = headerRow.querySelectorAll('th');
-            ths.forEach(th => {
-                if (th.style.display !== 'none') {
-                    headers.push(th.innerText.trim());
-                }
-            });
-        }
-        
-        // Obtener filas de datos
-        const rows = tabla.querySelectorAll('tbody tr');
-        rows.forEach(row => {
-            const rowData = [];
-            const tds = row.querySelectorAll('td');
-            tds.forEach((td, index) => {
-                if (td.style.display !== 'none') {
-                    rowData.push(td.innerText.trim());
-                }
-            });
-            if (rowData.length > 0) {
-                data.push(rowData);
-            }
-        });
-        
-        // Crear tabla en el PDF
+        // Agregar la tabla al PDF
         doc.autoTable({
-            head: [headers],
-            body: data,
+            html: '#' + tabla.id,
             startY: 40,
             theme: 'grid',
             headStyles: {
                 fillColor: [41, 128, 185],
                 textColor: 255,
-                fontStyle: 'bold',
-                fontSize: 9
+                fontStyle: 'bold'
+            },
+            alternateRowStyles: {
+                fillColor: [245, 245, 245]
             },
             styles: {
-                fontSize: 8,
-                cellPadding: 2,
-                overflow: 'linebreak',
-                cellWidth: 'wrap'
+                cellPadding: 3,
+                fontSize: 10,
+                valign: 'middle'
+            },
+            columnStyles: {
+                0: { cellWidth: 'auto' },
+                1: { cellWidth: 'auto' },
+                2: { cellWidth: 'auto' },
+                3: { cellWidth: 'auto' },
+                4: { cellWidth: 'auto' }
             },
             margin: { top: 40 },
             didDrawPage: function(data) {
-                // Agregar pie de página
+                // Footer con número de página
                 const pageSize = doc.internal.pageSize;
                 const pageHeight = pageSize.height ? pageSize.height : pageSize.getHeight();
                 doc.text(`Página ${data.pageNumber}`, data.settings.margin.left, pageHeight - 10);
@@ -160,45 +137,31 @@ function exportarAExcel(seccion) {
             return;
         }
         
-        // Crear un nuevo libro de trabajo
+        // Crear un nuevo libro de Excel
         const wb = XLSX.utils.book_new();
         
-        // Obtener datos de la tabla
-        const data = [];
-        
-        // Obtener encabezados
-        const headerRow = [];
-        const ths = tabla.querySelectorAll('thead th');
-        ths.forEach(th => {
-            if (th.style.display !== 'none') {
-                headerRow.push(th.innerText.trim());
-            }
-        });
-        data.push(headerRow);
-        
-        // Obtener filas de datos
-        const rows = tabla.querySelectorAll('tbody tr');
-        rows.forEach(row => {
-            const rowData = [];
-            const tds = row.querySelectorAll('td');
-            tds.forEach(td => {
-                if (td.style.display !== 'none') {
-                    rowData.push(td.innerText.trim());
-                }
-            });
-            if (rowData.length > 0) {
-                data.push(rowData);
-            }
-        });
-        
-        // Convertir datos a hoja de cálculo
-        const ws = XLSX.utils.aoa_to_sheet(data);
+        // Convertir la tabla a una hoja de cálculo
+        const ws = XLSX.utils.table_to_sheet(tabla);
         
         // Ajustar el ancho de las columnas
         const colWidths = [];
-        data[0].forEach(() => {
-            colWidths.push({ wch: 20 }); // Ancho fijo para todas las columnas
-        });
+        const range = XLSX.utils.decode_range(ws['!ref']);
+        
+        for (let C = range.s.c; C <= range.e.c; ++C) {
+            let maxLength = 0;
+            for (let R = range.s.r; R <= range.e.r; ++R) {
+                const cell = ws[XLSX.utils.encode_cell({r: R, c: C})];
+                if (cell && cell.v) {
+                    const cellLength = cell.v.toString().length;
+                    if (cellLength > maxLength) {
+                        maxLength = cellLength;
+                    }
+                }
+            }
+            // Ajustar el ancho de la columna (mínimo 10, máximo 50)
+            colWidths.push({ wch: Math.min(Math.max(maxLength + 2, 10), 50) });
+        }
+        
         ws['!cols'] = colWidths;
         
         // Agregar la hoja al libro
@@ -238,11 +201,6 @@ function mostrarAlerta(tipo, mensaje) {
     }
 }
 
-// Asegurarse de que las funciones estén disponibles globalmente
-window.exportarAPDF = exportarAPDF;
-window.exportarAExcel = exportarAExcel;
-}
-
 // Función para exportar pagos
 function exportarPagos() {
     // Obtener la tabla de pagos
@@ -258,6 +216,8 @@ function exportarPagos() {
 }
 
 // Asegurarse de que las funciones estén disponibles globalmente
-window.exportarAPDF = exportarAPDF;
-window.exportarAExcel = exportarAExcel;
-window.exportarPagos = exportarPagos;
+if (typeof window !== 'undefined') {
+    window.exportarAPDF = exportarAPDF;
+    window.exportarAExcel = exportarAExcel;
+    window.exportarPagos = exportarPagos;
+}
