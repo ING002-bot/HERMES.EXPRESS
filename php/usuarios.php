@@ -32,6 +32,23 @@ try {
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
     switch ($action) {
+        case 'obtener':
+            $id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+            if ($id <= 0) {
+                throw new Exception('ID de usuario no válido');
+            }
+            
+            $stmt = $pdo->prepare("SELECT id, usuario, nombre, email, tipo, activo FROM usuarios WHERE id = ?");
+            $stmt->execute([$id]);
+            $usuario = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if (!$usuario) {
+                throw new Exception('Usuario no encontrado');
+            }
+            
+            echo json_encode($usuario);
+            break;
+            
         case 'listar':
             try {
                 // Obtener el total de registros
