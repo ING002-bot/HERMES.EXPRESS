@@ -226,21 +226,42 @@ document.addEventListener('DOMContentLoaded', function() {
             return false;
         }
         
+        // Validar campos requeridos
+        const usuario = $('#usuario').val().trim();
+        const nombre = $('#nombre').val().trim();
+        const email = $('#email').val().trim();
+        const clave = $('#clave').val();
+        
+        if (!usuario || !nombre || !email) {
+            mostrarAlerta('warning', 'Por favor complete todos los campos requeridos');
+            return false;
+        }
+        
+        // Si es un nuevo usuario, validar la contraseña
+        if (!id && !clave) {
+            mostrarAlerta('warning', 'La contraseña es obligatoria para nuevos usuarios');
+            return false;
+        }
+        
         const formData = {
-            usuario: $('#usuario').val(),
-            nombre: $('#nombre').val(),
-            email: $('#email').val(),
+            usuario: usuario,
+            nombre: nombre,
+            email: email,
             tipo: $('#tipo').val(),
             activo: $('#activo').is(':checked') ? 1 : 0
         };
         
         // Solo incluir la contraseña si se proporcionó
-        const clave = $('#clave').val();
         if (clave) {
+            if (clave.length < 6) {
+                mostrarAlerta('warning', 'La contraseña debe tener al menos 6 caracteres');
+                return false;
+            }
             formData.clave = clave;
         }
         
-        const action = $(this).attr('data-action');
+        // Determinar la acción (crear o actualizar)
+        const action = id ? 'actualizar' : 'crear';
         let url = `/HERMES.EXPRESS/php/usuarios.php?action=${action}`;
         const method = action === 'crear' ? 'POST' : 'PUT';
         

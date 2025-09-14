@@ -203,16 +203,23 @@ function mostrarAlerta(tipo, mensaje) {
 
 // Función para exportar pagos
 function exportarPagos() {
-    // Obtener la tabla de pagos
-    const tabla = document.getElementById('tablaPagos');
+    // Obtener la tabla de pagos (usando el ID correcto del thead de la tabla)
+    const tabla = document.querySelector('.pagos-empleados table');
     if (!tabla) {
         console.error('No se encontró la tabla de pagos');
+        mostrarMensaje('error', 'No se pudo encontrar la tabla de pagos para exportar');
         return;
     }
     
-    // Usar SheetJS para exportar a Excel
-    const wb = XLSX.utils.table_to_book(tabla, {sheet: 'Pagos'});
-    XLSX.writeFile(wb, `reporte_pagos_${new Date().toISOString().split('T')[0]}.xlsx`);
+    try {
+        // Usar SheetJS para exportar a Excel
+        const wb = XLSX.utils.table_to_book(tabla, {sheet: 'Pagos'});
+        XLSX.writeFile(wb, `reporte_pagos_${new Date().toISOString().split('T')[0]}.xlsx`);
+        mostrarMensaje('éxito', 'Los pagos se exportaron correctamente');
+    } catch (error) {
+        console.error('Error al exportar pagos:', error);
+        mostrarMensaje('error', 'Ocurrió un error al exportar los pagos');
+    }
 }
 
 // Asegurarse de que las funciones estén disponibles globalmente

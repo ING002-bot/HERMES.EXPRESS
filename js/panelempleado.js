@@ -4,9 +4,43 @@ let misPaquetes = [];
 let miVehiculo = {};
 let miRuta = {};
 
+// Configurar eventos específicos del panel de empleado
+function configurarEventosEmpleado() {
+    console.log('Configurando eventos del empleado...');
+    
+    // Configurar el botón de cerrar sesión
+    const btnCerrarSesion = document.querySelector('.btn-salir');
+    if (btnCerrarSesion) {
+        btnCerrarSesion.addEventListener('click', cerrarSesion);
+    }
+    
+    // Configurar el botón de menú móvil
+    const btnMenuMovil = document.getElementById('btnMenuMovil');
+    const barraLateral = document.getElementById('barraLateral');
+    const contenidoPrincipal = document.querySelector('.contenido-principal');
+    
+    if (btnMenuMovil && barraLateral && contenidoPrincipal) {
+        btnMenuMovil.addEventListener('click', function() {
+            barraLateral.classList.toggle('activa');
+            contenidoPrincipal.classList.toggle('desplazado');
+        });
+    }
+    
+    // Configurar el botón de notificaciones
+    const btnNotificaciones = document.querySelector('.btn-notificaciones');
+    if (btnNotificaciones) {
+        btnNotificaciones.addEventListener('click', verNotificaciones);
+    }
+}
+
 // Inicializar cuando carga la página
 document.addEventListener('DOMContentLoaded', function() {
     verificarSesion();
+    
+    // Inicializar el mapa si existe el contenedor
+    if (document.getElementById('map')) {
+        initMap();
+    }
     
     // Función para inicializar la aplicación cuando el mapa esté listo
     function initializeApp() {
@@ -40,798 +74,638 @@ function verificarSesion() {
     // Los datos del empleado se cargarán desde el servidor
 }
 
-// Cargar datos específicos del empleado
-function cargarDatosEmpleado() {
-    cargarResumenEmpleado();
-    cargarMisPaquetes();
-    cargarMiVehiculo();
-    cargarMiRuta();
-    cargarTareasHoy();
-    cargarEstadisticasEmpleado();
-}
-
-// Cargar resumen del empleado
-function cargarResumenEmpleado() {
-    fetch('php/empleado.php?accion=resumen', {
-        headers: {
-            'Content-Type': 'application/json',
-            'X-Requested-With': 'XMLHttpRequest'
-        },
-        credentials: 'same-origin'
-    })
-    .then(response => {
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const contentType = response.headers.get('content-type');
-        if (!contentType || !contentType.includes('application/json')) {
-            return response.text().then(text => {
-                console.error('Respuesta no es JSON:', text);
-                throw new Error('Respuesta del servidor no es JSON');
-            });
-        }
-        return response.json();
-    })
-    .then(data => {
-        if (data && data.exito) {
-            if (document.getElementById('misPaquetes')) document.getElementById('misPaquetes').textContent = data.datos.mis_paquetes || '0';
-            if (document.getElementById('enRuta')) document.getElementById('enRuta').textContent = data.datos.en_ruta || '0';
-            if (document.getElementById('entregadosHoy')) document.getElementById('entregadosHoy').textContent = data.datos.entregados_hoy || '0';
-            if (document.getElementById('pendientes')) document.getElementById('pendientes').textContent = data.datos.pendientes || '0';
-        } else {
-            console.error('Error en la respuesta del servidor:', data);
-        }
-    })
-    .catch(error => {
-        console.error('Error al cargar el resumen:', error);
-        // Mostrar datos de prueba como respaldo
-        if (document.getElementById('misPaquetes')) document.getElementById('misPaquetes').textContent = '0';
-        if (document.getElementById('enRuta')) document.getElementById('enRuta').textContent = '0';
-        if (document.getElementById('entregadosHoy')) document.getElementById('entregadosHoy').textContent = '0';
-        if (document.getElementById('pendientes')) document.getElementById('pendientes').textContent = '0';
-    });
-}
-
-// Cargar mis paquetes
-function cargarMisPaquetes() {
-    fetch('php/empleado.php?accion=mis_paquetes', {
-        headers: {
-            'Content-Type': 'application/json',
-            'X-Requested-With': 'XMLHttpRequest'
-        },
-        credentials: 'same-origin'
-    })
-    .then(handleJsonResponse)
-    .then(data => {
-        if (data && data.exito) {
-            misPaquetes = Array.isArray(data.datos) ? data.datos : [];
-            mostrarMisPaquetes(misPaquetes);
-        } else {
-            console.error('Error en la respuesta de mis paquetes:', data);
-            mostrarMisPaquetes([]); // Mostrar lista vacía en caso de error
-        }
-    })
-    .catch(error => {
-        console.error('Error al cargar mis paquetes:', error);
-        mostrarMisPaquetes([]); // Mostrar lista vacía en caso de error
-    });
-}
-
-// Función auxiliar para manejar respuestas JSON
-function handleJsonResponse(response) {
-    if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    const contentType = response.headers.get('content-type');
-    if (!contentType || !contentType.includes('application/json')) {
-        return response.text().then(text => {
-            console.error('Respuesta no es JSON:', text);
-            throw new Error('Respuesta del servidor no es JSON');
-        });
-    }
-    return response.json();
-}
-
-// Mostrar mis paquetes en la tabla
-function mostrarMisPaquetes(paquetes) {
-    const tbody = document.getElementById('cuerpoTablaMisPaquetes');
-    tbody.innerHTML = '';
-    
-    paquetes.forEach(paquete => {
-        const fila = document.createElement('tr');
-        fila.innerHTML = `
-            <td>${paquete.codigo}</td>
-            <td>${paquete.destinatario}</td>
-            <td>${paquete.direccion_destino}</td>
-            <td><span class="estado estado-${paquete.estado}">${formatearEstado(paquete.estado)}</span></td>
-            <td>${paquete.peso} kg</td>
-            <td>${formatearFecha(paquete.fecha_envio)}</td>
-            <td>
-                <button class="btn btn-pequeno btn-primario" onclick="iniciarEntrega('${paquete.codigo}')">Entregar</button>
-                <button class="btn btn-pequeno btn-secundario" onclick="verDetallePaquete(${paquete.id})">Ver</button>
-            </td>
-        `;
-        tbody.appendChild(fila);
-    });
-}
-
-// Cargar información del vehículo asignado
-function cargarMiVehiculo() {
-    fetch('php/empleado.php?accion=mi_vehiculo', {
-        headers: {
-            'Content-Type': 'application/json',
-            'X-Requested-With': 'XMLHttpRequest'
-        },
-        credentials: 'same-origin'
-    })
-    .then(handleJsonResponse)
-    .then(data => {
-        if (data && data.exito && data.datos) {
-            miVehiculo = data.datos;
-            mostrarMiVehiculo(data.datos);
-        } else {
-            console.error('No se pudo cargar el vehículo:', data);
-            mostrarSinVehiculo();
-        }
-    })
-    .catch(error => {
-        console.error('Error al cargar el vehículo:', error);
-        mostrarSinVehiculo();
-    });
-}
-
-// Mostrar información del vehículo
-function mostrarMiVehiculo(vehiculo) {
-    const container = document.getElementById('infoVehiculo');
-    container.innerHTML = `
-        <div class="vehiculo-card">
-            <h4>${vehiculo.placa}</h4>
-            <p><strong>Marca:</strong> ${vehiculo.marca} ${vehiculo.modelo}</p>
-            <p><strong>Capacidad:</strong> ${vehiculo.capacidad} kg</p>
-            <p><strong>Estado:</strong> <span class="estado estado-${vehiculo.estado}">${formatearEstado(vehiculo.estado)}</span></p>
-        </div>
-    `;
-}
-
-// Mostrar cuando no hay vehículo asignado
-function mostrarSinVehiculo() {
-    const container = document.getElementById('infoVehiculo');
-    container.innerHTML = `
-        <div class="vehiculo-card">
-            <h4>Sin Vehículo Asignado</h4>
-            <p>Contacta al administrador para asignación de vehículo</p>
-        </div>
-    `;
-}
-
-// Cargar tareas del día
-function cargarTareasHoy() {
-    const tareas = [
-        {
-            titulo: 'Entregar paquete HE001',
-            descripcion: 'Dirección: Calle 1 #123',
-            prioridad: 'alta',
-            tiempo: '09:00 AM'
-        },
-        {
-            titulo: 'Recoger paquetes en centro',
-            descripcion: 'Punto de recolección principal',
-            prioridad: 'media',
-            tiempo: '11:30 AM'
-        },
-        {
-            titulo: 'Entregar paquete HE002',
-            descripcion: 'Dirección: Carrera 5 #456',
-            prioridad: 'baja',
-            tiempo: '02:00 PM'
-        }
-    ];
-    
-    mostrarTareas(tareas);
-}
-
-// Mostrar tareas
-function mostrarTareas(tareas) {
-    const container = document.getElementById('listaTareas');
-    container.innerHTML = '';
-    
-    tareas.forEach(tarea => {
-        const div = document.createElement('div');
-        div.className = `tarea-item ${tarea.prioridad === 'alta' ? 'tarea-urgente' : ''}`;
-        div.innerHTML = `
-            <div class="tarea-info">
-                <h4>${tarea.titulo}</h4>
-                <p>${tarea.descripcion}</p>
-                <small>⏰ ${tarea.tiempo}</small>
-            </div>
-            <span class="tarea-prioridad prioridad-${tarea.prioridad}">${tarea.prioridad.toUpperCase()}</span>
-        `;
-        container.appendChild(div);
-    });
-}
-
-// Cargar mi ruta del día
-function cargarMiRuta() {
-    fetch('php/empleado.php?accion=mi_ruta', {
-        headers: {
-            'Content-Type': 'application/json',
-            'X-Requested-With': 'XMLHttpRequest'
-        },
-        credentials: 'same-origin'
-    })
-    .then(handleJsonResponse)
-    .then(data => {
-        if (data && data.exito) {
-            miRuta = data.datos || {};
-            mostrarDetallesRuta(miRuta);
-            actualizarEntregasEnMapa();
-        } else {
-            console.error('No se pudo cargar la ruta:', data);
-            // Mostrar ruta vacía
-            miRuta = { paradas: [] };
-            mostrarDetallesRuta(miRuta);
-        }
-    })
-    .catch(error => {
-        console.error('Error al cargar la ruta:', error);
-        // Mostrar ruta vacía en caso de error
-        miRuta = { paradas: [] };
-        mostrarDetallesRuta(miRuta);
-    });
-}
-
-// La función initMap ahora está en panelempleado.html
-
-// Iniciar el seguimiento de ubicación
-function iniciarSeguimientoUbicacion() {
-    const infoPanel = document.getElementById('info-panel');
-    
-    if (!navigator.geolocation) {
-        mostrarNotificacion('Tu navegador no soporta geolocalización', 'error');
-        return;
-    }
-    
-    // Mostrar mensaje de carga
-    infoPanel.innerHTML = '<p>Buscando tu ubicación...</p>';
-    
-    // Opciones para la geolocalización
-    const opciones = {
-        enableHighAccuracy: true,  // Alta precisión (GPS)
-        timeout: 10000,           // Tiempo máximo de espera (10 segundos)
-        maximumAge: 0             // No usar caché de ubicación
-    };
-    
-    // Función para manejar la actualización de posición
-    const actualizarUbicacion = (position) => {
-        const pos = {
-            lat: position.coords.latitude,
-            lng: position.coords.longitude
-        };
-        
-        console.log('Nueva posición:', pos);
-        
-        // Centrar el mapa en la ubicación actual con zoom más cercano
-        map.setCenter(pos);
-        map.setZoom(16);
-        
-        // Crear o actualizar el marcador de ubicación actual
-        if (!currentLocationMarker) {
-            currentLocationMarker = new google.maps.Marker({
-                position: pos,
-                map: map,
-                icon: {
-                    path: google.maps.SymbolPath.CIRCLE,
-                    scale: 10,
-                    fillColor: '#0F9D58',
-                    fillOpacity: 1,
-                    strokeWeight: 2,
-                    strokeColor: 'white'
-                },
-                title: 'Tú estás aquí',
-                animation: google.maps.Animation.DROP
-            });
-            
-            // Agregar círculo de precisión
-            new google.maps.Circle({
-                strokeColor: '#0F9D58',
-                strokeOpacity: 0.3,
-                strokeWeight: 1,
-                fillColor: '#0F9D58',
-                fillOpacity: 0.1,
-                map: map,
-                center: pos,
-                radius: position.coords.accuracy
-            });
-        } else {
-            currentLocationMarker.setPosition(pos);
-        }
-        
-        // Actualizar panel de información
-        infoPanel.innerHTML = `
-            <button id="iniciarRutaBtn" class="btn btn-pequeno" disabled>Ruta en curso</button>
-            <div class="info-ubicacion">
-                <p><strong>Precisión:</strong> ${Math.round(position.coords.accuracy)} metros</p>
-                <p><small>Actualizado: ${new Date().toLocaleTimeString()}</small></p>
-            </div>
-        `;
-        
-        // Actualizar entregas en el mapa
-        actualizarEntregasEnMapa();
-    };
-    
-    // Función para manejar errores de geolocalización
-    const manejarError = (error) => {
-        let mensajeError = 'No se pudo obtener tu ubicación';
-        switch(error.code) {
-            case error.PERMISSION_DENIED:
-                mensajeError = 'Permiso de ubicación denegado. Por favor, habilita la ubicación para continuar.';
-                break;
-            case error.POSITION_UNAVAILABLE:
-                mensajeError = 'La información de ubicación no está disponible';
-                break;
-            case error.TIMEOUT:
-                mensajeError = 'Tiempo de espera agotado al obtener la ubicación';
-                break;
-        }
-        console.error('Error de geolocalización:', error);
-        infoPanel.innerHTML = `
-            <div class="error-ubicacion">
-                <p>${mensajeError}</p>
-                <button onclick="iniciarSeguimientoUbicacion()" class="btn btn-pequeno">Reintentar</button>
-            </div>
-        `;
-    };
-    
-    // Detener cualquier seguimiento anterior
-    if (watchId) {
-        navigator.geolocation.clearWatch(watchId);
-    }
-    
-    // Obtener la posición actual
-    navigator.geolocation.getCurrentPosition(
-        (position) => {
-            actualizarUbicacion(position);
-            
-            // Iniciar seguimiento continuo
-            watchId = navigator.geolocation.watchPosition(
-                actualizarUbicacion,
-                manejarError,
-                opciones
-            );
-        },
-        manejarError,
-        opciones
-    );
-}
-
-// Actualizar las entregas en el mapa
-function actualizarEntregasEnMapa() {
-    // Limpiar marcadores anteriores
-    deliveryMarkers.forEach(marker => marker.setMap(null));
-    deliveryMarkers = [];
-    
-    if (!miRuta.paradas || !Array.isArray(miRuta.paradas)) return;
-    
-    // Agregar marcadores para cada parada
-    miRuta.paradas.forEach((parada, index) => {
-        const marker = new google.maps.Marker({
-            position: { lat: parseFloat(parada.lat), lng: parseFloat(parada.lng) },
-            map: map,
-            title: `Entrega #${index + 1}: ${parada.direccion}`,
-            icon: {
-                path: google.maps.SymbolPath.CIRCLE,
-                scale: 8,
-                fillColor: '#4285F4',
-                fillOpacity: 1,
-                strokeWeight: 2,
-                strokeColor: 'white'
+// Función para cerrar sesión
+function cerrarSesion() {
+    fetch('php/cerrar_sesion.php')
+        .then(response => response.json())
+        .then(data => {
+            if (data.exito) {
+                window.location.href = 'login.html';
+            } else {
+                mostrarNotificacion('Error al cerrar sesión', 'error');
             }
+        })
+        .catch(error => {
+            console.error('Error al cerrar sesión:', error);
+            mostrarNotificacion('Error al cerrar sesión', 'error');
         });
-        
-        // Agregar ventana de información
-        const infoWindow = new google.maps.InfoWindow({
-            content: `
-                <div>
-                    <h4>Entrega #${index + 1}</h4>
-                    <p><strong>Dirección:</strong> ${parada.direccion}</p>
-                    <p><strong>Cliente:</strong> ${parada.cliente || 'N/A'}</p>
-                    <p><strong>Teléfono:</strong> ${parada.telefono || 'N/A'}</p>
-                    <button class="btn btn-pequeno btn-primario" onclick="marcarComoEntregado(${index})">
-                        Marcar como entregado
-                    </button>
-                </div>
-            `
-        });
-        
-        marker.addListener('click', () => {
-            infoWindow.open(map, marker);
-        });
-        
-        deliveryMarkers.push(marker);
-    });
-    
-    // Si hay ubicación actual, actualizar la ruta
-    if (currentPosition) {
-        actualizarRutaHaciaProximaEntrega();
-    }
 }
 
-// Actualizar la ruta hacia la próxima entrega
-function actualizarRutaHaciaProximaEntrega() {
-    if (!currentPosition || !miRuta.paradas || miRuta.paradas.length === 0) return;
-    
-    // Encontrar la próxima entrega no completada
-    const proximaParada = miRuta.paradas.find(p => !p.entregado);
-    if (!proximaParada) return;
-    
-    const destino = {
-        lat: parseFloat(proximaParada.lat),
-        lng: parseFloat(proximaParada.lng)
-    };
-    
-    const request = {
-        origin: currentPosition,
-        destination: destino,
-        travelMode: 'DRIVING',
-        unitSystem: google.maps.UnitSystem.METRIC
-    };
-    
-    directionsService.route(request, (result, status) => {
-        if (status === 'OK') {
-            directionsRenderer.setDirections(result);
-            
-            // Actualizar información de distancia y tiempo
-            const route = result.routes[0].legs[0];
-            document.getElementById('distancia').textContent = `Distancia: ${route.distance.text}`;
-            document.getElementById('tiempo').textContent = `Tiempo estimado: ${route.duration.text}`;
-            
-            // Actualizar la ruta cada minuto o cuando cambie significativamente la ubicación
-            setTimeout(actualizarRutaHaciaProximaEntrega, 60000);
-        }
-    });
-}
-
-// Marcar una entrega como completada
-function marcarComoEntregado(index) {
-    if (!miRuta.paradas || !miRuta.paradas[index]) return;
-    
-    // Aquí iría la lógica para marcar como entregado en el servidor
-    fetch('php/empleado.php', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: `accion=marcar_entregado&id_entrega=${miRuta.paradas[index].id}`
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.exito) {
-            miRuta.paradas[index].entregado = true;
-            mostrarNotificacion('Entrega marcada como completada', 'exito');
-            actualizarEntregasEnMapa();
-        } else {
-            mostrarNotificacion('Error al marcar la entrega', 'error');
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        mostrarNotificacion('Error al conectar con el servidor', 'error');
-    });
-}
-
-// Mostrar detalles de la ruta
-function mostrarDetallesRuta(ruta) {
-    const detallesRuta = document.getElementById('detallesRuta');
-    if (!ruta) {
-        detallesRuta.innerHTML = '<p>No hay ruta asignada para hoy.</p>';
-        return;
-    }
-    
-    const entregasPendientes = ruta.paradas ? ruta.paradas.filter(p => !p.entregado).length : 0;
-    const entregasCompletadas = ruta.paradas ? ruta.paradas.length - entregasPendientes : 0;
-    
-    let html = `
-        <div class="detalle-ruta">
-            <h4>${ruta.nombre || 'Ruta del Día'}</h4>
-            <p><strong>Origen:</strong> ${ruta.origen || 'No especificado'}</p>
-            <p><strong>Estado:</strong> ${entregasPendientes === 0 ? 'Completada' : 'En curso'}</p>
-            <p><strong>Entregas completadas:</strong> ${entregasCompletadas} de ${entregasCompletadas + entregasPendientes}</p>
-            <p><strong>Distancia total:</strong> ${ruta.distancia || 'N/A'}</p>
-            <p><strong>Tiempo estimado restante:</strong> ${ruta.tiempo_estimado || 'N/A'}</p>
-        </div>
-    `;
-    
-    detallesRuta.innerHTML = html;
-}
-
-// Cargar entregas programadas
-function cargarEntregasProgramadas() {
-    const entregas = [
-        {
-            codigo: 'HE001',
-            destinatario: 'Ana Martínez',
-            direccion: 'Calle 1 #123',
-            distancia: '2.5 km',
-            estado: 'pendiente'
-        },
-        {
-            codigo: 'HE002',
-            destinatario: 'Carlos López',
-            direccion: 'Carrera 5 #456',
-            distancia: '5.8 km',
-            estado: 'en_transito'
-        }
-    ];
-    
-    mostrarEntregasProgramadas(entregas);
-}
-
-// Mostrar entregas programadas
-function mostrarEntregasProgramadas(entregas) {
-    const container = document.getElementById('listaEntregas');
-    container.innerHTML = '';
-    
-    entregas.forEach(entrega => {
-        const div = document.createElement('div');
-        div.className = 'entrega-item';
-        div.innerHTML = `
-            <div class="entrega-info">
-                <h4>${entrega.codigo} - ${entrega.destinatario}</h4>
-                <p>📍 ${entrega.direccion}</p>
-                <p><span class="estado estado-${entrega.estado}">${formatearEstado(entrega.estado)}</span></p>
-            </div>
-            <div class="entrega-distancia">${entrega.distancia}</div>
-        `;
-        container.appendChild(div);
-    });
-}
-
-// Cargar estadísticas del empleado
-function cargarEstadisticasEmpleado() {
-    // Primero intentamos cargar desde el servidor
-    fetch('php/empleado.php?accion=estadisticas', {
-        headers: {
-            'Content-Type': 'application/json',
-            'X-Requested-With': 'XMLHttpRequest'
-        },
-        credentials: 'same-origin'
-    })
-    .then(handleJsonResponse)
-    .then(data => {
-        if (data && data.exito && data.datos) {
-            // Usar datos del servidor si están disponibles
-            mostrarEstadisticas(data.datos);
-        } else {
-            // Si hay un error en la respuesta, usar datos de prueba
-            mostrarEstadisticasDePrueba();
-        }
-    })
-    .catch(error => {
-        console.error('Error al cargar estadísticas:', error);
-        // En caso de error, mostrar datos de prueba
-        mostrarEstadisticasDePrueba();
-    });
-    
-    // Función para mostrar datos de prueba
-    function mostrarEstadisticasDePrueba() {
-        const estadisticas = [
-            { titulo: '45', descripcion: 'Entregas este mes' },
-            { titulo: '98%', descripcion: 'Tasa de éxito' },
-            { titulo: '4.8', descripcion: 'Calificación promedio' },
-            { titulo: '12', descripcion: 'Días trabajados' }
-        ];
-        mostrarEstadisticas(estadisticas);
-    }
-}
-
-// Mostrar estadísticas
-function mostrarEstadisticas(estadisticas) {
-    const container = document.getElementById('estadisticasContainer');
-    container.innerHTML = '';
-    
-    estadisticas.forEach(stat => {
-        const div = document.createElement('div');
-        div.className = 'estadistica-item';
-        div.innerHTML = `
-            <h4>${stat.titulo}</h4>
-            <p>${stat.descripcion}</p>
-        `;
-        container.appendChild(div);
-    });
-}
-
-// Configurar eventos específicos del empleado
-function configurarEventosEmpleado() {
-    // Búsqueda de mis paquetes
-    document.getElementById('buscarMiPaquete').addEventListener('input', filtrarMisPaquetes);
-    document.getElementById('filtroMiEstado').addEventListener('change', filtrarMisPaquetes);
-    
-    // Formulario de entrega
-    document.getElementById('formEntrega').addEventListener('submit', confirmarEntrega);
-    
-    // Formulario de perfil
-    document.getElementById('formPerfil').addEventListener('submit', actualizarPerfil);
-}
-
-// Filtrar mis paquetes
-function filtrarMisPaquetes() {
-    const busqueda = document.getElementById('buscarMiPaquete').value.toLowerCase();
-    const estado = document.getElementById('filtroMiEstado').value;
-    
-    let paquetesFiltrados = misPaquetes.filter(paquete => {
-        const coincideBusqueda = paquete.codigo.toLowerCase().includes(busqueda) ||
-                                paquete.destinatario.toLowerCase().includes(busqueda);
-        
-        const coincidenEstado = !estado || paquete.estado === estado;
-        
-        return coincideBusqueda && coincidenEstado;
-    });
-    
-    mostrarMisPaquetes(paquetesFiltrados);
-}
-
-// Mostrar sección específica
-function mostrarSeccion(seccion) {
-    // Ocultar todas las secciones
-    document.querySelectorAll('.seccion').forEach(s => s.classList.remove('activa'));
-    
-    // Mostrar sección seleccionada
-    document.getElementById(`seccion-${seccion}`).classList.add('activa');
-    
-    // Actualizar menú
-    document.querySelectorAll('.menu a').forEach(a => a.classList.remove('activo'));
-    document.querySelector(`[onclick="mostrarSeccion('${seccion}')"]`).classList.add('activo');
-    
-    // Actualizar título
-    const titulos = {
-        'inicio': 'Panel de Empleado',
-        'mis-paquetes': 'Mis Paquetes',
-        'entregar': 'Confirmar Entrega',
-        'ruta': 'Mi Ruta del Día',
-        'perfil': 'Mi Perfil'
-    };
-    document.getElementById('tituloSeccion').textContent = titulos[seccion];
-}
-
-// Iniciar entrega desde tabla
-function iniciarEntrega(codigo) {
-    document.getElementById('codigoEntrega').value = codigo;
-    mostrarSeccion('entregar');
-}
-
-// Confirmar entrega
-function confirmarEntrega(e) {
-    e.preventDefault();
-    
-    const formData = new FormData();
-    formData.append('accion', 'confirmar_entrega');
-    formData.append('codigo', document.getElementById('codigoEntrega').value);
-    formData.append('receptor', document.getElementById('nombreReceptor').value);
-    formData.append('documento', document.getElementById('documentoReceptor').value);
-    formData.append('observaciones', document.getElementById('observaciones').value);
-    
-    const archivo = document.getElementById('fotoEntrega').files[0];
-    if (archivo) {
-        formData.append('foto', archivo);
-    }
-    
-    fetch('php/empleado.php', {
-        method: 'POST',
-        body: formData
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.exito) {
-            mostrarNotificacion('Entrega confirmada exitosamente', 'exito');
-            limpiarFormEntrega();
-            cargarMisPaquetes();
-            cargarResumenEmpleado();
-        } else {
-            mostrarNotificacion(data.mensaje, 'error');
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        mostrarNotificacion('Error al confirmar entrega', 'error');
-    });
-}
-
-// Limpiar formulario de entrega
-function limpiarFormEntrega() {
-    document.getElementById('formEntrega').reset();
-}
-
-// Escanear código (simulado)
-function escanearCodigo() {
-    mostrarNotificacion('Función de escáner - Por implementar', 'info');
-}
-
-// Iniciar ruta
-function iniciarRuta() {
-    if (confirm('¿Iniciar ruta del día?')) {
-        mostrarNotificacion('Ruta iniciada', 'exito');
-    }
-}
-
-// Reportar problema
-function reportarProblema() {
-    const problema = prompt('Describe el problema:');
-    if (problema) {
-        mostrarNotificacion('Problema reportado al administrador', 'exito');
-    }
-}
-
-// Actualizar estado
-function actualizarEstado() {
-    cargarDatosEmpleado();
-    mostrarNotificacion('Estado actualizado', 'exito');
-}
-
-// Ver notificaciones
+// Función para mostrar notificaciones
 function verNotificaciones() {
-    mostrarNotificacion('Panel de notificaciones - Por implementar', 'info');
+    // Aquí puedes implementar la lógica para mostrar notificaciones
+    // Por ahora, mostramos un mensaje simple
+    mostrarNotificacion('No hay notificaciones nuevas', 'info');
+    
+    // En una implementación real, podrías hacer una llamada al servidor
+    // para obtener las notificaciones no leídas
+    /*
+    fetch('php/notificaciones.php?accion=obtener')
+        .then(response => response.json())
+        .then(data => {
+            // Mostrar las notificaciones en un modal o dropdown
+            console.log('Notificaciones:', data);
+        })
+        .catch(error => {
+            console.error('Error al cargar notificaciones:', error);
+            mostrarNotificacion('Error al cargar notificaciones', 'error');
+        });
+    */
 }
 
-// Actualizar perfil
-function actualizarPerfil(e) {
-    e.preventDefault();
-    
-    const nuevaClave = document.getElementById('nuevaClave').value;
-    const confirmarClave = document.getElementById('confirmarClave').value;
-    
-    if (nuevaClave && nuevaClave !== confirmarClave) {
-        mostrarNotificacion('Las contraseñas no coinciden', 'error');
-        return;
+// Cargar datos del empleado
+function cargarDatosEmpleado() {
+    fetch('php/empleado.php?accion=obtener_datos_empleado')
+        .then(response => response.json())
+        .then(data => {
+            if (data.exito) {
+                datosEmpleado = data.datos;
+                actualizarUIEmpleado();
+            } else {
+                mostrarNotificacion('Error al cargar datos del empleado', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            mostrarNotificacion('Error de conexión', 'error');
+        });
+}
+
+// Actualizar la interfaz con los datos del empleado
+function actualizarUIEmpleado() {
+    // Actualizar nombre de usuario
+    const nombreUsuario = document.getElementById('nombreUsuario');
+    if (nombreUsuario) {
+        nombreUsuario.textContent = datosEmpleado.nombre || 'Empleado';
     }
     
-    const formData = new FormData();
-    formData.append('accion', 'actualizar_perfil');
-    formData.append('email', document.getElementById('perfilEmail').value);
-    if (nuevaClave) {
-        formData.append('nueva_clave', nuevaClave);
-    }
+    // Aquí puedes agregar más actualizaciones de UI según sea necesario
+}
+
+// Cargar la ruta del empleado
+function cargarMiRuta() {
+    const contenedorRuta = document.getElementById('detallesRuta');
+    if (!contenedorRuta) return;
     
-    fetch('php/empleado.php', {
-        method: 'POST',
-        body: formData
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.exito) {
-            mostrarNotificacion('Perfil actualizado exitosamente', 'exito');
-            document.getElementById('nuevaClave').value = '';
-            document.getElementById('confirmarClave').value = '';
-        } else {
-            mostrarNotificacion(data.mensaje, 'error');
+    contenedorRuta.innerHTML = '<p>Cargando ruta...</p>';
+    
+    fetch('php/empleado.php?accion=obtener_ruta')
+        .then(response => response.json())
+        .then(data => {
+            if (data.exito) {
+                miRuta = data.ruta;
+                mostrarDetallesRuta();
+            } else {
+                contenedorRuta.innerHTML = `<p class="sin-ruta">${data.mensaje || 'No hay ruta asignada para hoy'}</p>`;
+            }
+        })
+        .catch(error => {
+            console.error('Error al cargar la ruta:', error);
+            contenedorRuta.innerHTML = '<p class="error">Error al cargar la ruta. Intenta de nuevo más tarde.</p>';
+        });
+}
+
+// Mostrar detalles de la ruta en la interfaz
+function mostrarDetallesRuta() {
+    const contenedorRuta = document.getElementById('detallesRuta');
+    if (!contenedorRuta) return;
+    
+    if (miRuta && miRuta.paradas && miRuta.paradas.length > 0) {
+        let html = `
+            <div class="resumen-ruta">
+                <div class="estado-ruta">
+                    <span class="etiqueta">Estado:</span>
+                    <span class="valor ${miRuta.estado || 'pendiente'}">${formatearEstado(miRuta.estado || 'pendiente')}</span>
+                </div>
+                <div class="total-paquetes">
+                    <span class="etiqueta">Total paquetes:</span>
+                    <span class="valor">${miRuta.paradas.length}</span>
+                </div>
+            </div>
+            <div class="lista-paradas">
+                <h4>Paradas de la ruta:</h4>
+                <ul>
+        `;
+        
+        miRuta.paradas.forEach((parada, index) => {
+            html += `
+                <li class="parada ${parada.estado || 'pendiente'}">
+                    <span class="numero">${index + 1}.</span>
+                    <div class="info-parada">
+                        <span class="direccion">${parada.direccion || 'Dirección no disponible'}</span>
+                        <span class="estado">${formatearEstado(parada.estado || 'pendiente')}</span>
+                    </div>
+                </li>
+            `;
+        });
+        
+        html += `
+                </ul>
+            </div>
+            <button id="iniciarRutaBtn" class="btn btn-primario">
+                <i class="fas fa-route"></i> Iniciar Ruta
+            </button>
+        `;
+        
+        contenedorRuta.innerHTML = html;
+        
+        // Configurar evento del botón de iniciar ruta
+        const iniciarRutaBtn = document.getElementById('iniciarRutaBtn');
+        if (iniciarRutaBtn) {
+            iniciarRutaBtn.addEventListener('click', function() {
+                iniciarSeguimientoUbicacion();
+                this.disabled = true;
+                this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Ruta en curso';
+                mostrarNotificacion('Ruta iniciada. Se está rastreando tu ubicación.', 'exito');
+            });
         }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        mostrarNotificacion('Error al actualizar perfil', 'error');
-    });
+    } else {
+        contenedorRuta.innerHTML = '<p class="sin-ruta">No hay paradas asignadas para hoy.</p>';
+    }
 }
 
-// Ver detalle de paquete
-function verDetallePaquete(id) {
-    mostrarNotificacion('Detalle de paquete - Por implementar', 'info');
-}
-
-
-// Funciones auxiliares reutilizadas
+// Función para formatear el estado
 function formatearEstado(estado) {
     const estados = {
         'pendiente': 'Pendiente',
-        'en_transito': 'En Tránsito',
+        'en_camino': 'En Camino',
+        'en_espera': 'En Espera',
         'entregado': 'Entregado',
-        'devuelto': 'Devuelto'
+        'fallido': 'Fallido'
     };
     return estados[estado] || estado;
 }
 
-function formatearFecha(fecha) {
-    return new Date(fecha).toLocaleDateString('es-CO');
+// Variables para el mapa y seguimiento de ubicación
+window.map = null;
+window.watchId = window.watchId || null;
+window.currentLocationMarker = window.currentLocationMarker || null;
+window.routePolyline = window.routePolyline || null;
+window.pathCoordinates = window.pathCoordinates || [];
+
+// Función para inicializar el mapa
+function initMap() {
+    console.log('Inicializando mapa...');
+    
+    // Coordenadas de Lima por defecto
+    const lima = { lat: -12.0464, lng: -77.0428 };
+    
+    // Opciones del mapa
+    const mapOptions = {
+        zoom: 12,
+        center: lima,
+        mapTypeId: 'roadmap',
+        styles: [
+            {
+                featureType: 'poi',
+                elementType: 'labels',
+                stylers: [{ visibility: 'off' }]
+            }
+        ]
+    };
+    
+    // Crear el mapa
+    window.map = new google.maps.Map(document.getElementById('map'), mapOptions);
+    
+    // Marcar que el mapa está listo
+    window.mapInitialized = true;
+    console.log('Mapa inicializado correctamente');
+    
+    // Disparar evento personalizado cuando el mapa está listo
+    const event = new Event('mapInitialized');
+    window.dispatchEvent(event);
 }
 
+// Función para iniciar el seguimiento de ruta
+function iniciarRuta() {
+    console.log('Iniciando seguimiento de ruta...');
+    
+    // Verificar si el mapa está inicializado
+    if (!window.map) {
+        console.error('El mapa no está inicializado');
+        mostrarNotificacion('Error: El mapa no se ha cargado correctamente', 'error');
+        
+        // Intentar inicializar el mapa si no está listo
+        if (typeof google !== 'undefined' && google.maps) {
+            console.log('Inicializando mapa...');
+            const lima = { lat: -12.0464, lng: -77.0428 };
+            window.map = new google.maps.Map(document.getElementById('map'), {
+                zoom: 12,
+                center: lima,
+                mapTypeId: 'roadmap'
+            });
+        } else {
+            return;
+        }
+    }
+    
+    // Iniciar el seguimiento de ubicación
+    iniciarSeguimientoUbicacion();
+    
+    // Actualizar los botones
+    const botonesIniciar = [
+        document.getElementById('iniciarRutaBtn'),
+        document.getElementById('btnIniciarRutaVehiculo')
+    ];
+    
+    botonesIniciar.forEach(boton => {
+        if (boton) {
+            boton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Siguiendo ruta...';
+            boton.onclick = detenerSeguimientoUbicacion;
+            boton.className = 'btn btn-secundario';
+            
+            // Cambiar a botón de detener después de 1 segundo
+            setTimeout(() => {
+                boton.innerHTML = '<i class="fas fa-stop"></i> Detener Seguimiento';
+                boton.title = 'Haz clic para detener el seguimiento';
+            }, 1000);
+        }
+    });
+    
+    mostrarNotificacion('Seguimiento de ruta iniciado. Moviéndote a tu ubicación actual...', 'exito');
+}
+
+// Iniciar seguimiento de ubicación
+function iniciarSeguimientoUbicacion() {
+    console.log('Iniciando seguimiento de ubicación...');
+    
+    // Verificar si el navegador soporta geolocalización
+    if (!navigator.geolocation) {
+        const mensaje = 'Tu navegador no soporta geolocalización';
+        console.error(mensaje);
+        mostrarNotificacion(mensaje, 'error');
+        return;
+    }
+
+    // Opciones para la geolocalización
+    const opciones = {
+        enableHighAccuracy: true,  // Alta precisión
+        maximumAge: 0,           // No usar caché
+        timeout: 10000           // 10 segundos de espera
+    };
+
+    // Función para manejar el éxito de la geolocalización
+    const exito = (posicion) => {
+        console.log('Ubicación obtenida:', posicion);
+        
+        const pos = {
+            lat: posicion.coords.latitude,
+            lng: posicion.coords.longitude,
+            accuracy: posicion.coords.accuracy
+        };
+        
+        console.log('Coordenadas:', pos);
+        console.log('Precisión: ±' + pos.accuracy + ' metros');
+
+        // Crear o actualizar el marcador de ubicación
+        if (!window.currentLocationMarker && window.google && window.google.maps) {
+            console.log('Creando nuevo marcador...');
+            window.currentLocationMarker = new google.maps.Marker({
+                position: pos,
+                map: window.map,
+                title: 'Tu ubicación actual',
+                icon: {
+                    url: 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png',
+                    scaledSize: new google.maps.Size(40, 40)
+                },
+                animation: google.maps.Animation.DROP
+            });
+            
+            // Crear círculo de precisión
+            window.accuracyCircle = new google.maps.Circle({
+                strokeColor: '#1E88E5',
+                strokeOpacity: 0.3,
+                strokeWeight: 1,
+                fillColor: '#1E88E5',
+                fillOpacity: 0.15,
+                map: window.map,
+                center: pos,
+                radius: pos.accuracy
+            });
+            
+            // Centrar el mapa en la ubicación actual
+            if (window.map) {
+                window.map.setCenter(pos);
+                window.map.setZoom(17); // Zoom más cercano para mejor visualización
+            }
+        } else if (window.currentLocationMarker) {
+            console.log('Actualizando marcador existente...');
+            window.currentLocationMarker.setPosition(pos);
+            
+            // Actualizar círculo de precisión
+            if (window.accuracyCircle) {
+                window.accuracyCircle.setCenter(pos);
+                window.accuracyCircle.setRadius(pos.accuracy);
+            }
+            
+            // Mover el mapa suavemente a la nueva posición
+            if (window.map) {
+                window.map.panTo(pos);
+            }
+        }
+
+        // Agregar la posición al array de coordenadas
+        window.pathCoordinates = window.pathCoordinates || [];
+        window.pathCoordinates.push(pos);
+
+        // Actualizar la línea de ruta
+        if (!window.routePolyline && window.google && window.google.maps) {
+            console.log('Creando nueva línea de ruta...');
+            window.routePolyline = new google.maps.Polyline({
+                path: window.pathCoordinates,
+                geodesic: true,
+                strokeColor: '#1E88E5',
+                strokeOpacity: 1.0,
+                strokeWeight: 4,
+                map: window.map
+            });
+        } else if (window.routePolyline) {
+            window.routePolyline.setPath(window.pathCoordinates);
+        }
+    };
+
+    // Función para manejar errores de geolocalización
+    const error = (error) => {
+        let mensaje = 'Error al obtener la ubicación: ';
+        
+        switch(error.code) {
+            case error.PERMISSION_DENIED:
+                mensaje += 'Permiso denegado por el usuario';
+                break;
+            case error.POSITION_UNAVAILABLE:
+                mensaje += 'La información de ubicación no está disponible';
+                break;
+            case error.TIMEOUT:
+                mensaje += 'Tiempo de espera agotado';
+                break;
+            case error.UNKNOWN_ERROR:
+                mensaje += 'Error desconocido';
+                break;
+        }
+        
+        console.error(mensaje, error);
+        mostrarNotificacion(mensaje, 'error');
+    };
+
+    // Si ya hay un seguimiento en curso, detenerlo primero
+    if (window.watchId !== null) {
+        navigator.geolocation.clearWatch(window.watchId);
+    }
+
+    // Iniciar el seguimiento de ubicación
+    console.log('Solicitando ubicación...');
+    navigator.geolocation.getCurrentPosition(
+        (posicion) => {
+            exito(posicion);
+            
+            // Iniciar seguimiento continuo
+            window.watchId = navigator.geolocation.watchPosition(
+                exito,
+                error,
+                opciones
+            );
+            
+            console.log('Seguimiento de ubicación iniciado con ID:', window.watchId);
+            mostrarNotificacion('Seguimiento de ubicación activo', 'exito');
+        },
+        error,
+        opciones
+    );
+}
+
+// Detener el seguimiento de ubicación
+function detenerSeguimientoUbicacion() {
+    console.log('Deteniendo seguimiento de ubicación...');
+    
+    // Detener el seguimiento de ubicación si está activo
+    if (window.watchId !== null) {
+        navigator.geolocation.clearWatch(window.watchId);
+        window.watchId = null;
+        console.log('Seguimiento de ubicación detenido');
+    }
+    
+    // Actualizar los botones
+    const botonesIniciar = [
+        document.getElementById('iniciarRutaBtn'),
+        document.getElementById('btnIniciarRutaVehiculo')
+    ];
+    
+    botonesIniciar.forEach(boton => {
+        if (boton) {
+            boton.innerHTML = '<i class="fas fa-route"></i> Iniciar Ruta';
+            boton.onclick = iniciarRuta;
+            boton.className = 'btn btn-primario';
+            boton.title = 'Haz clic para iniciar el seguimiento de ubicación';
+        }
+    });
+    
+    // Limpiar el marcador de ubicación actual
+    if (window.currentLocationMarker) {
+        window.currentLocationMarker.setMap(null);
+        window.currentLocationMarker = null;
+    }
+    
+    // Limpiar el círculo de precisión
+    if (window.accuracyCircle) {
+        window.accuracyCircle.setMap(null);
+        window.accuracyCircle = null;
+    }
+    
+    // No limpiar la ruta trazada para mantener el historial
+    
+    console.log('Seguimiento de ubicación detenido correctamente');
+    mostrarNotificacion('Seguimiento de ubicación detenido', 'info');
+}
+
+// Detener el seguimiento cuando se cierre la página
+window.addEventListener('beforeunload', () => {
+    if (window.watchId !== null) {
+        navigator.geolocation.clearWatch(window.watchId);
+    }
+});
+
+// Función para inicializar la navegación
+function inicializarNavegacion() {
+    console.log('Inicializando navegación...');
+    
+    // Configurar manejadores de clic para los enlaces del menú
+    const enlacesMenu = document.querySelectorAll('.menu a');
+    console.log(`Se encontraron ${enlacesMenu.length} enlaces de menú`);
+    
+    enlacesMenu.forEach((enlace, index) => {
+        console.log(`Configurando enlace #${index + 1}:`, enlace);
+        
+        enlace.addEventListener('click', function(e) {
+            e.preventDefault();
+            const seccionId = this.getAttribute('data-seccion');
+            console.log('Menú clickeado - Sección:', seccionId);
+            
+            if (!seccionId) {
+                console.error('El enlace no tiene atributo data-seccion:', this);
+                return;
+            }
+            
+            mostrarSeccion(seccionId, this);
+        });
+    });
+
+    // Mostrar la sección de inicio por defecto
+    console.log('Mostrando sección de inicio por defecto');
+    const seccionInicio = document.getElementById('seccion-inicio');
+    if (seccionInicio) {
+        console.log('Sección de inicio encontrada, mostrando...');
+        seccionInicio.style.display = 'block';
+        // Asegurarse de que solo el enlace de inicio esté activo
+        document.querySelector('.menu a.activo')?.classList.remove('activo');
+        document.querySelector('.menu a[data-seccion="inicio"]')?.classList.add('activo');
+    } else {
+        console.error('No se pudo encontrar la sección de inicio');
+    }
+}
+
+// Inicializar la navegación cuando el DOM esté listo
+document.addEventListener('DOMContentLoaded', inicializarNavegacion);
+
+// Función para mostrar/ocultar secciones en el panel del empleado
+function mostrarSeccion(seccionId, elemento) {
+    console.clear(); // Limpiar la consola para mejor depuración
+    console.log('=== INICIO mostrarSeccion ===');
+    console.log('Sección solicitada:', seccionId);
+    console.log('Elemento que disparó el evento:', elemento);
+    
+    try {
+        // 1. Ocultar todas las secciones
+        const secciones = document.querySelectorAll('.seccion');
+        console.log(`Se encontraron ${secciones.length} secciones en total`);
+        
+        if (secciones.length === 0) {
+            console.error('No se encontraron elementos con la clase "seccion"');
+            return;
+        }
+        
+        secciones.forEach((seccion, index) => {
+            console.log(`Sección #${index + 1}:`, seccion.id, '- Clases:', seccion.className);
+            seccion.style.display = 'none';
+        });
+        
+        // 2. Mostrar la sección seleccionada
+        // Primero intentar con guión bajo, luego con guión medio
+        let idSeccion = 'seccion_' + seccionId.replace(/-/g, '_');
+        console.log('Buscando elemento con ID (con guión bajo):', idSeccion);
+        let seccion = document.getElementById(idSeccion);
+        
+        // Si no se encuentra con guión bajo, intentar con guión medio
+        if (!seccion) {
+            idSeccion = 'seccion-' + seccionId;
+            console.log('No se encontró con guión bajo. Buscando con ID:', idSeccion);
+            seccion = document.getElementById(idSeccion);
+        }
+        
+        // Si aún no se encuentra, mostrar error
+        if (!seccion) {
+            console.error('No se pudo encontrar la sección con ID:', idSeccion);
+            console.log('IDs de secciones disponibles:');
+            document.querySelectorAll('.seccion').forEach(s => console.log('-', s.id));
+            return;
+        }
+        
+        if (seccion) {
+            console.log('Sección encontrada, mostrando...');
+            seccion.style.display = 'block';
+            console.log('Sección mostrada. Display actual:', seccion.style.display);
+            
+            // Actualizar el título de la sección
+            const tituloSeccion = document.getElementById('tituloSeccion');
+            if (tituloSeccion) {
+                const nuevoTitulo = elemento ? elemento.textContent.trim() : 'Panel de Empleado';
+                console.log('Actualizando título a:', nuevoTitulo);
+                tituloSeccion.textContent = nuevoTitulo;
+            }
+            
+            // Cargar datos específicos de la sección
+            console.log('Cargando datos para la sección:', seccionId);
+            switch(seccionId) {
+                case 'inicio':
+                    console.log('Iniciando carga de datos del empleado...');
+                    if (typeof cargarDatosEmpleado === 'function') {
+                        cargarDatosEmpleado();
+                    } else {
+                        console.error('La función cargarDatosEmpleado no está definida');
+                    }
+                    break;
+                    
+                case 'mis-paquetes':
+                    console.log('Iniciando carga de paquetes...');
+                    if (typeof cargarMisPaquetes === 'function') {
+                        cargarMisPaquetes();
+                    } else {
+                        console.error('La función cargarMisPaquetes no está definida');
+                    }
+                    break;
+                    
+                case 'ruta':
+                    console.log('Iniciando carga de ruta...');
+                    if (typeof cargarMiRuta === 'function') {
+                        cargarMiRuta();
+                    } else {
+                        console.error('La función cargarMiRuta no está definida');
+                    }
+                    break;
+                    
+                case 'perfil':
+                    console.log('Iniciando carga de perfil...');
+                    if (typeof cargarDatosPerfil === 'function') {
+                        cargarDatosPerfil();
+                    } else {
+                        console.error('La función cargarDatosPerfil no está definida');
+                    }
+                    break;
+                    
+                default:
+                    console.log('No hay carga de datos específica para esta sección');
+            }
+        } else {
+            console.error('❌ No se encontró la sección con ID:', idSeccion);
+            console.log('Elementos con clase "sección":', document.getElementsByClassName('seccion'));
+        }
+        
+        // 3. Actualizar la clase activa en los enlaces del menú
+        console.log('Actualizando clases activas del menú...');
+        const enlacesMenu = document.querySelectorAll('.menu a');
+        console.log(`Se encontraron ${enlacesMenu.length} enlaces en el menú`);
+        
+        let enlacesActualizados = 0;
+        enlacesMenu.forEach((enlace, index) => {
+            console.log(`Enlace #${index + 1}:`, enlace.textContent.trim());
+            if (enlace.classList.contains('activo')) {
+                enlace.classList.remove('activo');
+                console.log(`  ➖ Removida clase 'activo' de:`, enlace.textContent.trim());
+                enlacesActualizados++;
+            }
+        });
+        
+        if (elemento) {
+            console.log('Añadiendo clase activa a:', elemento.textContent.trim());
+            elemento.classList.add('activo');
+            console.log('Clases actuales del elemento:', elemento.className);
+        } else {
+            console.warn('No se recibió el elemento del menú para marcar como activo');
+        }
+        
+        // 4. Desplazarse al inicio de la página
+        console.log('Desplazando al inicio de la página...');
+        window.scrollTo(0, 0);
+        
+        console.log('=== FIN mostrarSeccion ===');
+        
+    } catch (error) {
+        console.error('❌ ERROR en mostrarSeccion:', error);
+        console.error('Stack trace:', error.stack);
+        mostrarNotificacion('Error al cambiar de sección: ' + error.message, 'error');
+    }
+}
+
+// Función auxiliar para mostrar notificaciones
 function mostrarNotificacion(mensaje, tipo) {
     const notificacion = document.createElement('div');
     notificacion.className = `notificacion notificacion-${tipo}`;
