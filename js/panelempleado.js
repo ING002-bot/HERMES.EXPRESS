@@ -76,12 +76,23 @@ function verificarSesion() {
 
 // Función para cerrar sesión
 function cerrarSesion() {
+    if (!confirm("¿Está seguro que desea cerrar sesión?")) {
+        return; // Si el usuario cancela, no hace nada
+    }
+
     fetch('php/cerrar_sesion.php')
-        .then(response => response.json())
+        .then(response => {
+            // Ojo: tu cerrar_sesion.php hace un redirect, no devuelve JSON
+            if (response.redirected) {
+                window.location.href = response.url;
+                return;
+            }
+            return response.json();
+        })
         .then(data => {
-            if (data.exito) {
+            if (data && data.exito) {
                 window.location.href = 'login.html';
-            } else {
+            } else if (data) {
                 mostrarNotificacion('Error al cerrar sesión', 'error');
             }
         })
