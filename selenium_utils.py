@@ -1677,27 +1677,27 @@ def configurar_fechas_y_consultar(driver: webdriver.Chrome, fecha_inicio: str, f
     try:
         print(f"Configurando fechas: {fecha_inicio} a {fecha_fin}")
         
-        # Activar 'Fecha de Creación' si hay checkbox
-        try:
-            chk = driver.find_element(By.XPATH, "//label[contains(translate(.,'áéíóúÁÉÍÓÚ','aeiouAEIOU'),'Fecha de Creacion')]/preceding::input[@type='checkbox'][1]")
-            if not chk.is_selected():
-                driver.execute_script("arguments[0].click();", chk)
-                print("Checkbox 'Fecha de Creación' activado")
-        except Exception:
-            print("No se encontró checkbox de 'Fecha de Creación'")
-            pass
-
-        # Desactivar 'Fecha de Recepción' si está marcado
+        # Activar 'Fecha de Recepción' si hay checkbox
         try:
             chk_rx = driver.find_element(By.XPATH, "//label[contains(translate(.,'áéíóúÁÉÍÓÚ','aeiouAEIOU'),'Fecha de Recepcion')]/preceding::input[@type='checkbox'][1]")
-            if chk_rx.is_selected():
+            if not chk_rx.is_selected():
                 driver.execute_script("arguments[0].click();", chk_rx)
-                print("Checkbox 'Fecha de Recepción' desactivado")
+                print("Checkbox 'Fecha de Recepción' activado")
+        except Exception:
+            print("No se encontró checkbox de 'Fecha de Recepción'")
+            pass
+
+        # Desactivar 'Fecha de Creación' si está marcado
+        try:
+            chk = driver.find_element(By.XPATH, "//label[contains(translate(.,'áéíóúÁÉÍÓÚ','aeiouAEIOU'),'Fecha de Creacion')]/preceding::input[@type='checkbox'][1]")
+            if chk.is_selected():
+                driver.execute_script("arguments[0].click();", chk)
+                print("Checkbox 'Fecha de Creación' desactivado")
         except Exception:
             pass
 
         # Configurar fechas usando el método robusto
-        if set_date_inputs_by_label(driver, 'Fecha de Creacion', fecha_inicio, fecha_fin, timeout=timeout):
+        if set_date_inputs_by_label(driver, 'Fecha de Recepcion', fecha_inicio, fecha_fin, timeout=timeout):
             print("Fechas configuradas correctamente")
         else:
             print("Advertencia: No se pudieron configurar las fechas automáticamente")
@@ -1779,16 +1779,91 @@ def configurar_fechas_y_consultar(driver: webdriver.Chrome, fecha_inicio: str, f
         print(f"Error configurando fechas y consultando: {e}")
         return False
 
-def abrir_modal_y_extraer_datos(driver: webdriver.Chrome, categoria: str = "TOTAL", timeout: int = 20) -> Dict[str, Any]:
+def abrir_modal_y_extraer_datos(driver: webdriver.Chrome, categoria: str = "TOTAL", column_label: Optional[str] = None, timeout: int = 20) -> Dict[str, Any]:
     """
-    Abre el modal haciendo clic en una categoría específica y extrae los datos.
+    Abre el modal haciendo clic en un objetivo y extrae los datos.
+    Puedes especificar:
+    - categoria: texto de categoría (botón/etiqueta) a clicar
+    - column_label: encabezado de columna sobre el cual se debe clicar el primer valor numérico (e.g. "EN ALMACEN RECEPCIONAR")
     """
     try:
-        print(f"Abriendo modal para la categoría: {categoria}")
+        if column_label:
+            print(f"Abriendo modal haciendo clic en columna: {column_label}")
+        else:
+            print(f"Abriendo modal para la categoría: {categoria}")
         
-        # Buscar y hacer clic en la categoría especificada
+        # Buscar y hacer clic en el objetivo especificado
         categoria_clicked = False
-        label_upper = categoria.upper()
+        label_upper = categoria.upper() if categoria else ""
+
+        # Método 0: Clic por encabezado de columna y primera fila de datos
+        if column_label and not categoria_clicked:
+            try:
+                col_upper = column_label.upper()
+                # Localizar el TH cuyo texto contenga el label de la columna
+                th_candidates = driver.find_elements(By.XPATH, "//th")
+                th_target = None
+                for th in th_candidates:
+                    txt = (th.text or "").upper().strip()
+                    if not txt:
+                        continue
+                    if col_upper in txt:
+                        th_target = th
+                        break
+                if th_target is not None:
+                    all_th = th_target.find_elements(By.XPATH, "ancestor::tr[1]/th")
+                    idx = all_th.index(th_target) + 1
+                    td = driver.find_element(By.XPATH, f"//tr[td][1]/td[{idx}]")
+                    driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", td)
+                    time.sleep(0.2)
+                    # Intentar clicar específicamente el 'botón/badge' negro con el número dentro de la celda
+                    clicked_inner = False
+                    try:
+                        inner_candidates = td.find_elements(By.XPATH, ".//*[self::button or self::a or self::div or self::span]")
+                        # Priorizar los que parezcan botones/badges por clase o estilo y que tengan dígitos
+                        priorizados = []
+                        for el in inner_candidates:
+                            t = (el.text or '').strip()
+                            cls = (el.get_attribute('class') or '').lower()
+                            style = (el.get_attribute('style') or '').lower()
+                            if re.search(r"\\b(btn|badge|label|pill|dark|negro)\\b", cls) or ('background' in style or '#000' in style or 'black' in style):
+                                if re.search(r"\\d+", t):
+                                    priorizados.append(el)
+                        target_el = None
+                        if priorizados:
+                            target_el = priorizados[0]
+                        else:
+                            # fallback: cualquier descendiente con números
+                            for el in inner_candidates:
+                                if re.search(r"\\d+", (el.text or '').strip()):
+                                    target_el = el
+                                    break
+                        if target_el is not None:
+                            try:
+                                driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", target_el)
+                                time.sleep(0.1)
+                                ActionChains(driver).move_to_element(target_el).pause(0.1).click().perform()
+                                clicked_inner = True
+                            except Exception:
+                                try:
+                                    driver.execute_script("arguments[0].click();", target_el)
+                                    clicked_inner = True
+                                except Exception:
+                                    clicked_inner = False
+                    except Exception:
+                        clicked_inner = False
+
+                    if not clicked_inner:
+                        # Clic en la celda completa como respaldo
+                        try:
+                            ActionChains(driver).move_to_element(td).pause(0.2).click().perform()
+                        except Exception:
+                            driver.execute_script("arguments[0].click();", td)
+
+                    print(f"Clic en columna '{column_label}' exitoso")
+                    categoria_clicked = True
+            except Exception as e:
+                print(f"Error al clicar columna '{column_label}': {e}")
         
         # Método 1: Buscar por texto en la tabla
         categoria_xpaths = [
@@ -1797,21 +1872,22 @@ def abrir_modal_y_extraer_datos(driver: webdriver.Chrome, categoria: str = "TOTA
             f"//*[self::button or self::a][contains(translate(.,'abcdefghijklmnopqrstuvwxyz','ABCDEFGHIJKLMNOPQRSTUVWXYZ'),'{label_upper}')]"
         ]
         
-        for xp in categoria_xpaths:
-            try:
-                el = driver.find_element(By.XPATH, xp)
-                if el.is_displayed():
-                    driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", el)
-                    time.sleep(0.2)
-                    driver.execute_script("arguments[0].click();", el)
-                    print(f"Clic en categoría '{categoria}' exitoso")
-                    categoria_clicked = True
-                    break
-            except Exception:
-                continue
+        if not categoria_clicked and categoria:
+            for xp in categoria_xpaths:
+                try:
+                    el = driver.find_element(By.XPATH, xp)
+                    if el.is_displayed():
+                        driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", el)
+                        time.sleep(0.2)
+                        driver.execute_script("arguments[0].click();", el)
+                        print(f"Clic en categoría '{categoria}' exitoso")
+                        categoria_clicked = True
+                        break
+                except Exception:
+                    continue
 
         # Método 2: Si no se encontró por texto, buscar por posición en la tabla
-        if not categoria_clicked:
+        if not categoria_clicked and not column_label:
             try:
                 # Buscar la columna TOTAL en la tabla
                 th_total = driver.find_element(By.XPATH, "//th[contains(translate(.,'abcdefghijklmnopqrstuvwxyz','ABCDEFGHIJKLMNOPQRSTUVWXYZ'),'TOTAL')]")
@@ -1828,10 +1904,11 @@ def abrir_modal_y_extraer_datos(driver: webdriver.Chrome, categoria: str = "TOTA
                 print(f"Error con método de posición: {e}")
 
         if not categoria_clicked:
-            print(f"Error: No se pudo hacer clic en la categoría '{categoria}'")
+            objetivo = column_label if column_label else categoria
+            print(f"Error: No se pudo hacer clic en el objetivo '{objetivo}'")
             return {
                 "estado": "error",
-                "mensaje": f"No se pudo abrir el modal para la categoría '{categoria}'"
+                "mensaje": f"No se pudo abrir el modal para '{objetivo}'"
             }
 
         # Esperar a que aparezca el modal
@@ -1865,7 +1942,7 @@ def main():
     """
     Función principal para probar el módulo.
     """
-    print("=== EXTRACCIÓN DE DATOS SAVAR EXPRESS ===")
+    print("=== EXTRACCION DE DATOS SAVAR EXPRESS ===")
     
     # Configurar el navegador con carpeta de descargas
     download_dir = str(Path(__file__).parent / 'downloads')
@@ -1884,42 +1961,42 @@ def main():
         print(f"\nConfigurando consulta para el rango de fechas: {fecha_inicio} al {fecha_fin}")
         
         # Paso 1: Iniciar sesión
-        print("\n🔐 PASO 1: INICIANDO SESIÓN...")
+        print("\nPASO 1: INICIANDO SESION...")
         if login_and_fetch_saver(driver, usuario, contrasena, fecha_inicio, fecha_fin):
-            print("✅ Inicio de sesión exitoso")
+            print("Inicio de sesion exitoso")
             
             # Paso 2: Navegar a Control de Almacenes
-            print("\n📋 PASO 2: NAVEGANDO A CONTROL DE ALMACENES...")
+            print("\nPASO 2: NAVEGANDO A CONTROL DE ALMACENES...")
             if search_and_open_menu(driver, "Control de Almacenes", timeout=20):
-                print("✅ Control de Almacenes abierto")
+                print("Control de Almacenes abierto")
                 
                 # Paso 3: Configurar fechas y hacer clic en Consultar
-                print("\n📅 PASO 3: CONFIGURANDO FECHAS Y CONSULTANDO...")
+                print("\nPASO 3: CONFIGURANDO FECHAS Y CONSULTANDO...")
                 if configurar_fechas_y_consultar(driver, fecha_inicio, fecha_fin):
-                    print("✅ Fechas configuradas y consulta ejecutada")
+                    print("Fechas configuradas y consulta ejecutada")
                     
                     # Paso 4: Abrir modal y extraer datos
-                    print("\n📊 PASO 4: ABRIENDO MODAL Y EXTRAYENDO DATOS...")
-                    datos = abrir_modal_y_extraer_datos(driver, categoria="TOTAL")
+                    print("\nPASO 4: ABRIENDO MODAL Y EXTRAYENDO DATOS...")
+                    datos = abrir_modal_y_extraer_datos(driver, categoria="TOTAL", column_label="EN ALMACEN")
                 else:
-                    print("❌ Error: No se pudo configurar las fechas y consultar")
+                    print("Error: No se pudo configurar las fechas y consultar")
                     datos = {"estado": "error", "mensaje": "No se pudo configurar fechas y consultar"}
             else:
-                print("❌ Error: No se pudo abrir 'Control de Almacenes'")
+                print("Error: No se pudo abrir 'Control de Almacenes'")
                 datos = {"estado": "error", "mensaje": "No se pudo abrir Control de Almacenes"}
         else:
-            print("❌ Error: No se pudo iniciar sesión")
+            print("Error: No se pudo iniciar sesion")
             datos = {"estado": "error", "mensaje": "No se pudo iniciar sesión"}
         
         # Mostrar resultados
         print("\n" + "="*50)
-        print("📊 RESULTADOS DE LA EXTRACCIÓN:")
+        print("RESULTADOS DE LA EXTRACCION:")
         print("="*50)
         print(f"Estado: {datos.get('estado')}")
         print(f"Mensaje: {datos.get('mensaje', 'N/A')}")
         print(f"Total de registros: {datos.get('total_registros', 0)}")
         
-        if datos.get('estado') == 'éxito':
+        if datos.get('estado') == 'exito':
             print(f"Origen: {datos.get('origen', 'N/A')}")
             if datos.get('ruta_excel'):
                 print(f"Archivo Excel: {datos.get('ruta_excel')}")
@@ -1927,11 +2004,11 @@ def main():
         # Guardar los datos en un archivo JSON
         with open('datos_savar.json', 'w', encoding='utf-8') as f:
             json.dump(datos, f, ensure_ascii=False, indent=2)
-        print(f"\n✅ Datos guardados en 'datos_savar.json'")
+        print(f"\nDatos guardados en 'datos_savar.json'")
         
         # Si hay datos, intentar guardar en la base de datos
         if datos.get('estado') == 'éxito' and datos.get('datos'):
-            print("\n💾 Guardando datos en la base de datos...")
+            print("\nGuardando datos en la base de datos...")
             resultado_db = save_to_database(datos)
             print(f"Resultado de la base de datos: {resultado_db.get('estado')}")
             print(f"Mensaje: {resultado_db.get('mensaje')}")
