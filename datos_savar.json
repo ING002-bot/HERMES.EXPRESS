@@ -1,11 +1,5 @@
 {
-  "estado": "éxito",
-  "fecha_consulta": "2025-09-04 10:41:46",
-  "url_origen": "https://app.savarexpress.com.pe/govari/#",
-  "total_registros": 0,
-  "encabezados": [
-    "Columna_1",
-    "Columna_2"
-  ],
-  "datos": []
+  "estado": "error",
+  "mensaje": "Error al extraer datos: HTTPConnectionPool(host='localhost', port=61101): Max retries exceeded with url: /session/ad92a6f422d8da37959a2b759c8d68d7/screenshot (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x000001812E667130>: Failed to establish a new connection: [WinError 10061] No se puede establecer una conexión ya que el equipo de destino denegó expresamente dicha conexión'))",
+  "fecha_consulta": "2025-09-19 01:09:26"
 }
