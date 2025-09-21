@@ -21,8 +21,101 @@ import mysql.connector
 from mysql.connector import Error
 from typing import Dict, List, Any, Optional, Union
 import re
+import unicodedata
 
 # Configuración global
+
+def _normalize_key(text: str) -> str:
+    """Normaliza texto: quita acentos, espacios y saltos de línea, a MAYÚSCULAS."""
+    if text is None:
+        return ""
+    t = unicodedata.normalize('NFKD', text)
+    t = ''.join(c for c in t if not unicodedata.combining(c))
+    t = t.upper().replace(' ', '').replace('\n', '').replace('\r', '')
+    return t
+
+def _find_th_by_text(driver: webdriver.Chrome, key_text: str) -> Optional[Any]:
+    """Busca un <th> cuyo texto normalizado coincida con key_text (también normalizado)."""
+    target = _normalize_key(key_text)
+    try:
+        th_candidates = driver.find_elements(By.XPATH, "//th")
+        for th in th_candidates:
+            try:
+                txt = (th.text or "")
+                if _normalize_key(txt) and target in _normalize_key(txt):
+                    return th
+            except Exception:
+                continue
+    except Exception:
+        pass
+
+def close_overlays_and_datepickers(driver: webdriver.Chrome) -> None:
+    """Cierra posibles overlays, backdrops y datepickers que bloqueen los clics."""
+    try:
+        # Tecla ESC varias veces
+        try:
+            body = driver.find_element(By.TAG_NAME, 'body')
+            for _ in range(3):
+                body.send_keys(Keys.ESCAPE)
+                time.sleep(0.05)
+        except Exception:
+            pass
+
+        # Ocultar elementos comunes por JS
+        js = """
+        (function(){
+          var sels = [
+            '.modal-backdrop', '.MuiBackdrop-root', '.swal2-container',
+            '.xdsoft_datetimepicker', '.datepicker', '.date-picker',
+            '.overlay', '.blockUI', '.loader', '.preloader'
+          ];
+          for (var i=0;i<sels.length;i++){
+            var nodes = document.querySelectorAll(sels[i]);
+            for (var j=0;j<nodes.length;j++){
+              var el = nodes[j];
+              try{ el.style.display='none'; el.style.visibility='hidden'; el.style.pointerEvents='none'; }catch(e){}
+            }
+          }
+        })();
+        """
+        try:
+            driver.execute_script(js)
+        except Exception:
+            pass
+    except Exception:
+        pass
+
+def dismiss_error_dialog_if_any(driver: webdriver.Chrome) -> bool:
+    """Cierra diálogos de error tipo SweetAlert/Bootstrap. Devuelve True si cerró alguno."""
+    closed = False
+    try:
+        selectors = [
+            (By.XPATH, "//*[contains(translate(.,'abcdefghijklmnopqrstuvwxyz','ABCDEFGHIJKLMNOPQRSTUVWXYZ'),'HA OCURRIDO UN ERROR')]/ancestor::*[contains(@class,'swal2-popup') or contains(@class,'modal')][1]//button[normalize-space()='OK']"),
+            (By.CSS_SELECTOR, ".swal2-container .swal2-confirm"),
+            (By.XPATH, "//div[contains(@class,'modal') and .//*[contains(.,'error') or contains(.,'Error')]]//*[self::button or self::a][normalize-space()='OK']")
+        ]
+        for by, sel in selectors:
+            try:
+                btns = driver.find_elements(by, sel)
+                for b in btns:
+                    if b.is_displayed():
+                        try:
+                            driver.execute_script("arguments[0].click();", b)
+                        except Exception:
+                            try:
+                                b.click()
+                            except Exception:
+                                continue
+                        time.sleep(0.2)
+                        closed = True
+                        break
+                if closed:
+                    break
+            except Exception:
+                continue
+    except Exception:
+        pass
+    return closed
 def setup_driver(headless: bool = True, download_dir: str = None) -> webdriver.Chrome:
     """
     Configura y retorna una instancia del navegador Chrome.
@@ -299,9 +392,9 @@ def login_and_fetch_saver(driver: webdriver.Chrome, usuario: str, contrasena: st
             return False
     except NoSuchElementException:
         pass
-        
     # Si llegamos aquí, asumimos que el login fue exitoso
     print("Login procesado - continuando...")
+    close_overlays_and_datepickers(driver)
     return True
 
 def open_side_menu_if_needed(driver: webdriver.Chrome, timeout: int = 10) -> None:
@@ -742,6 +835,35 @@ def open_control_almacenes_and_open_total(
                         continue
             except Exception:
                 pass
+
+        # Sexto fallback: navegación por teclado (TAB) hasta 'CONSULTAR' y Enter
+        if not consultar_clicked:
+            try:
+                print("Fallback: navegando con TAB hasta 'CONSULTAR'...")
+                body = driver.find_element(By.TAG_NAME, 'body')
+                body.click()
+                for i in range(12):
+                    try:
+                        body.send_keys(Keys.TAB)
+                        time.sleep(0.15)
+                        focused_text = driver.execute_script("var el=document.activeElement; return (el.innerText||el.value||'').toString();") or ''
+                        focused_upper = (focused_text or '').strip().upper()
+                        if 'CONSULTAR' in focused_upper:
+                            try:
+                                body.send_keys(Keys.ENTER)
+                            except Exception:
+                                pass
+                            try:
+                                body.send_keys(Keys.SPACE)
+                            except Exception:
+                                pass
+                            consultar_clicked = True
+                            print("Clic en 'CONSULTAR' por teclado (TAB+ENTER/SPACE)")
+                            break
+                    except Exception:
+                        continue
+            except Exception:
+                pass
         driver.save_screenshot("step_after_consultar.png")
 
         # Esperar que aparezcan los totales o botón 'Exportar Detalle' con reintentos
@@ -862,6 +984,8 @@ def open_control_almacenes_and_open_category(
     a abrir, por ejemplo: "TRANSF. POR RECEPCIONAR".
     """
     try:
+        # Normalizar categoría a mayúsculas para búsquedas de texto
+        label_upper = (categoria or "").upper()
         # Reutilizar el flujo base para llegar a Control de Almacenes y consultar
         if not search_and_open_menu(driver, "Control de Almacenes", timeout=timeout):
             if not navigate_menu_path(driver, ["DE RECURSOS", "Control de Almacenes"]):
@@ -999,7 +1123,6 @@ def open_control_almacenes_and_open_category(
             pass
 
         # 1) PRIMERO: localizar th de la categoría y clicar el NÚMERO (td) de la primera fila
-        label_upper = categoria.upper()
         # Método auxiliar para hacer clic por coordenadas absolutas
         def click_at_position(x, y, offset_x=0, offset_y=0):
             try:
@@ -1723,7 +1846,26 @@ def configurar_fechas_y_consultar(driver: webdriver.Chrome, fecha_inicio: str, f
 
         # Hacer clic en el botón Consultar con reintentos
         print("Buscando botón 'Consultar'...")
+        try:
+            driver.execute_script("window.scrollTo(0,0);")
+        except Exception:
+            pass
         consultar_clicked = False
+        # Intento prioritario por ID exacto del botón Consultar
+        try:
+            btn_id = driver.find_element(By.ID, "btnBuscarCTRLALM")
+            if btn_id and btn_id.is_displayed():
+                driver.execute_script("arguments[0].scrollIntoView({block:'center'});", btn_id)
+                time.sleep(0.2)
+                try:
+                    driver.execute_script("arguments[0].click();", btn_id)
+                except Exception:
+                    btn_id.click()
+                consultar_clicked = True
+                print("Botón 'Consultar' clickeado por ID #btnBuscarCTRLALM")
+        except Exception:
+            pass
+
         consultar_xpaths = [
             "//button[normalize-space()='Consultar']",
             "//a[normalize-space()='Consultar']",
@@ -1760,14 +1902,149 @@ def configurar_fechas_y_consultar(driver: webdriver.Chrome, fecha_inicio: str, f
                     time.sleep(3)
                     continue
 
+        # Fallback JS por texto visible si aún no se clickeó
+        if not consultar_clicked:
+            print("Fallback: intentando localizar 'CONSULTAR' por texto con JS...")
+            try:
+                driver.execute_script("void(0);")
+            except Exception:
+                pass
+            try:
+                js_ok = driver.execute_script(
+                    "var upper=function(s){return (s||'').toString().toUpperCase()};"
+                    "var visible=function(el){var r=el.getBoundingClientRect();return r.width>0&&r.height>0&&window.getComputedStyle(el).visibility!=='hidden'&&window.getComputedStyle(el).display!=='none'};"
+                    "var nodes=document.querySelectorAll('button,a,input,div,span');"
+                    "for(var i=0;i<nodes.length;i++){var el=nodes[i];var t=upper((el.innerText||el.value||'').trim());"
+                    "if(t.indexOf('CONSULTAR')>-1 && visible(el)){try{el.disabled=false;el.removeAttribute('disabled');}catch(e){};"
+                    "try{el.scrollIntoView({block:'center'});}catch(e){};"
+                    "try{el.click();}catch(e){};"
+                    "try{['mousedown','mouseup','click'].forEach(function(tipo){var ev=new MouseEvent(tipo,{view:window,bubbles:true,cancelable:true});el.dispatchEvent(ev);});}catch(e){};"
+                    "return true;}} return false;"
+                )
+                consultar_clicked = True
+                print("Clic en 'CONSULTAR' realizado por fallback JS")
+            except Exception as e:
+                print(f"Fallback JS no pudo clicar 'CONSULTAR': {e}")
+
+        # Segundo fallback: click por coordenadas del botón si es visible en DOM
+        if not consultar_clicked:
+            try:
+                btn = None
+                for xp in consultar_xpaths:
+                    try:
+                        el = driver.find_element(By.XPATH, xp)
+                        if el.is_displayed():
+                            btn = el
+                            break
+                    except Exception:
+                        continue
+                if btn is not None:
+                    driver.execute_script("arguments[0].scrollIntoView({block:'center'});", btn)
+                    driver.execute_script(
+                        "var r=arguments[0].getBoundingClientRect();"
+                        "var cx=r.left+(r.width/2);var cy=r.top+(r.height/2);"
+                        "var el=document.elementFromPoint(cx,cy);"
+                        "if(el){['mousedown','mouseup','click'].forEach(function(t){var ev=new MouseEvent(t,{view:window,bubbles:true,cancelable:true,clientX:cx,clientY:cy});el.dispatchEvent(ev);});}",
+                        btn
+                    )
+                    consultar_clicked = True
+                    print("Clic en 'CONSULTAR' por coordenadas ejecutado")
+            except Exception:
+                pass
+
+        # Tercer fallback: enviar Enter en el último input de fecha
+        if not consultar_clicked:
+            try:
+                last_input = None
+                try:
+                    # Ubicar el segundo input bajo 'Fecha de Recepcion'
+                    xpath_start = "//label[contains(translate(.,'áéíóúÁÉÍÓÚ','aeiouAEIOU'),'Fecha de Recepcion')]"
+                    last_input = driver.find_element(By.XPATH, xpath_start + "/following::input[2]")
+                except Exception:
+                    pass
+                if last_input is None:
+                    inputs = driver.find_elements(By.CSS_SELECTOR, "input[type='date'], input[class*='date'], input[type='text']")
+                    if inputs:
+                        last_input = inputs[-1]
+                if last_input is not None:
+                    last_input.click()
+                    time.sleep(0.1)
+                    last_input.send_keys(Keys.ENTER)
+                    print("Enter enviado en el último input de fecha")
+                    consultar_clicked = True
+            except Exception:
+                pass
+
+        # Cuarto fallback: submit del formulario más cercano por JS
+        if not consultar_clicked:
+            try:
+                js_submitted = driver.execute_script(
+                    "var btns=[].slice.call(document.querySelectorAll('button,a'));"
+                    "var upper=function(s){return (s||'').toString().toUpperCase()};"
+                    "var visible=function(el){var r=el.getBoundingClientRect();return r.width>0&&r.height>0&&window.getComputedStyle(el).visibility!=='hidden'&&window.getComputedStyle(el).display!=='none'};"
+                    "for(var i=0;i<btns.length;i++){var el=btns[i]; if(upper(el.innerText||'').indexOf('CONSULTAR')>-1 && visible(el)){var f=el.closest('form'); if(f){f.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})); try{f.submit();}catch(e){} return true;}}} return false;"
+                )
+                if js_submitted:
+                    consultar_clicked = True
+                    print("Formulario enviado por JS (submit)")
+            except Exception:
+                pass
+
+        # Quinto fallback: click en una posición fija relativa al botón Exportar (misma barra)
+        if not consultar_clicked:
+            try:
+                export_btn = None
+                for xp in [
+                    "//button[normalize-space()='Exportar']",
+                    "//a[normalize-space()='Exportar']",
+                    "//*[self::button or self::a][contains(translate(.,'abcdefghijklmnopqrstuvwxyz','ABCDEFGHIJKLMNOPQRSTUVWXYZ'),'EXPORTAR')]"
+                ]:
+                    try:
+                        el = driver.find_element(By.XPATH, xp)
+                        if el.is_displayed():
+                            export_btn = el
+                            break
+                    except Exception:
+                        continue
+                if export_btn is not None:
+                    driver.execute_script("arguments[0].scrollIntoView({block:'center'});", export_btn)
+                    time.sleep(0.1)
+                    # Click 60px a la izquierda del centro de 'Exportar' (donde suele estar 'Consultar')
+                    driver.execute_script(
+                        "var r=arguments[0].getBoundingClientRect();"
+                        "var cx=r.left+(r.width/2)-60; var cy=r.top+(r.height/2);"
+                        "var el=document.elementFromPoint(cx,cy);"
+                        "if(el){['mousedown','mouseup','click'].forEach(function(t){var ev=new MouseEvent(t,{view:window,bubbles:true,cancelable:true,clientX:cx,clientY:cy});el.dispatchEvent(ev);});}",
+                        export_btn
+                    )
+                    consultar_clicked = True
+                    print("Clic aproximado en posición de 'Consultar' ejecutado")
+            except Exception:
+                pass
+
         if not consultar_clicked:
             print("Error: No se pudo hacer clic en el botón 'Consultar'")
+            try:
+                driver.save_screenshot("error_click_consultar.png")
+                print("Screenshot guardado: error_click_consultar.png")
+            except Exception:
+                pass
             return False
 
         # Esperar a que termine el procesamiento
         print("Esperando a que termine el procesamiento...")
         if not wait_until_not_processing(driver, timeout=40):
             print("Advertencia: la página siguió procesando más de lo esperado")
+
+        # Cerrar posibles mensajes de error que bloquean la pantalla (OK de alerta)
+        try:
+            if dismiss_error_dialog_if_any(driver):
+                print("Se cerró un diálogo de error tras Consultar")
+        except Exception:
+            pass
+
+        # Asegurar que no quede ningún overlay abierto
+        close_overlays_and_datepickers(driver)
 
         # Tomar screenshot después de consultar
         driver.save_screenshot("step_after_consultar.png")
@@ -1787,6 +2064,13 @@ def abrir_modal_y_extraer_datos(driver: webdriver.Chrome, categoria: str = "TOTA
     - column_label: encabezado de columna sobre el cual se debe clicar el primer valor numérico (e.g. "EN ALMACEN RECEPCIONAR")
     """
     try:
+        # Prevenir bloqueos por alertas/overlays antes de intentar los clics
+        try:
+            dismiss_error_dialog_if_any(driver)
+        except Exception:
+            pass
+        close_overlays_and_datepickers(driver)
+
         if column_label:
             print(f"Abriendo modal haciendo clic en columna: {column_label}")
         else:
@@ -1796,20 +2080,67 @@ def abrir_modal_y_extraer_datos(driver: webdriver.Chrome, categoria: str = "TOTA
         categoria_clicked = False
         label_upper = categoria.upper() if categoria else ""
 
-        # Método 0: Clic por encabezado de columna y primera fila de datos
+        # Método 0A: intento directo por selector global del botón reportado
+        if column_label and not categoria_clicked:
+            # Detectar todas las opciones visibles y probar hasta que aparezca un modal
+            def modal_appeared(d):
+                sels = [
+                    (By.CSS_SELECTOR, ".modal.show, .modal[style*='display: block']"),
+                    (By.XPATH, "//*[@role='dialog' and (contains(@style,'display') or @aria-modal='true')]"),
+                    (By.CSS_SELECTOR, ".MuiDialog-container, .swal2-container")
+                ]
+                for by, sel in sels:
+                    try:
+                        els = d.find_elements(by, sel)
+                        if any(e.is_displayed() for e in els):
+                            return True
+                    except Exception:
+                        continue
+                return False
+
+            candidates = []
+            try:
+                candidates = [el for el in driver.find_elements(By.CSS_SELECTOR, "span.ctrlalm-item-detail-header[data-estado='6']") if el.is_displayed()]
+            except Exception:
+                candidates = []
+            if not candidates:
+                try:
+                    candidates = [el for el in driver.find_elements(By.XPATH, "//span[contains(@class,'ctrlalm-item-detail-header') and @data-estado='6']") if el.is_displayed()]
+                except Exception:
+                    candidates = []
+            for cand in candidates:
+                try:
+                    driver.execute_script("arguments[0].scrollIntoView({block:'center'});", cand)
+                    time.sleep(0.1)
+                    try:
+                        ActionChains(driver).move_to_element(cand).pause(0.1).click().perform()
+                    except Exception:
+                        try:
+                            driver.execute_script("arguments[0].click();", cand)
+                        except Exception:
+                            # fallback mouse events
+                            driver.execute_script(
+                                "var r=arguments[0].getBoundingClientRect();"
+                                "var cx=r.left+(r.width/2);var cy=r.top+(r.height/2);"
+                                "var el=document.elementFromPoint(cx,cy);"
+                                "if(el){['mousedown','mouseup','click'].forEach(function(t){var ev=new MouseEvent(t,{view:window,bubbles:true,cancelable:true,clientX:cx,clientY:cy});el.dispatchEvent(ev);});}",
+                                cand
+                            )
+                    # Esperar a que se abra un modal
+                    try:
+                        WebDriverWait(driver, 4).until(modal_appeared)
+                        categoria_clicked = True
+                        break
+                    except Exception:
+                        continue
+                except Exception:
+                    continue
+
+        # Método 0B: Clic por encabezado de columna y primera fila de datos
         if column_label and not categoria_clicked:
             try:
-                col_upper = column_label.upper()
-                # Localizar el TH cuyo texto contenga el label de la columna
-                th_candidates = driver.find_elements(By.XPATH, "//th")
-                th_target = None
-                for th in th_candidates:
-                    txt = (th.text or "").upper().strip()
-                    if not txt:
-                        continue
-                    if col_upper in txt:
-                        th_target = th
-                        break
+                # Localizar el TH por coincidencia normalizada (ignora tildes y saltos de línea)
+                th_target = _find_th_by_text(driver, column_label)
                 if th_target is not None:
                     all_th = th_target.find_elements(By.XPATH, "ancestor::tr[1]/th")
                     idx = all_th.index(th_target) + 1
@@ -1819,6 +2150,16 @@ def abrir_modal_y_extraer_datos(driver: webdriver.Chrome, categoria: str = "TOTA
                     # Intentar clicar específicamente el 'botón/badge' negro con el número dentro de la celda
                     clicked_inner = False
                     try:
+                        # 0) Priorizar el span específico reportado por el usuario
+                        try:
+                            target_el = td.find_element(By.CSS_SELECTOR, "span.ctrlalm-item-detail-header[data-estado='6']")
+                        except Exception:
+                            try:
+                                target_el = td.find_element(By.XPATH, ".//span[contains(@class,'ctrlalm-item-detail-header')][@data-estado='6']")
+                            except Exception:
+                                target_el = None
+
+                        # 1) Si no se encontró el específico, priorizar candidatos que parecen badge/botón con número
                         inner_candidates = td.find_elements(By.XPATH, ".//*[self::button or self::a or self::div or self::span]")
                         # Priorizar los que parezcan botones/badges por clase o estilo y que tengan dígitos
                         priorizados = []
@@ -1826,30 +2167,100 @@ def abrir_modal_y_extraer_datos(driver: webdriver.Chrome, categoria: str = "TOTA
                             t = (el.text or '').strip()
                             cls = (el.get_attribute('class') or '').lower()
                             style = (el.get_attribute('style') or '').lower()
-                            if re.search(r"\\b(btn|badge|label|pill|dark|negro)\\b", cls) or ('background' in style or '#000' in style or 'black' in style):
+                            if re.search(r"\b(btn|badge|label|pill|dark|negro|black)\b", cls) or ('background' in style or '#000' in style or 'black' in style):
                                 if re.search(r"\\d+", t):
                                     priorizados.append(el)
-                        target_el = None
-                        if priorizados:
-                            target_el = priorizados[0]
+                        # Mantener target_el si ya fue encontrado por la clase específica
+                        if target_el is None:
+                            target_el = None
+                        # Si hay priorizados, tomar el primero visible
+                        if target_el is None:
+                            for cand in priorizados:
+                                try:
+                                    if cand.is_displayed():
+                                        target_el = cand
+                                        break
+                                except Exception:
+                                    continue
                         else:
                             # fallback: cualquier descendiente con números
                             for el in inner_candidates:
-                                if re.search(r"\\d+", (el.text or '').strip()):
-                                    target_el = el
-                                    break
+                                try:
+                                    if el.is_displayed() and re.search(r"\d+", (el.text or '').strip()):
+                                        target_el = el
+                                        break
+                                except Exception:
+                                    continue
                         if target_el is not None:
+                            # Buscar ancestro clickeable (a, button, [onclick], [role='button'])
+                            try:
+                                ancestor = None
+                                for _ in range(4):
+                                    if target_el is None:
+                                        break
+                                    try:
+                                        if target_el.tag_name.lower() in ['a','button']:
+                                            ancestor = target_el
+                                            break
+                                        onclick = (target_el.get_attribute('onclick') or '').strip()
+                                        rolebtn = (target_el.get_attribute('role') or '').lower() == 'button'
+                                        if onclick or rolebtn:
+                                            ancestor = target_el
+                                            break
+                                        # subir un nivel
+                                        target_el = target_el.find_element(By.XPATH, "..")
+                                    except Exception:
+                                        break
+                                if ancestor is not None:
+                                    target_el = ancestor
+                            except Exception:
+                                pass
                             try:
                                 driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", target_el)
                                 time.sleep(0.1)
+                                # Intento 1: click normal con ActionChains
                                 ActionChains(driver).move_to_element(target_el).pause(0.1).click().perform()
                                 clicked_inner = True
+                                # pequeña espera a que el modal aparezca
+                                try:
+                                    WebDriverWait(driver, 3).until(EC.visibility_of_element_located((By.XPATH, "//*[contains(translate(., 'abcdefghijklmnopqrstuvwxyz','ABCDEFGHIJKLMNOPQRSTUVWXYZ'),'DETALLE DE PEDIDOS')]")))
+                                except Exception:
+                                    pass
                             except Exception:
                                 try:
+                                    # Intento 2: click JS directo
                                     driver.execute_script("arguments[0].click();", target_el)
                                     clicked_inner = True
+                                    try:
+                                        WebDriverWait(driver, 3).until(EC.visibility_of_element_located((By.XPATH, "//*[contains(translate(., 'abcdefghijklmnopqrstuvwxyz','ABCDEFGHIJKLMNOPQRSTUVWXYZ'),'DETALLE DE PEDIDOS')]")))
+                                    except Exception:
+                                        pass
                                 except Exception:
-                                    clicked_inner = False
+                                    try:
+                                        # Intento 3: dispatch MouseEvents en el centro del elemento
+                                        driver.execute_script(
+                                            "var r=arguments[0].getBoundingClientRect();"
+                                            "var cx=r.left+(r.width/2);var cy=r.top+(r.height/2);"
+                                            "var el=document.elementFromPoint(cx,cy);"
+                                            "if(el){['mouseover','mousemove','mousedown','mouseup','click'].forEach(function(t){var ev=new MouseEvent(t,{view:window,bubbles:true,cancelable:true,clientX:cx,clientY:cy});el.dispatchEvent(ev);});}",
+                                            target_el
+                                        )
+                                        clicked_inner = True
+                                        try:
+                                            WebDriverWait(driver, 3).until(EC.visibility_of_element_located((By.XPATH, "//*[contains(translate(., 'abcdefghijklmnopqrstuvwxyz','ABCDEFGHIJKLMNOPQRSTUVWXYZ'),'DETALLE DE PEDIDOS')]")))
+                                        except Exception:
+                                            pass
+                                    except Exception:
+                                        try:
+                                            # Intento 4: doble clic por si abre modal con dblclick
+                                            ActionChains(driver).move_to_element(target_el).pause(0.1).double_click().perform()
+                                            clicked_inner = True
+                                            try:
+                                                WebDriverWait(driver, 3).until(EC.visibility_of_element_located((By.XPATH, "//*[contains(translate(., 'abcdefghijklmnopqrstuvwxyz','ABCDEFGHIJKLMNOPQRSTUVWXYZ'),'DETALLE DE PEDIDOS')]")))
+                                            except Exception:
+                                                pass
+                                        except Exception:
+                                            clicked_inner = False
                     except Exception:
                         clicked_inner = False
 
@@ -1858,7 +2269,20 @@ def abrir_modal_y_extraer_datos(driver: webdriver.Chrome, categoria: str = "TOTA
                         try:
                             ActionChains(driver).move_to_element(td).pause(0.2).click().perform()
                         except Exception:
-                            driver.execute_script("arguments[0].click();", td)
+                            try:
+                                driver.execute_script("arguments[0].click();", td)
+                            except Exception:
+                                try:
+                                    # Último recurso: click por coordenadas del centro del TD
+                                    driver.execute_script(
+                                        "var r=arguments[0].getBoundingClientRect();"
+                                        "var cx=r.left+(r.width/2);var cy=r.top+(r.height/2)+2;"
+                                        "var el=document.elementFromPoint(cx,cy);"
+                                        "if(el){['mousedown','mouseup','click'].forEach(function(t){var ev=new MouseEvent(t,{view:window,bubbles:true,cancelable:true,clientX:cx,clientY:cy});el.dispatchEvent(ev);});}",
+                                        td
+                                    )
+                                except Exception:
+                                    pass
 
                     print(f"Clic en columna '{column_label}' exitoso")
                     categoria_clicked = True
@@ -1915,7 +2339,11 @@ def abrir_modal_y_extraer_datos(driver: webdriver.Chrome, categoria: str = "TOTA
         print("Esperando a que aparezca el modal...")
         try:
             WebDriverWait(driver, timeout).until(
-                EC.visibility_of_element_located((By.XPATH, "//*[contains(translate(., 'abcdefghijklmnopqrstuvwxyz','ABCDEFGHIJKLMNOPQRSTUVWXYZ'),'DETALLE DE PEDIDOS') and (self::h2 or self::h3 or self::div)]"))
+                lambda d: (
+                    any(e.is_displayed() for e in d.find_elements(By.XPATH, "//*[contains(translate(., 'abcdefghijklmnopqrstuvwxyz','ABCDEFGHIJKLMNOPQRSTUVWXYZ'),'DETALLE DE PEDIDOS') and (self::h2 or self::h3 or self::div)]")) or
+                    any(e.is_displayed() for e in d.find_elements(By.CSS_SELECTOR, ".modal.show, .modal[style*='display: block']")) or
+                    any(e.is_displayed() for e in d.find_elements(By.XPATH, "//*[@role='dialog' and (contains(@style,'display') or @aria-modal='true')]") )
+                )
             )
             print("Modal 'DETALLE DE PEDIDOS' abierto correctamente")
         except Exception:
