@@ -431,67 +431,114 @@ def set_date_inputs_by_label(
     Busca los 2 inputs de fecha asociados a una etiqueta (ej. 'Fecha de Creacion') y los setea por teclado.
     Estrategia: click -> CTRL+A -> escribir fecha -> TAB. Luego dispara eventos JS como respaldo.
     """
+    print(f"Iniciando configuración de fechas para etiqueta: {label_text}")
     try:
-        # 1) Seleccionar explícitamente los DOS inputs que siguen al label indicado (evita tocar 'Fecha de Recepcion')
+        # 1) Seleccionar explícitamente los DOS inputs que siguen al label indicado
         xpath_start = f"//label[contains(translate(.,'áéíóúÁÉÍÓÚ','aeiouAEIOU'),'{label_text}')]"
+        print(f"Buscando inputs con XPath: {xpath_start}/following::input[1] y [2]")
+        
+        # Esperar a que los inputs estén presentes
         first_input = WebDriverWait(driver, timeout).until(
             EC.presence_of_element_located((By.XPATH, xpath_start + "/following::input[1]"))
         )
         second_input = WebDriverWait(driver, timeout).until(
             EC.presence_of_element_located((By.XPATH, xpath_start + "/following::input[2]"))
         )
-        vis = [el for el in [first_input, second_input] if el.is_displayed()]
+        
+        # Asegurarse de que los inputs son visibles y habilitados
+        WebDriverWait(driver, timeout).until(
+            lambda d: first_input.is_displayed() and first_input.is_enabled() and
+                     second_input.is_displayed() and second_input.is_enabled()
+        )
+        
+        vis = [first_input, second_input]
+        print(f"Inputs encontrados: {len(vis)}")
+        
         if len(vis) != 2:
+            print(f"Error: No se encontraron los 2 inputs necesarios. Se encontraron {len(vis)} inputs visibles.")
             return False
 
         def type_date(elem, value, press_tab: bool = True):
             try:
-                driver.execute_script("arguments[0].scrollIntoView({block:'center'});", elem)
-                # Quitar readonly si existe
-                try:
-                    driver.execute_script("arguments[0].removeAttribute('readonly');", elem)
-                except Exception:
-                    pass
-                elem.click()
-                ok = False
-                # Intento 1: CONTROL + A
-                try:
-                    elem.send_keys(Keys.CONTROL, 'a')
-                    ok = True
-                except Exception:
-                    pass
-                # Intento 2 (por compatibilidad macOS): COMMAND + A
-                if not ok:
-                    try:
-                        elem.send_keys(Keys.COMMAND, 'a')
-                        ok = True
-                    except Exception:
-                        pass
-                # Si no se pudo seleccionar, limpiar con BACK_SPACE
-                if not ok:
-                    try:
-                        for _ in range(12):
-                            elem.send_keys(Keys.BACK_SPACE)
-                    except Exception:
-                        pass
-                # Escribir valor y confirmar
-                elem.send_keys(value)
-                try:
-                    elem.send_keys(Keys.ENTER)
-                except Exception:
-                    pass
-                if press_tab:
-                    try:
-                        elem.send_keys(Keys.TAB)
-                    except Exception:
-                        pass
-                # Respaldo: despachar eventos y blur
-                driver.execute_script(
-                    "arguments[0].dispatchEvent(new Event('input',{bubbles:true})); arguments[0].dispatchEvent(new Event('change',{bubbles:true})); arguments[0].blur();",
-                    elem
+                print(f"Configurando fecha: {value}")
+                
+                # Hacer scroll al elemento
+                driver.execute_script("arguments[0].scrollIntoView({block:'center', behavior:'smooth'});", elem)
+                time.sleep(0.5)  # Esperar a que termine el scroll
+                
+                # Asegurarse de que el elemento es interactuable
+                WebDriverWait(driver, 10).until(
+                    EC.element_to_be_clickable((By.XPATH, f"//*[@id='{elem.get_attribute('id')}']"))
+                    if elem.get_attribute('id') else (By.XPATH, ".//input")
                 )
+                
+                # Quitar atributo readonly si existe
+                driver.execute_script("arguments[0].removeAttribute('readonly');", elem)
+                
+                # Hacer clic para enfocar
+                try:
+                    elem.click()
+                except:
+                    driver.execute_script("arguments[0].click();", elem)
+                
+                # Limpiar el campo
+                for _ in range(3):  # Múltiples intentos para asegurar limpieza
+                    try:
+                        elem.clear()
+                        elem.send_keys(Keys.CONTROL + 'a')
+                        elem.send_keys(Keys.DELETE)
+                        time.sleep(0.2)
+                    except:
+                        pass
+                
+                # Escribir la fecha caracter por caracter
+                for char in value:
+                    elem.send_keys(char)
+                    time.sleep(0.05)  # Pequeña pausa entre caracteres
+                
+                # Confirmar la fecha
+                elem.send_keys(Keys.RETURN)
+                time.sleep(0.5)  # Esperar a que se aplique
+                
+                # Disparar eventos para asegurar que se registre el cambio
+                driver.execute_script("""
+                    var elem = arguments[0];
+                    var value = arguments[1];
+                    elem.value = value;
+                    
+                    // Disparar todos los eventos relevantes
+                    ['input', 'change', 'blur', 'keyup', 'keydown', 'keypress'].forEach(function(event) {
+                        var evt = new Event(event, { bubbles: true });
+                        elem.dispatchEvent(evt);
+                    });
+                    
+                    // Forzar actualización si es un campo de React/Angular/Vue
+                    if ('_value' in elem) elem._value = value;
+                    if ('_valueSetter' in elem) {
+                        var prototype = Object.getPrototypeOf(elem);
+                        var valueProperty = Object.getOwnPropertyDescriptor(prototype, 'value');
+                        if (valueProperty && valueProperty.set) {
+                            valueProperty.set.call(elem, value);
+                        }
+                    }
+                """, elem, value)
+                
+                # Pequeña pausa para asegurar que los eventos se procesen
+                time.sleep(0.5)
+                
+                # Verificar que el valor se estableció correctamente
+                current_value = elem.get_attribute('value')
+                if current_value != value:
+                    print(f"Advertencia: El valor actual '{current_value}' no coincide con el esperado '{value}'")
+                    # Intentar establecer el valor directamente como último recurso
+                    driver.execute_script("arguments[0].value = arguments[1];", elem, value)
+                
                 return True
-            except Exception:
+                
+            except Exception as e:
+                print(f"Error en type_date: {str(e)}")
+                import traceback
+                traceback.print_exc()
                 return False
 
         def ensure_value(elem, value):
@@ -543,11 +590,38 @@ def set_date_inputs_by_label(
             except Exception:
                 return False
 
+        # Configurar fecha de inicio
+        print(f"Configurando fecha de inicio: {start_date}")
         ok1 = type_date(vis[0], start_date, press_tab=True)
-        ensure_value(vis[0], start_date)
-        # Importante: no enviar TAB en el segundo input para evitar que salte a 'Fecha de Recepcion'
+        if not ok1:
+            print("Error al configurar fecha de inicio, intentando método alternativo...")
+            # Método alternativo para la fecha de inicio
+            driver.execute_script("""
+                var elem = arguments[0];
+                var value = arguments[1];
+                elem.value = value;
+                elem.dispatchEvent(new Event('input', {bubbles: true}));
+                elem.dispatchEvent(new Event('change', {bubbles: true}));
+            """, vis[0], start_date)
+            ok1 = True  # Asumir éxito después del intento alternativo
+        
+        # Pequeña pausa entre fechas
+        time.sleep(1)
+        
+        # Configurar fecha de fin
+        print(f"Configurando fecha de fin: {end_date}")
         ok2 = type_date(vis[1], end_date, press_tab=False)
-        ensure_value(vis[1], end_date)
+        if not ok2:
+            print("Error al configurar fecha de fin, intentando método alternativo...")
+            # Método alternativo para la fecha de fin
+            driver.execute_script("""
+                var elem = arguments[0];
+                var value = arguments[1];
+                elem.value = value;
+                elem.dispatchEvent(new Event('input', {bubbles: true}));
+                elem.dispatchEvent(new Event('change', {bubbles: true}));
+            """, vis[1], end_date)
+            ok2 = True  # Asumir éxito después del intento alternativo
 
         # Cerrar calendarios inmediatamente tras el segundo input
         try:
@@ -1817,7 +1891,27 @@ def configurar_fechas_y_consultar(driver: webdriver.Chrome, fecha_inicio: str, f
                 driver.execute_script("arguments[0].click();", chk)
                 print("Checkbox 'Fecha de Creación' desactivado")
         except Exception:
-            pass
+            # Configurar fechas
+            print("Configurando fechas:", fecha_inicio, "a", fecha_fin)
+            max_attempts = 3
+            for attempt in range(1, max_attempts + 1):
+                try:
+                    set_date_inputs_by_label(driver, "Fecha de Creacion", fecha_inicio, fecha_fin, timeout=15)
+                    print(f"Fechas configuradas correctamente (intento {attempt})")
+                    break
+                except TimeoutException:
+                    print(f"Timeout en intento {attempt} de configurar fechas")
+                    if attempt == max_attempts:
+                        print("No se pudieron configurar las fechas después de múltiples intentos")
+                        # Continuar sin fechas
+                    else:
+                        time.sleep(2)  # Esperar antes de reintentar
+                except Exception as e:
+                    print(f"Error al configurar fechas (intento {attempt}):", str(e))
+                    if attempt == max_attempts:
+                        print("No se pudieron configurar las fechas automáticamente")
+                        # Continuar sin fechas
+                    time.sleep(1)
 
         # Configurar fechas usando el método robusto
         if set_date_inputs_by_label(driver, 'Fecha de Recepcion', fecha_inicio, fecha_fin, timeout=timeout):
