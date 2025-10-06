@@ -159,6 +159,15 @@ def setup_driver(headless: bool = True, download_dir: str = None) -> webdriver.C
     driver.set_page_load_timeout(120)  # Aumentar timeout a 2 minutos
     driver.implicitly_wait(20)  # Aumentar espera implícita
     driver.maximize_window()  # Maximizar ventana
+    # Habilitar descargas en modo headless mediante CDP
+    try:
+        if download_dir:
+            driver.execute_cdp_cmd(
+                "Page.setDownloadBehavior",
+                {"behavior": "allow", "downloadPath": str(Path(download_dir).resolve())}
+            )
+    except Exception:
+        pass
     return driver
 
 def login_and_fetch_saver(driver: webdriver.Chrome, usuario: str, contrasena: str, fecha_inicio: str = None, fecha_fin: str = None, timeout: int = 30) -> bool:
@@ -740,6 +749,169 @@ def click_element_by_text(driver: webdriver.Chrome, text: str, timeout: int = 15
         except Exception:
             continue
     return False
+
+# ==========================
+# Exportar Excel desde modal
+# ==========================
+
+def get_downloads_dir() -> str:
+    """Obtiene el directorio de Descargas del usuario actual (Windows/macOS/Linux)."""
+    try:
+        home = Path.home()
+        downloads = home / "Downloads"
+        return str(downloads)
+    except Exception:
+        return str(Path.cwd())
+
+def _list_downloads(download_dir: str, pattern: str = "*.xls*") -> list:
+    try:
+        return glob.glob(str(Path(download_dir) / pattern))
+    except Exception:
+        return []
+
+def wait_for_download_completion(download_dir: str, pattern: str = "*.xls*", timeout: int = 90) -> Optional[str]:
+    """
+    Espera a que aparezca un archivo que cumpla el patrón y que no tenga la extensión .crdownload.
+    Retorna la ruta del archivo descargado o None si expira el timeout.
+    """
+    start = time.time()
+    download_dir = str(Path(download_dir).resolve())
+    last_stable_path = None
+    while time.time() - start < timeout:
+        # No debe haber archivos temporales .crdownload
+        tmp_in_progress = glob.glob(os.path.join(download_dir, "*.crdownload"))
+        files = _list_downloads(download_dir, pattern)
+        if files:
+            # Elegir el más reciente
+            files.sort(key=lambda p: os.path.getmtime(p), reverse=True)
+            candidate = files[0]
+            # Verificar que no siga escribiéndose (tamaño estable)
+            try:
+                size1 = os.path.getsize(candidate)
+                time.sleep(0.5)
+                size2 = os.path.getsize(candidate)
+                if size1 == size2 and not tmp_in_progress:
+                    last_stable_path = candidate
+                    break
+            except Exception:
+                pass
+        time.sleep(0.5)
+    return last_stable_path
+
+def click_export_excel_in_open_modal(
+    driver: webdriver.Chrome,
+    timeout: int = 30,
+    button_text: str = "Exportar Excel",
+    download_dir: Optional[str] = None,
+    file_pattern: str = "*.xls*"
+) -> Optional[str]:
+    """
+    Asume que el modal ya está visible. Hace clic en el botón "Exportar Excel" y
+    espera a que el archivo se descargue en el directorio indicado.
+
+    Retorna la ruta del archivo descargado o None si falla.
+    """
+    try:
+        # Asegurar directorio de descarga
+        download_dir = download_dir or get_downloads_dir()
+        Path(download_dir).mkdir(parents=True, exist_ok=True)
+
+        # Intentar encontrar el botón por texto exacto u opciones cercanas
+        btn_xpaths = [
+            f"//button[normalize-space()='{button_text}']",
+            f"//a[normalize-space()='{button_text}']",
+            f"//div[contains(@class,'modal') and .//*[normalize-space()='{button_text}']]//*[self::button or self::a][normalize-space()='{button_text}']",
+            f"//*[self::button or self::a][contains(normalize-space(), 'Exportar') and contains(normalize-space(), 'Excel')]",
+        ]
+        button = None
+        for xp in btn_xpaths:
+            try:
+                button = WebDriverWait(driver, timeout).until(
+                    EC.element_to_be_clickable((By.XPATH, xp))
+                )
+                if button and button.is_displayed():
+                    break
+            except Exception:
+                continue
+        if not button:
+            return None
+
+        # Clic con JS para evitar overlays
+        try:
+            driver.execute_script("arguments[0].scrollIntoView({block:'center'});", button)
+            time.sleep(0.2)
+            driver.execute_script("arguments[0].click();", button)
+        except Exception:
+            try:
+                button.click()
+            except Exception:
+                return None
+
+        # Esperar a que inicie y finalice la descarga
+        downloaded = wait_for_download_completion(download_dir, file_pattern, timeout=120)
+        return downloaded
+    except Exception:
+        return None
+
+def exportar_excel_despues_de_modal(
+    driver: webdriver.Chrome,
+    download_dir: Optional[str] = None,
+    timeout: int = 30,
+    button_text: str = "Exportar Excel",
+    file_pattern: str = "*.xls*"
+) -> Optional[str]:
+    """
+    Úsala inmediatamente después de que tu script abra el modal.
+    No intenta abrir el modal: solo hace clic en el botón "Exportar Excel" visible
+    dentro del modal actual y espera la descarga en la carpeta indicada (por defecto, Descargas).
+    Retorna la ruta del archivo descargado o None si falla.
+    """
+    return click_export_excel_in_open_modal(
+        driver,
+        timeout=timeout,
+        button_text=button_text,
+        download_dir=download_dir,
+        file_pattern=file_pattern,
+    )
+
+def wait_modal_then_export_excel(
+    driver: webdriver.Chrome,
+    timeout: int = 40,
+    modal_title_contains: str = "DETALLE DE PEDIDOS",
+    button_text: str = "Exportar Excel",
+    download_dir: Optional[str] = None,
+    file_pattern: str = "*.xls*"
+) -> Optional[str]:
+    """
+    Espera a que un modal esté visible (por título o por presencia del botón de exportar) y
+    dispara la exportación a Excel, guardando en Downloads.
+    """
+    try:
+        # Condición: modal visible por clases comunes o por título
+        modal_locators = [
+            (By.CSS_SELECTOR, ".modal.show"),
+            (By.XPATH, f"//div[contains(@class,'modal') and .//*[contains(translate(.,'abcdefghijklmnopqrstuvwxyz','ABCDEFGHIJKLMNOPQRSTUVWXYZ'),'{modal_title_contains}')]]"),
+            (By.XPATH, f"//*[self::button or self::a][normalize-space()='{button_text}']")
+        ]
+        visible = False
+        for by, sel in modal_locators:
+            try:
+                WebDriverWait(driver, timeout).until(EC.visibility_of_element_located((by, sel)))
+                visible = True
+                break
+            except Exception:
+                continue
+        if not visible:
+            return None
+        return click_export_excel_in_open_modal(
+            driver,
+            timeout=timeout,
+            button_text=button_text,
+            download_dir=download_dir,
+            file_pattern=file_pattern,
+        )
+    except Exception:
+        return None
 
 def navigate_menu_path(driver: webdriver.Chrome, items: List[str], timeout: int = 20) -> bool:
     """
@@ -2447,11 +2619,34 @@ def abrir_modal_y_extraer_datos(driver: webdriver.Chrome, categoria: str = "TOTA
         driver.save_screenshot("step_modal_opened.png")
         print("Screenshot del modal guardado: step_modal_opened.png")
 
-        # Extraer datos del modal
-        print("Extrayendo datos del modal...")
-        datos = extract_data(driver, use_excel_export=True, download_dir=str(Path(__file__).parent / 'downloads'))
-        
-        return datos
+        # Descargar Excel desde el modal y retornar solo la ruta
+        print("Clic en 'Exportar Excel' y esperando descarga...")
+        download_dir = str(Path(__file__).parent / 'downloads')
+        try:
+            Path(download_dir).mkdir(parents=True, exist_ok=True)
+        except Exception:
+            pass
+
+        ruta_excel = click_export_excel_in_open_modal(
+            driver,
+            timeout=40,
+            button_text="Exportar Excel",
+            download_dir=download_dir,
+            file_pattern="*.xls*",
+        )
+
+        if not ruta_excel:
+            return {
+                "estado": "error",
+                "mensaje": "No se pudo descargar el Excel desde el modal"
+            }
+
+        return {
+            "estado": "éxito",
+            "origen": "excel_descargado",
+            "ruta_excel": ruta_excel,
+            "fecha_consulta": time.strftime("%Y-%m-%d %H:%M:%S")
+        }
         
     except Exception as e:
         print(f"Error abriendo modal y extrayendo datos: {e}")
@@ -2510,30 +2705,14 @@ def main():
             print("Error: No se pudo iniciar sesion")
             datos = {"estado": "error", "mensaje": "No se pudo iniciar sesión"}
         
-        # Mostrar resultados
+        # Mostrar resultados mínimos y no generar JSON
         print("\n" + "="*50)
-        print("RESULTADOS DE LA EXTRACCION:")
+        print("RESULTADO DE DESCARGA DE EXCEL:")
         print("="*50)
         print(f"Estado: {datos.get('estado')}")
         print(f"Mensaje: {datos.get('mensaje', 'N/A')}")
-        print(f"Total de registros: {datos.get('total_registros', 0)}")
-        
-        if datos.get('estado') == 'exito':
-            print(f"Origen: {datos.get('origen', 'N/A')}")
-            if datos.get('ruta_excel'):
-                print(f"Archivo Excel: {datos.get('ruta_excel')}")
-        
-        # Guardar los datos en un archivo JSON
-        with open('datos_savar.json', 'w', encoding='utf-8') as f:
-            json.dump(datos, f, ensure_ascii=False, indent=2)
-        print(f"\nDatos guardados en 'datos_savar.json'")
-        
-        # Si hay datos, intentar guardar en la base de datos
-        if datos.get('estado') == 'éxito' and datos.get('datos'):
-            print("\nGuardando datos en la base de datos...")
-            resultado_db = save_to_database(datos)
-            print(f"Resultado de la base de datos: {resultado_db.get('estado')}")
-            print(f"Mensaje: {resultado_db.get('mensaje')}")
+        if datos.get('ruta_excel'):
+            print(f"Archivo Excel: {datos.get('ruta_excel')}")
             
     except Exception as e:
         print(f"\nError durante la ejecución: {e}")
