@@ -132,6 +132,12 @@
                         <button class="btn btn-exportar me-2" onclick="exportarAExcel('paquetes')">
                             <i class="fas fa-file-excel me-1"></i> Excel
                         </button>
+                        <button id="btnEjecutarSelenium" class="btn btn-primario" onclick="ejecutarSelenium()">
+                            <i class="fas fa-play me-1"></i> Ejecutar Selenium (Descargar Excel SAVAR)
+                        </button>
+                        <button type="button" class="btn btn-primary" onclick="cargarPaquetesDesdeBD()">
+                            Refrescar Paquetes (BD)
+                          </button>
                     </div>
                 </div>
                 
@@ -1126,7 +1132,146 @@
         function exportarPagos() {
             alert('Función de exportar pagos - Por implementar');
         }
-        
+        5
+        // Carga el último Excel descargado y lo renderiza en la tabla de Paquetes
+async function cargarUltimoExcelEnPaquetes() {
+    try {
+        // 1) Pedir al servidor cuál es el archivo más reciente
+        const metaResp = await fetch('php/latest_excel.php', { cache: 'no-store' });
+        const meta = await metaResp.json();
+        if (!meta.exito) {
+            alert('No se pudo localizar el Excel: ' + (meta.mensaje || 'Desconocido'));
+            return;
+        }
+
+        // 2) Descargar el Excel como ArrayBuffer
+        const fileResp = await fetch(meta.ruta_relativa, { cache: 'no-store' });
+        if (!fileResp.ok) {
+            throw new Error('No se pudo descargar el archivo Excel: ' + meta.ruta_relativa);
+        }
+        const buf = await fileResp.arrayBuffer();
+
+        // 3) Parsear usando SheetJS (XLSX ya está incluido en la página)
+        const wb = XLSX.read(buf, { type: 'array' });
+        const hoja = wb.SheetNames[0];
+        const ws = wb.Sheets[hoja];
+        // header:1 => matriz de filas, defval:'' para no tener undefined
+        const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+
+        if (!rows || rows.length === 0) {
+            alert('El Excel está vacío o no tiene datos.');
+            return;
+        }
+
+        // 4) Renderizar
+        renderPaquetesDesdeExcel(rows);
+
+        // 5) Actualizar métrica principal
+        const total = rows.length > 1 ? (rows.length - 1) : 0;
+        const totalLbl = document.getElementById('totalPaquetes');
+        if (totalLbl) totalLbl.textContent = String(total);
+
+        // 6) Asegurar que la sección Paquetes esté visible
+        const enlacePaquetes = document.querySelector('a[onclick*=\"paquetes\"]');
+        if (enlacePaquetes) mostrarSeccion('paquetes', enlacePaquetes);
+
+    } catch (e) {
+        console.error('Error cargando y renderizando Excel:', e);
+        alert('Error al cargar el Excel: ' + e.message);
+    }
+}
+// Carga todos los paquetes desde BD y los pinta
+async function cargarPaquetesDesdeBD() {
+  try {
+    const resp = await fetch('php/paquetes.php?limit=2000', { cache: 'no-store' });
+    // Parseo robusto (si no fuese JSON, te muestra qué devolvió)
+    const raw = await resp.text();
+    let data;
+    try { data = JSON.parse(raw); } catch (e) {
+      alert('Error cargando paquetes desde BD.\nLa respuesta no es JSON.\n\nCuerpo (primeros 2000 chars):\n' + raw.slice(0,2000));
+      return;
+    }
+    if (!data.exito) throw new Error(data.mensaje || 'Error desconocido');
+
+    const headers = data.headers && data.headers.length ? data.headers : inferHeaders(data.datos);
+    renderPaquetesDesdeBD(headers, data.datos);
+
+    const totalLbl = document.getElementById('totalPaquetes');
+    if (totalLbl) totalLbl.textContent = String(data.total || data.datos.length || 0);
+
+    const enlacePaquetes = document.querySelector('a[onclick*="paquetes"]');
+    if (enlacePaquetes) mostrarSeccion('paquetes', enlacePaquetes);
+  } catch (e) {
+    console.error('Error cargando desde BD:', e);
+    alert('Error cargando paquetes desde BD: ' + e.message);
+  }
+}
+// Exponer en global para poder llamarla desde consola o botones
+window.cargarPaquetesDesdeBD = cargarPaquetesDesdeBD;
+window.inferHeaders = inferHeaders;
+window.renderPaquetesDesdeBD = renderPaquetesDesdeBD;
+// Si no vienen headers, intenta inferir por llaves del primer objeto
+function inferHeaders(rows) {
+  if (!Array.isArray(rows) || !rows.length) return [];
+  return Object.keys(rows[0]);
+}
+
+function renderPaquetesDesdeBD(headers, rows) {
+  const tabla = document.getElementById('tablaPaquetes');
+  if (!tabla) return alert('No se encontró la tabla de Paquetes (id="tablaPaquetes").');
+  const thead = tabla.querySelector('thead');
+  const tbody = tabla.querySelector('tbody');
+  if (!thead || !tbody) return alert('La tabla de Paquetes no tiene thead/tbody.');
+
+  const esc = (s) => String(s ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+
+  // Encabezados
+  thead.innerHTML = '<tr>' + headers.map(h => `<th>${esc(h)}</th>`).join('') + '</tr>';
+
+  // Cuerpo
+  let html = '';
+  for (const r of rows) {
+    html += '<tr>' + headers.map(h => `<td>${esc(r[h])}</td>`).join('') + '</tr>';
+  }
+  tbody.innerHTML = html;
+}
+// Pinta headers y filas en #tablaPaquetes a partir de matriz [ [headers...], [row1...], ... ]
+function renderPaquetesDesdeExcel(rows) {
+    const tabla = document.getElementById('tablaPaquetes');
+    if (!tabla) {
+        alert('No se encontró la tabla de Paquetes (id="tablaPaquetes").');
+        return;
+    }
+    const thead = tabla.querySelector('thead');
+    const tbody = tabla.querySelector('tbody');
+    if (!thead || !tbody) {
+        alert('La tabla de Paquetes no tiene thead/tbody.');
+        return;
+    }
+
+    // Primera fila = encabezados
+    const headers = rows[0].map(h => String(h || '').trim());
+    const dataRows = rows.slice(1);
+
+    // Helper para evitar XSS en celdas
+    const esc = (s) => String(s ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+
+    // Construir encabezados
+    thead.innerHTML = '<tr>' + headers.map(h => `<th>${esc(h)}</th>`).join('') + '</tr>';
+
+    // Construir cuerpo
+    let html = '';
+    for (const r of dataRows) {
+        html += '<tr>' + headers.map((_, i) => `<td>${esc(r[i] ?? '')}</td>`).join('') + '</tr>';
+    }
+    tbody.innerHTML = html;
+}
         // Funciones para cargar datos de empleados, vehículos y rutas
         function cargarEmpleados() {
             console.log('Cargando empleados...');

@@ -1,0 +1,60 @@
+[2025-10-09 05:30:28] CMD: "C:\Users\JULIO DME\AppData\Local\Programs\Python\Python313\python.exe" "C:\xampp\htdocs\HERMES.EXPRESS\import_excel_to_db.py" 2>&1
+[2025-10-09 05:30:29] CODE: 0
+OUT:
+{"exito": true, "mensaje": "Importación completada de 1 archivo(s) desde downloads/", "insertados": 0, "detalle": [{"archivo": "Detalle Pedidos.xlsx", "error": "1054 (42S22): Unknown column 'data' in 'field list'"}]}
+[2025-10-09 05:30:32] CMD: "C:\Users\JULIO DME\AppData\Local\Programs\Python\Python313\python.exe" "C:\xampp\htdocs\HERMES.EXPRESS\import_excel_to_db.py" 2>&1
+[2025-10-09 05:30:32] CODE: 0
+OUT:
+{"exito": true, "mensaje": "Importación completada de 1 archivo(s) desde downloads/", "insertados": 0, "detalle": [{"archivo": "Detalle Pedidos.xlsx", "error": "1054 (42S22): Unknown column 'data' in 'field list'"}]}
+[2025-10-09 05:30:32] CMD: "C:\Users\JULIO DME\AppData\Local\Programs\Python\Python313\python.exe" "C:\xampp\htdocs\HERMES.EXPRESS\import_excel_to_db.py" 2>&1
+[2025-10-09 05:30:33] CODE: 0
+OUT:
+{"exito": true, "mensaje": "Importación completada de 1 archivo(s) desde downloads/", "insertados": 0, "detalle": [{"archivo": "Detalle Pedidos.xlsx", "error": "1054 (42S22): Unknown column 'data' in 'field list'"}]}
+[2025-10-09 05:30:37] CMD: "C:\Users\JULIO DME\AppData\Local\Programs\Python\Python313\python.exe" "C:\xampp\htdocs\HERMES.EXPRESS\import_excel_to_db.py" 2>&1
+[2025-10-09 05:30:37] CMD: "C:\Users\JULIO DME\AppData\Local\Programs\Python\Python313\python.exe" "C:\xampp\htdocs\HERMES.EXPRESS\import_excel_to_db.py" 2>&1
+[2025-10-09 05:30:38] CMD: "C:\Users\JULIO DME\AppData\Local\Programs\Python\Python313\python.exe" "C:\xampp\htdocs\HERMES.EXPRESS\import_excel_to_db.py" 2>&1
+[2025-10-09 05:30:38] CMD: "C:\Users\JULIO DME\AppData\Local\Programs\Python\Python313\python.exe" "C:\xampp\htdocs\HERMES.EXPRESS\import_excel_to_db.py" 2>&1
+[2025-10-09 05:30:38] CODE: 0
+OUT:
+{"exito": true, "mensaje": "Importación completada de 1 archivo(s) desde downloads/", "insertados": 0, "detalle": [{"archivo": "Detalle Pedidos.xlsx", "error": "1054 (42S22): Unknown column 'data' in 'field list'"}]}
+[2025-10-09 05:30:38] CMD: "C:\Users\JULIO DME\AppData\Local\Programs\Python\Python313\python.exe" "C:\xampp\htdocs\HERMES.EXPRESS\import_excel_to_db.py" 2>&1
+[2025-10-09 05:30:38] CODE: 0
+OUT:
+{"exito": true, "mensaje": "Importación completada de 1 archivo(s) desde downloads/", "insertados": 0, "detalle": [{"archivo": "Detalle Pedidos.xlsx", "error": "1054 (42S22): Unknown column 'data' in 'field list'"}]}
+[2025-10-09 05:30:38] CMD: "C:\Users\JULIO DME\AppData\Local\Programs\Python\Python313\python.exe" "C:\xampp\htdocs\HERMES.EXPRESS\import_excel_to_db.py" 2>&1
+[2025-10-09 05:30:38] CODE: 0
+OUT:
+{"exito": true, "mensaje": "Importación completada de 1 archivo(s) desde downloads/", "insertados": 0, "detalle": [{"archivo": "Detalle Pedidos.xlsx", "error": "1054 (42S22): Unknown column 'data' in 'field list'"}]}
+[2025-10-09 05:30:38] CMD: "C:\Users\JULIO DME\AppData\Local\Programs\Python\Python313\python.exe" "C:\xampp\htdocs\HERMES.EXPRESS\import_excel_to_db.py" 2>&1
+[2025-10-09 05:30:39] CODE: 0
+OUT:
+{"exito": true, "mensaje": "Importación completada de 1 archivo(s) desde downloads/", "insertados": 0, "detalle": [{"archivo": "Detalle Pedidos.xlsx", "error": "1054 (42S22): Unknown column 'data' in 'field list'"}]}
+[2025-10-09 05:30:39] CODE: 0
+OUT:
+{"exito": true, "mensaje": "Importación completada de 1 archivo(s) desde downloads/", "insertados": 0, "detalle": [{"archivo": "Detalle Pedidos.xlsx", "error": "1054 (42S22): Unknown column 'data' in 'field list'"}]}
+[2025-10-09 05:30:39] CODE: 0
+OUT:
+{"exito": true, "mensaje": "Importación completada de 1 archivo(s) desde downloads/", "insertados": 0, "detalle": [{"archivo": "Detalle Pedidos.xlsx", "error": "1054 (42S22): Unknown column 'data' in 'field list'"}]}
+[2025-10-09 05:30:39] CODE: 0
+OUT:
+{"exito": true, "mensaje": "Importación completada de 1 archivo(s) desde downloads/", "insertados": 0, "detalle": [{"archivo": "Detalle Pedidos.xlsx", "error": "1054 (42S22): Unknown column 'data' in 'field list'"}]}
+[2025-10-09 05:35:14] CMD: "C:\Users\JULIO DME\AppData\Local\Programs\Python\Python313\python.exe" "C:\xampp\htdocs\HERMES.EXPRESS\import_excel_to_db.py" 2>&1
+[2025-10-09 05:35:15] CODE: 0
+OUT:
+{"exito": true, "mensaje": "Importación completada de 1 archivo(s) desde downloads/", "insertados": 0, "detalle": [{"archivo": "Detalle Pedidos.xlsx", "error": "1054 (42S22): Unknown column 'data' in 'field list'"}]}
+[2025-10-09 05:35:17] CMD: "C:\Users\JULIO DME\AppData\Local\Programs\Python\Python313\python.exe" "C:\xampp\htdocs\HERMES.EXPRESS\import_excel_to_db.py" 2>&1
+[2025-10-09 05:35:17] CODE: 0
+OUT:
+{"exito": true, "mensaje": "Importación completada de 1 archivo(s) desde downloads/", "insertados": 0, "detalle": [{"archivo": "Detalle Pedidos.xlsx", "error": "1054 (42S22): Unknown column 'data' in 'field list'"}]}
+[2025-10-09 05:37:16] CMD: "C:\Users\JULIO DME\AppData\Local\Programs\Python\Python313\python.exe" "C:\xampp\htdocs\HERMES.EXPRESS\import_excel_to_db.py" 2>&1
+[2025-10-09 05:37:16] CODE: 0
+OUT:
+{"exito": true, "mensaje": "Importación completada de 1 archivo(s) desde downloads/", "insertados": 0, "detalle": [{"archivo": "Detalle Pedidos.xlsx", "error": "1054 (42S22): Unknown column 'data' in 'field list'"}]}
+[2025-10-09 05:43:01] CMD: "C:\Users\JULIO DME\AppData\Local\Programs\Python\Python313\python.exe" "C:\xampp\htdocs\HERMES.EXPRESS\import_excel_to_db.py" 2>&1
+[2025-10-09 05:43:02] CODE: 0
+OUT:
+{"exito": true, "mensaje": "Importación completada de 1 archivo(s) desde downloads/", "insertados": 2, "detalle": [{"archivo": "Detalle Pedidos.xlsx", "insertados": 2}]}
+[2025-10-09 05:43:04] CMD: "C:\Users\JULIO DME\AppData\Local\Programs\Python\Python313\python.exe" "C:\xampp\htdocs\HERMES.EXPRESS\import_excel_to_db.py" 2>&1
+[2025-10-09 05:43:05] CODE: 0
+OUT:
+{"exito": true, "mensaje": "Importación completada de 1 archivo(s) desde downloads/", "insertados": 2, "detalle": [{"archivo": "Detalle Pedidos.xlsx", "insertados": 2}]}

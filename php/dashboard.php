@@ -1,5 +1,6 @@
 <?php
 require_once 'config.php';
+require_once 'verificar_sesion.php';
 verificar_sesion();
 
 $accion = $_GET['accion'] ?? $_POST['accion'] ?? '';
