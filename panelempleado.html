@@ -252,140 +252,10 @@
             </section>
         </main>
     </div>
-
-    <!-- Google Maps API -->
-    <script>
-        // Variables globales para el mapa
-        let map;
-        let directionsService;
-        let directionsRenderer;
-        let watchId;
-        let currentPosition = null;
-        let deliveryMarkers = [];
-        let currentLocationMarker = null;
-        let routePolyline = null;
-        window.mapInitialized = false;
-
-        // Función para inicializar el mapa
-        function initMap() {
-            console.log('Inicializando mapa...');
-            
-            try {
-                // Verificar si el contenedor del mapa existe
-                const mapElement = document.getElementById('map');
-                if (!mapElement) {
-                    console.error('No se encontró el elemento del mapa');
-                    return;
-                }
-                
-                // Configuración inicial del mapa centrado en Lima, Perú
-                const lima = { lat: -12.0464, lng: -77.0428 };
-                
-                // Opciones del mapa
-                const mapOptions = {
-                    zoom: 12,
-                    center: lima,
-                    mapTypeId: 'roadmap',
-                    styles: [
-                        {
-                            featureType: 'poi',
-                            elementType: 'labels',
-                            stylers: [{ visibility: 'off' }]
-                        }
-                    ],
-                    disableDefaultUI: false,
-                    zoomControl: true,
-                    mapTypeControl: false,
-                    scaleControl: true,
-                    streetViewControl: false,
-                    rotateControl: true,
-                    fullscreenControl: true
-                };
-                
-                // Crear instancia del mapa
-                map = new google.maps.Map(mapElement, mapOptions);
-                
-                // Inicializar el servicio de direcciones
-                directionsService = new google.maps.DirectionsService();
-                directionsRenderer = new google.maps.DirectionsRenderer({
-                    map: map,
-                    suppressMarkers: true,
-                    preserveViewport: true
-                });
-                
-                window.mapInitialized = true;
-                console.log('Mapa inicializado correctamente');
-                
-                // Disparar evento personalizado cuando el mapa está listo
-                const event = new Event('mapInitialized');
-                window.dispatchEvent(event);
-                
-                // Forzar un redibujado del mapa
-                google.maps.event.trigger(map, 'resize');
-                
-                // Centrar el mapa nuevamente después de redibujar
-                setTimeout(() => {
-                    map.setCenter(lima);
-                }, 100);
-                
-            } catch (error) {
-                console.error('Error al inicializar el mapa:', error);
-            }
-        }
-        
-        // Cargar la API de Google Maps de forma asíncrona
-        (function() {
-            // Verificar si ya existe el script del mapa
-            if (document.querySelector('script[src*="maps.googleapis.com"]')) {
-                console.log('La API de Google Maps ya está cargada');
-                return;
-            }
-            
-            // Configurar función global para el callback
-            window.initMap = function() {
-                console.log('API de Google Maps cargada, inicializando mapa...');
-                
-                // Coordenadas de Lima por defecto
-                const lima = { lat: -12.0464, lng: -77.0428 };
-                
-                // Opciones del mapa
-                const mapOptions = {
-                    zoom: 12,
-                    center: lima,
-                    mapTypeId: 'roadmap',
-                    styles: [
-                        {
-                            featureType: 'poi',
-                            elementType: 'labels',
-                            stylers: [{ visibility: 'off' }]
-                        }
-                    ]
-                };
-                
-                // Crear el mapa
-                window.map = new google.maps.Map(document.getElementById('map'), mapOptions);
-                
-                // Marcar que el mapa está listo
-                window.mapInitialized = true;
-                console.log('Mapa inicializado correctamente');
-                
-                // Disparar evento personalizado cuando el mapa está listo
-                const event = new Event('mapInitialized');
-                window.dispatchEvent(event);
-            };
-            
-            // Cargar el script de la API de Google Maps
-            const script = document.createElement('script');
-            script.src = 'https://maps.googleapis.com/maps/api/js?key=AIzaSyAhKq8glWDGij47iJZy2_RB8jan9D1V-Sk&libraries=geometry,places&callback=initMap&loading=async';
-            script.async = true;
-            script.defer = true;
-            script.onerror = function() {
-                console.error('Error al cargar la API de Google Maps');
-                mostrarNotificacion('Error al cargar el mapa. Por favor, recarga la página.', 'error');
-            };
-            document.head.appendChild(script);
-        })();
-    </script>
+    <!-- Carga del panel JS antes de Google Maps para que exista initMap como callback -->
+    <script src="js/panelempleado.js"></script>
+    <!-- Google Maps API (reemplaza TU_API_KEY con tu clave válida) -->
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAhKq8glWDGij47iJZy2_RB8jan9D1V-Sk&libraries=geometry,places&callback=initMap&loading=async" async defer></script>
     <script>
         // Cerrar sesión
         function cerrarSesion() {
@@ -502,6 +372,7 @@
                 });
         });
     </script>
-    <script src="js/panelempleado.js"></script>
+    
 </body>
 </html>
+{{ ... }}

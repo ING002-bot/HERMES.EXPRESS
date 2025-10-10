@@ -278,6 +278,40 @@ function initMap() {
     // Crear el mapa
     window.map = new google.maps.Map(document.getElementById('map'), mapOptions);
     
+    // Agregar puntos fijos solicitados
+    const puntos = [
+        { lat: -12.0464, lng: -77.0428, titulo: 'Cliente 1' },
+        { lat: -12.0500, lng: -77.0300, titulo: 'Cliente 2' },
+        { lat: -12.0600, lng: -77.0550, titulo: 'Cliente 3' },
+        { lat: -12.0430, lng: -77.0700, titulo: 'Cliente 4' }
+    ];
+
+    try {
+        const bounds = new google.maps.LatLngBounds();
+        puntos.forEach(p => {
+            const position = { lat: p.lat, lng: p.lng };
+            const marker = new google.maps.Marker({
+                position,
+                map: window.map,
+                title: p.titulo,
+                icon: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png'
+            });
+            const info = new google.maps.InfoWindow({
+                content: `<strong>${p.titulo}</strong><br>(${p.lat}, ${p.lng})`
+            });
+            marker.addListener('click', () => info.open(window.map, marker));
+            bounds.extend(position);
+        });
+        if (!bounds.isEmpty()) {
+            window.map.fitBounds(bounds);
+        }
+        console.log('✅ Puntos agregados al mapa.');
+        // Marcar que ya se agregaron para evitar duplicados si se usa el listener
+        window.fixedPointsAdded = true;
+    } catch (e) {
+        console.error('No se pudieron agregar los puntos al mapa:', e);
+    }
+
     // Marcar que el mapa está listo
     window.mapInitialized = true;
     console.log('Mapa inicializado correctamente');
@@ -286,6 +320,53 @@ function initMap() {
     const event = new Event('mapInitialized');
     window.dispatchEvent(event);
 }
+
+// Listener para agregar puntos cuando el mapa esté listo (según solicitud)
+window.addEventListener('mapInitialized', () => {
+    console.log('Mapa detectado. Agregando puntos...');
+
+    const puntos = [
+        { lat: -12.0464, lng: -77.0428, titulo: 'Oficina Central' },
+        { lat: -12.0500, lng: -77.0300, titulo: 'Cliente 1' },
+        { lat: -12.0600, lng: -77.0550, titulo: 'Cliente 2' },
+        { lat: -12.0430, lng: -77.0700, titulo: 'Entrega Especial' }
+    ];
+
+    if (!window.map) {
+        console.error('❌ El mapa aún no está disponible.');
+        return;
+    }
+
+    // Evitar duplicados si ya fueron agregados dentro de initMap
+    if (window.fixedPointsAdded) {
+        console.log('Puntos fijos ya agregados. Se omite para evitar duplicados.');
+        return;
+    }
+
+    const bounds = new google.maps.LatLngBounds();
+    puntos.forEach(punto => {
+        const marker = new google.maps.Marker({
+            position: { lat: punto.lat, lng: punto.lng },
+            map: window.map,
+            title: punto.titulo,
+            icon: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png'
+        });
+
+        const info = new google.maps.InfoWindow({
+            content: `<strong>${punto.titulo}</strong><br>(${punto.lat}, ${punto.lng})`
+        });
+
+        marker.addListener('click', () => info.open(window.map, marker));
+        bounds.extend({ lat: punto.lat, lng: punto.lng });
+    });
+
+    if (!bounds.isEmpty()) {
+        window.map.fitBounds(bounds);
+    }
+
+    window.fixedPointsAdded = true;
+    console.log('✅ Puntos agregados correctamente.');
+});
 
 // Función para iniciar el seguimiento de ruta
 function iniciarRuta() {
@@ -352,7 +433,7 @@ function iniciarSeguimientoUbicacion() {
     const opciones = {
         enableHighAccuracy: true,  // Alta precisión
         maximumAge: 0,           // No usar caché
-        timeout: 10000           // 10 segundos de espera
+        timeout: 20000           // 20 segundos de espera
     };
 
     // Función para manejar el éxito de la geolocalización
@@ -739,4 +820,6 @@ function mostrarNotificacion(mensaje, tipo) {
     setTimeout(() => {
         notificacion.remove();
     }, 3000);
+
+    
 }
