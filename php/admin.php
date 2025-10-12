@@ -443,6 +443,7 @@ function crearRuta() {
         $destino = limpiar_dato($_POST['destino']);
         $distancia = floatval($_POST['distancia']);
         $tiempo_estimado = intval($_POST['tiempo_estimado']);
+        $zonas = isset($_POST['zonas']) ? trim($_POST['zonas']) : null; // coma-separado
         
         // Validar datos
         if (empty($nombre) || empty($origen) || empty($destino) || $distancia <= 0) {
@@ -450,12 +451,27 @@ function crearRuta() {
             return;
         }
         
-        // Crear ruta
-        $stmt = $pdo->prepare("
-            INSERT INTO rutas (nombre, origen, destino, distancia, tiempo_estimado) 
-            VALUES (?, ?, ?, ?, ?)
-        ");
-        $stmt->execute([$nombre, $origen, $destino, $distancia, $tiempo_estimado]);
+        // Asegurar columna 'zonas' (opcional)
+        try {
+            $pdo->exec("ALTER TABLE rutas ADD COLUMN zonas TEXT NULL");
+        } catch (Exception $e) {
+            // Ignorar si ya existe
+        }
+
+        // Crear ruta (incluye zonas si se proporcionó)
+        if ($zonas !== null && $zonas !== '') {
+            $stmt = $pdo->prepare("
+                INSERT INTO rutas (nombre, origen, destino, distancia, tiempo_estimado, zonas) 
+                VALUES (?, ?, ?, ?, ?, ?)
+            ");
+            $stmt->execute([$nombre, $origen, $destino, $distancia, $tiempo_estimado, $zonas]);
+        } else {
+            $stmt = $pdo->prepare("
+                INSERT INTO rutas (nombre, origen, destino, distancia, tiempo_estimado) 
+                VALUES (?, ?, ?, ?, ?)
+            ");
+            $stmt->execute([$nombre, $origen, $destino, $distancia, $tiempo_estimado]);
+        }
         
         echo json_encode([
             'exito' => true,

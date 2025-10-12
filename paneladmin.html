@@ -52,6 +52,9 @@
                         <i class="fas fa-users-cog"></i> Gestión de Usuarios
                     </a>
                 </li>
+                <li><a href="javascript:void(0)" onclick="mostrarSeccion('asignar', this)">
+                    <span class="icono">🧩</span>Asignar
+                </a></li>
             </ul>
             
             <div class="usuario-info">
@@ -594,6 +597,10 @@
                             <input type="text" id="destinoRuta" required>
                         </div>
                         <div class="form-grupo">
+                            <label>Zonas (separadas por coma):</label>
+                            <input type="text" id="zonasRuta" placeholder="Ej: Chiclayo, JLO, La Victoria, Santa Victoria">
+                        </div>
+                        <div class="form-grupo">
                             <label>Distancia (km):</label>
                             <input type="number" id="distanciaRuta" step="0.1" required>
                         </div>
@@ -728,6 +735,52 @@
             location.reload();
         }
         
+        // ====== Asignaciones: empleados y distritos ======
+        async function cargarEmpleadosAsignar() {
+            try {
+                const resp = await fetch('php/asignaciones.php?accion=empleados', { cache: 'no-store' });
+                const data = await resp.json();
+                const sel = document.getElementById('selEmpleadoAsignar');
+                if (!sel) return;
+                sel.innerHTML = '<option value="">Seleccione empleado...</option>' +
+                    (data.datos || []).map(e => `<option value="${e.id}">${e.nombre}</option>`).join('');
+            } catch (e) { console.error('cargarEmpleadosAsignar', e); }
+        }
+
+        async function cargarDistritosAsignar() {
+            try {
+                const resp = await fetch('php/asignaciones.php?accion=distritos', { cache: 'no-store' });
+                const data = await resp.json();
+                const sel = document.getElementById('selDistritosAsignar');
+                if (!sel) return;
+                sel.innerHTML = (data.datos || []).map(d => `<option value="${d}">${d}</option>`).join('');
+            } catch (e) { console.error('cargarDistritosAsignar', e); }
+        }
+
+        async function asignarPaquetesPorDistrito() {
+            try {
+                const selEmp = document.getElementById('selEmpleadoAsignar');
+                const selDis = document.getElementById('selDistritosAsignar');
+                const resBox = document.getElementById('resultadoAsignacion');
+                const empleado_id = parseInt(selEmp?.value || '0', 10);
+                const distritos = Array.from(selDis?.selectedOptions || []).map(o => o.value);
+                if (!empleado_id) { alert('Seleccione un empleado'); return; }
+                if (!distritos.length) { alert('Seleccione al menos un distrito'); return; }
+                const form = new FormData();
+                form.append('accion', 'asignar_por_distrito');
+                form.append('empleado_id', String(empleado_id));
+                distritos.forEach(d => form.append('distritos[]', d));
+                const resp = await fetch('php/asignaciones.php', { method:'POST', body: form });
+                const data = await resp.json();
+                if (!data.exito) { alert('Error: ' + (data.mensaje || 'No se pudo asignar')); return; }
+                resBox.textContent = `Asignados: ${data.asignados || 0}`;
+                // Opcional: recargar métricas o asignaciones
+            } catch (e) {
+                console.error('asignarPaquetesPorDistrito', e);
+                alert('Error al asignar: ' + e.message);
+            }
+        }
+        
         // Función para mostrar el formulario de usuario
         function mostrarFormularioUsuario(accion, id = '') {
             // Verificar si Bootstrap está cargado
@@ -848,6 +901,8 @@
             formData.append('nombre', document.getElementById('nombreRuta').value);
             formData.append('origen', document.getElementById('origenRuta').value);
             formData.append('destino', document.getElementById('destinoRuta').value);
+            const zonasVal = (document.getElementById('zonasRuta')?.value || '').trim();
+            if (zonasVal) formData.append('zonas', zonasVal);
             formData.append('distancia', document.getElementById('distanciaRuta').value);
             formData.append('tiempo_estimado', document.getElementById('tiempoRuta').value);
             
@@ -1477,9 +1532,13 @@ function renderPaquetesDesdeExcel(rows) {
             
             rutas.forEach(ruta => {
                 const fila = document.createElement('tr');
+                const zonasTxt = (ruta.zonas || '').trim();
                 fila.innerHTML = `
                     <td>${ruta.id}</td>
-                    <td>${ruta.nombre}</td>
+                    <td>
+                        <div>${ruta.nombre}</div>
+                        ${zonasTxt ? `<small style="color:#6c757d;display:block;margin-top:4px;">Zonas: ${zonasTxt}</small>` : ''}
+                    </td>
                     <td>${ruta.origen}</td>
                     <td>${ruta.destino}</td>
                     <td>${ruta.distancia}</td>
@@ -1611,7 +1670,8 @@ function renderPaquetesDesdeExcel(rows) {
                 'vehiculos': 'Gestión de Vehículos',
                 'rutas': 'Gestión de Rutas',
                 'reportes': 'Reportes',
-                'pagos': 'Pagos Empleados'
+                'pagos': 'Pagos Empleados',
+                'asignar': 'Asignar Paquetes por Distrito'
             };
             document.getElementById('tituloSeccion').textContent = titulos[seccion] || 'Panel de Administración';
             
@@ -1730,6 +1790,9 @@ function renderPaquetesDesdeExcel(rows) {
                     cargarEmpleados();
                     cargarVehiculos();
                     cargarRutas();
+                    // Pre-cargar selects de Asignar
+                    cargarEmpleadosAsignar();
+                    cargarDistritosAsignar();
                 })
                 .catch(error => {
                     console.error('Error:', error);

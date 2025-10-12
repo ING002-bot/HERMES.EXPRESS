@@ -37,6 +37,7 @@
         <li><a href="javascript:void(0)" onclick="mostrarSeccion('rutas', this)"><span class="icono">🗺️</span>Rutas</a></li>
         <li><a href="javascript:void(0)" onclick="mostrarSeccion('vehiculos', this)"><span class="icono">🚛</span>Vehículos</a></li>
         <li><a href="javascript:void(0)" onclick="mostrarSeccion('reportes', this)"><span class="icono">📊</span>Reportes</a></li>
+        <li><a href="javascript:void(0)" onclick="mostrarSeccion('asignar', this)"><span class="icono">🧩</span>Asignar</a></li>
       </ul>
       <div class="usuario-info">
         <div class="avatar">👤</div>
@@ -166,6 +167,31 @@
         </div>
         <div id="contenidoReporte" class="contenido-reporte"></div>
       </section>
+
+      <section id="seccion-asignar" class="seccion">
+        <div class="seccion-header">
+          <h2>Asignar Paquetes por Distrito</h2>
+          <p>Selecciona un empleado y distritos para asignar los paquetes correspondientes.</p>
+        </div>
+        <div class="asignar-contenedor">
+          <div class="form-grupo">
+            <label for="selEmpleadoAsignar">Empleado:</label>
+            <select id="selEmpleadoAsignar" class="form-select">
+              <option value="">Seleccione empleado...</option>
+            </select>
+          </div>
+          <div class="form-grupo">
+            <label for="selDistritosAsignar">Distritos (múltiple):</label>
+            <select id="selDistritosAsignar" class="form-select" multiple size="8" style="min-width:260px;"></select>
+          </div>
+          <div class="form-acciones">
+            <button class="btn btn-primario" onclick="asignarPaquetesPorDistrito()">
+              <i class="fas fa-share-square me-1"></i> Asignar seleccionados
+            </button>
+          </div>
+          <div id="resultadoAsignacion" class="mt-2"></div>
+        </div>
+      </section>
     </main>
   </div>
 
@@ -290,6 +316,9 @@
           document.getElementById('nombreUsuario').textContent = d.usuario.nombre;
           // Cargar paquetes desde BD al iniciar para que se muestren al entrar o al refrescar
           cargarPaquetesDesdeBD();
+          // Pre-cargar selects de Asignar
+          cargarEmpleadosAsignar();
+          cargarDistritosAsignar();
         })
         .catch(() => window.location.href = 'login.html');
     });
@@ -394,6 +423,51 @@
       let html = '';
       for (const r of rows) { html += '<tr>' + headers.map(h => `<td>${esc(r[h])}</td>`).join('') + '</tr>'; }
       tbody.innerHTML = html;
+    }
+
+    // ====== Asignaciones: empleados y distritos ======
+    async function cargarEmpleadosAsignar() {
+      try {
+        const resp = await fetch('php/asignaciones.php?accion=empleados', { cache: 'no-store' });
+        const data = await resp.json();
+        const sel = document.getElementById('selEmpleadoAsignar');
+        if (!sel) return;
+        sel.innerHTML = '<option value="">Seleccione empleado...</option>' +
+          (data.datos || []).map(e => `<option value="${e.id}">${e.nombre}</option>`).join('');
+      } catch (e) { console.error('cargarEmpleadosAsignar', e); }
+    }
+
+    async function cargarDistritosAsignar() {
+      try {
+        const resp = await fetch('php/asignaciones.php?accion=distritos', { cache: 'no-store' });
+        const data = await resp.json();
+        const sel = document.getElementById('selDistritosAsignar');
+        if (!sel) return;
+        sel.innerHTML = (data.datos || []).map(d => `<option value="${d}">${d}</option>`).join('');
+      } catch (e) { console.error('cargarDistritosAsignar', e); }
+    }
+
+    async function asignarPaquetesPorDistrito() {
+      try {
+        const selEmp = document.getElementById('selEmpleadoAsignar');
+        const selDis = document.getElementById('selDistritosAsignar');
+        const resBox = document.getElementById('resultadoAsignacion');
+        const empleado_id = parseInt(selEmp?.value || '0', 10);
+        const distritos = Array.from(selDis?.selectedOptions || []).map(o => o.value);
+        if (!empleado_id) { alert('Seleccione un empleado'); return; }
+        if (!distritos.length) { alert('Seleccione al menos un distrito'); return; }
+        const form = new FormData();
+        form.append('accion', 'asignar_por_distrito');
+        form.append('empleado_id', String(empleado_id));
+        distritos.forEach(d => form.append('distritos[]', d));
+        const resp = await fetch('php/asignaciones.php', { method:'POST', body: form });
+        const data = await resp.json();
+        if (!data.exito) { alert('Error: ' + (data.mensaje || 'No se pudo asignar')); return; }
+        resBox.textContent = `Asignados: ${data.asignados || 0}`;
+      } catch (e) {
+        console.error('asignarPaquetesPorDistrito', e);
+        alert('Error al asignar: ' + e.message);
+      }
     }
   </script>
 
