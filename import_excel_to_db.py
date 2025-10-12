@@ -2,6 +2,7 @@ import os
 import json
 from pathlib import Path
 from typing import List, Dict, Any
+import hashlib
 
 import pandas as pd
 import mysql.connector as mysql
@@ -54,11 +55,22 @@ def ensure_table(cursor):
         CREATE TABLE IF NOT EXISTS `{TABLE_NAME}` (
             `id` INT NOT NULL AUTO_INCREMENT,
             `data` JSON NOT NULL,
+            `hash` VARCHAR(64) NOT NULL,
             `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            PRIMARY KEY (`id`)
+            PRIMARY KEY (`id`),
+            UNIQUE KEY `uniq_hash` (`hash`)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
         """
     )
+    # Si la tabla ya existía sin columna hash, intentar agregarla (idempotente)
+    try:
+        cursor.execute(f"ALTER TABLE `{TABLE_NAME}` ADD COLUMN IF NOT EXISTS `hash` VARCHAR(64) NOT NULL AFTER `data`;")
+    except Exception:
+        pass
+    try:
+        cursor.execute(f"ALTER TABLE `{TABLE_NAME}` ADD UNIQUE KEY `uniq_hash` (`hash`);")
+    except Exception:
+        pass
 
 
 def insert_rows(rows: List[Dict[str, Any]]) -> int:
@@ -68,8 +80,14 @@ def insert_rows(rows: List[Dict[str, Any]]) -> int:
     try:
         cur = cnx.cursor()
         ensure_table(cur)
-        sql = f"INSERT INTO `{TABLE_NAME}` (`data`) VALUES (%s)"
-        payload = [ (json.dumps(r, ensure_ascii=False),) for r in rows ]
+        # Inserción con IGNORE y hash único para evitar duplicados
+        sql = f"INSERT IGNORE INTO `{TABLE_NAME}` (`data`, `hash`) VALUES (%s, %s)"
+        payload = []
+        for r in rows:
+            # Normalizar JSON con sort_keys para hash estable
+            normalized = json.dumps(r, ensure_ascii=False, sort_keys=True)
+            h = hashlib.sha256(normalized.encode('utf-8')).hexdigest()
+            payload.append((json.dumps(r, ensure_ascii=False), h))
         cur.executemany(sql, payload)
         inserted = cur.rowcount
         cnx.commit()

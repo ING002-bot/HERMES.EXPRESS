@@ -99,15 +99,31 @@
       </section>
 
       <section id="seccion-paquetes" class="seccion">
-        <div class="filtros">
-          <input type="text" id="buscarPaquete" placeholder="Buscar por código o destinatario...">
-          <select id="filtroEstado">
-            <option value="">Todos los estados</option>
-            <option value="pendiente">Pendiente</option>
-            <option value="en_transito">En Tránsito</option>
-            <option value="entregado">Entregado</option>
-            <option value="devuelto">Devuelto</option>
-          </select>
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <div class="filtros" style="margin-right: auto;">
+            <input type="text" id="buscarPaquete" placeholder="Buscar por código o destinatario...">
+            <select id="filtroEstado">
+              <option value="">Todos los estados</option>
+              <option value="pendiente">Pendiente</option>
+              <option value="en_transito">En Tránsito</option>
+              <option value="entregado">Entregado</option>
+              <option value="devuelto">Devuelto</option>
+            </select>
+          </div>
+          <div class="d-flex">
+            <button class="btn btn-exportar me-2" onclick="exportarAPDF('paquetes')">
+              <i class="fas fa-file-pdf me-1"></i> PDF
+            </button>
+            <button class="btn btn-exportar me-2" onclick="exportarAExcel('paquetes')">
+              <i class="fas fa-file-excel me-1"></i> Excel
+            </button>
+            <button id="btnEjecutarSelenium" class="btn btn-primario" onclick="ejecutarSelenium()">
+              <i class="fas fa-play me-1"></i> Extracción de datos
+            </button>
+            <button id="btnImportarDownloads" class="btn btn-exito ms-2" onclick="importarDesdeDownloadsYMostrar()" title="Importar TODOS los Excel de downloads/ a la BD y mostrarlos">
+              <i class="fas fa-database me-1"></i> Mostrar datos
+            </button>
+          </div>
         </div>
         <div class="tabla-container">
           <table id="tablaPaquetes">
@@ -272,9 +288,113 @@
             return;
           }
           document.getElementById('nombreUsuario').textContent = d.usuario.nombre;
+          // Cargar paquetes desde BD al iniciar para que se muestren al entrar o al refrescar
+          cargarPaquetesDesdeBD();
         })
         .catch(() => window.location.href = 'login.html');
     });
+  </script>
+
+  <!-- Bibliotecas para exportación como en paneladmin -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="js/exportar.js"></script>
+
+  <script>
+    // Funciones traídas/adaptadas desde paneladmin.html
+    async function ejecutarSelenium() {
+      try {
+        const btn = document.getElementById('btnEjecutarSelenium');
+        if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Extrayendo datos...'; }
+        const resp = await fetch('php/run_selenium.php', { method: 'POST', cache: 'no-store' });
+        const raw = await resp.text();
+        let data;
+        try { data = JSON.parse(raw); } catch (e) {
+          alert('La respuesta de Selenium no es JSON.\n\nCuerpo:\n' + raw.slice(0,2000));
+          return;
+        }
+        if (!data.exito) { alert('Selenium reportó error: ' + (data.mensaje || 'Desconocido')); return; }
+        alert(data.mensaje || 'Descarga completada.');
+        if (typeof cargarPaquetesDesdeBD === 'function') {
+          await cargarPaquetesDesdeBD();
+          const enlace = document.querySelector('a[onclick*="paquetes"]');
+          if (enlace) mostrarSeccion('paquetes', enlace);
+        }
+      } catch (e) {
+        console.error('Error en ejecutarSelenium():', e);
+        alert('Error ejecutando Selenium: ' + e.message);
+      } finally {
+        const btn = document.getElementById('btnEjecutarSelenium');
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-play me-1"></i> Extracción de datos'; }
+      }
+    }
+
+    async function importarDesdeDownloadsYMostrar() {
+      try {
+        const btn = document.getElementById('btnImportarDownloads');
+        if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Mostrando datos...'; }
+        const resp = await fetch('php/import_paquetes.php', { method: 'POST', cache: 'no-store' });
+        const raw = await resp.text();
+        let data;
+        try { data = JSON.parse(raw); } catch (e) {
+          alert('La respuesta de importación no es JSON.\n\nCuerpo (primeros 2000 chars):\n' + raw.slice(0,2000));
+          return;
+        }
+        if (!data.exito) { alert('Error al importar: ' + (data.mensaje || 'Desconocido')); return; }
+        const detalle = Array.isArray(data.detalle)
+          ? ('\n' + data.detalle.map(d => `- ${d.archivo || ''}: ${d.insertados ?? d.error}`).join('\n'))
+          : '';
+        alert(`Importación completada. Insertados: ${data.insertados || 0}${detalle}`);
+        await cargarPaquetesDesdeBD();
+        const enlace = document.querySelector('a[onclick*="paquetes"]');
+        if (enlace) mostrarSeccion('paquetes', enlace);
+      } catch (e) {
+        console.error('Error en importarDesdeDownloadsYMostrar:', e);
+        alert('Error en importación: ' + e.message);
+      } finally {
+        const btn = document.getElementById('btnImportarDownloads');
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-database me-1"></i> Mostrar datos'; }
+      }
+    }
+
+    async function cargarPaquetesDesdeBD() {
+      try {
+        const resp = await fetch('php/paquetes.php?limit=2000', { cache: 'no-store' });
+        const raw = await resp.text();
+        let data;
+        try { data = JSON.parse(raw); } catch (e) {
+          alert('Error cargando paquetes desde BD.\nLa respuesta no es JSON.\n\nCuerpo (primeros 2000 chars):\n' + raw.slice(0,2000));
+          return;
+        }
+        if (!data.exito) throw new Error(data.mensaje || 'Error desconocido');
+        const headers = data.headers && data.headers.length ? data.headers : inferHeaders(data.datos);
+        renderPaquetesDesdeBD(headers, data.datos);
+        const totalLbl = document.getElementById('totalPaquetes');
+        if (totalLbl) totalLbl.textContent = String(data.total || data.datos.length || 0);
+      } catch (e) {
+        console.error('Error cargando desde BD:', e);
+        alert('Error cargando paquetes desde BD: ' + e.message);
+      }
+    }
+
+    function inferHeaders(rows) {
+      if (!Array.isArray(rows) || !rows.length) return [];
+      return Object.keys(rows[0]);
+    }
+
+    function renderPaquetesDesdeBD(headers, rows) {
+      const tabla = document.getElementById('tablaPaquetes');
+      if (!tabla) return alert('No se encontró la tabla de Paquetes (id="tablaPaquetes").');
+      const thead = tabla.querySelector('thead');
+      const tbody = tabla.querySelector('tbody');
+      if (!thead || !tbody) return alert('La tabla de Paquetes no tiene thead/tbody.');
+      const esc = (s) => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      thead.innerHTML = '<tr>' + headers.map(h => `<th>${esc(h)}</th>`).join('') + '</tr>';
+      let html = '';
+      for (const r of rows) { html += '<tr>' + headers.map(h => `<td>${esc(r[h])}</td>`).join('') + '</tr>'; }
+      tbody.innerHTML = html;
+    }
   </script>
 
   <script src="js/dashboard.js"></script>

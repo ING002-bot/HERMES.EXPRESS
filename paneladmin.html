@@ -52,9 +52,6 @@
                         <i class="fas fa-users-cog"></i> Gestión de Usuarios
                     </a>
                 </li>
-                <li><a href="javascript:void(0)" onclick="mostrarSeccion('extraccion', this)">
-                    <span class="icono">📥</span>Extracción de Datos
-                </a></li>
             </ul>
             
             <div class="usuario-info">
@@ -658,56 +655,6 @@
         </main>
     </div>
 
-    <section id="seccion-extraccion" class="seccion">
-        <div class="seccion-header">
-            <h2>Extracción de Datos de SAVAR</h2>
-            <p>Extraiga información de SAVAR y guárdela en la base de datos local.</p>
-        </div>
-
-        <div class="extraccion-contenedor">
-            <div class="formulario-extraccion">
-                <div class="form-grupo">
-                    <label for="fechaInicio">Fecha de Inicio:</label>
-                    <input type="date" id="fechaInicio" class="form-control">
-                </div>
-                
-                <div class="form-grupo">
-                    <label for="fechaFin">Fecha de Fin:</label>
-                    <input type="date" id="fechaFin" class="form-control">
-                </div>
-                
-                <div class="form-grupo">
-                    <label for="usuarioSavar">Usuario SAVAR:</label>
-                    <input type="text" id="usuarioSavar" class="form-control" placeholder="Ingrese su usuario SAVAR">
-                </div>
-                
-                <div class="form-grupo">
-                    <label for="contrasenaSavar">Contraseña SAVAR:</label>
-                    <input type="password" id="contrasenaSavar" class="form-control" placeholder="Ingrese su contraseña SAVAR">
-                </div>
-                
-                <div class="acciones-extraccion">
-                    <button type="button" class="btn btn-primario" onclick="ejecutarExtraccion()">
-                        <span class="icono">▶️</span> Ejecutar Extracción
-                    </button>
-                    <div class="estado-extraccion" id="estadoExtraccion">
-                        <div class="spinner-border text-primary spinner-border-sm d-none" role="status" id="spinnerExtraccion">
-                            <span class="visually-hidden">Cargando...</span>
-                        </div>
-                        <span id="mensajeEstado">Listo para ejecutar</span>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="resultados-extraccion" id="resultadosExtraccion">
-                <h3>Resultados de la Extracción</h3>
-                <div class="log-extraccion" id="logExtraccion">
-                    <!-- Aquí se mostrará el progreso de la extracción -->
-                </div>
-            </div>
-        </div>
-    </section>
-
     <!-- Scripts en el orden correcto -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
@@ -1197,8 +1144,7 @@ async function cargarPaquetesDesdeBD() {
     const totalLbl = document.getElementById('totalPaquetes');
     if (totalLbl) totalLbl.textContent = String(data.total || data.datos.length || 0);
 
-    const enlacePaquetes = document.querySelector('a[onclick*="paquetes"]');
-    if (enlacePaquetes) mostrarSeccion('paquetes', enlacePaquetes);
+    // No cambiar de sección automáticamente aquí para respetar la vista actual
   } catch (e) {
     console.error('Error cargando desde BD:', e);
     alert('Error cargando paquetes desde BD: ' + e.message);
@@ -1233,6 +1179,9 @@ async function ejecutarSelenium() {
       // Opción B: si prefieres cargar desde BD (si ya importaste a BD)
       if (typeof cargarPaquetesDesdeBD === 'function') {
         await cargarPaquetesDesdeBD();
+    // Después de mostrar datos manualmente, sí navegar a Paquetes
+    const enlacePaquetes = document.querySelector('a[onclick*="paquetes"]');
+    if (enlacePaquetes) mostrarSeccion('paquetes', enlacePaquetes);
       }
     }
   } catch (e) {
@@ -1776,7 +1725,8 @@ function renderPaquetesDesdeExcel(rows) {
                     // Actualizar información del usuario
                     document.getElementById('nombreUsuario').textContent = data.usuario.nombre;
                     
-                    // Cargar todos los datos al iniciar
+                    // Cargar todos los datos al iniciar (incluye paquetes desde BD)
+                    cargarPaquetesDesdeBD();
                     cargarEmpleados();
                     cargarVehiculos();
                     cargarRutas();
