@@ -233,3 +233,24 @@ Revisa los siguientes archivos:
 Esperando 10 segundos antes de cerrar...
 [2025-10-09 05:59:41] CMD: "C:\Users\JULIO DME\AppData\Local\Programs\Python\Python313\python.exe" "C:\xampp\htdocs\HERMES.EXPRESS\selenium_utils.py" 2>&1
 [2025-10-09 06:10:15] CMD: "C:\Users\JULIO DME\AppData\Local\Programs\Python\Python313\python.exe" "C:\xampp\htdocs\HERMES.EXPRESS\selenium_utils.py" 2>&1
+[2025-10-12 17:05:27] CMD: "C:\Users\JULIO DME\AppData\Local\Programs\Python\Python313\python.exe" "C:\xampp\htdocs\HERMES.EXPRESS\selenium_utils.py" 2>&1
+[2025-10-12 17:05:27] CODE: 1
+[2025-10-12 17:05:27] OUT:
+El sistema no puede encontrar la ruta especificada.
+[2025-10-12 17:05:30] CMD: "C:\Users\JULIO DME\AppData\Local\Programs\Python\Python313\python.exe" "C:\xampp\htdocs\HERMES.EXPRESS\selenium_utils.py" 2>&1
+[2025-10-12 17:05:30] CODE: 1
+[2025-10-12 17:05:30] OUT:
+El sistema no puede encontrar la ruta especificada.
+[2025-10-12 17:08:24] CMD: "C:\Users\JULIO DME\AppData\Local\Programs\Python\Python313\python.exe" "C:\xampp\htdocs\HERMES.EXPRESS\selenium_utils.py" 2>&1
+[2025-10-12 17:08:24] CODE: 1
+[2025-10-12 17:08:24] OUT:
+El sistema no puede encontrar la ruta especificada.
+[2025-10-12 17:36:45] CMD: "C:\Users\JULIO DME\AppData\Local\Programs\Python\Python313\python.exe" "C:\xampp\htdocs\HERMES.EXPRESS\selenium_utils.py" 2>&1
+[2025-10-12 17:36:45] CODE: 1
+[2025-10-12 17:36:45] OUT:
+El sistema no puede encontrar la ruta especificada.
+[2025-10-12 17:43:54] SKIP inexistente: C:\Users\JULIO DME\AppData\Local\Programs\Python\Python313\python.exe
+[2025-10-12 17:43:54] SKIP inexistente: C:\Users\JULIO DME\AppData\Local\Programs\Python\Python312\python.exe
+[2025-10-12 17:43:54] SKIP inexistente: C:\Python313\python.exe
+[2025-10-12 17:43:54] SKIP inexistente: C:\Python312\python.exe
+[2025-10-12 17:43:54] PROBANDO: python "C:\xampp\htdocs\HERMES.EXPRESS\selenium_utils.py" 2>&1

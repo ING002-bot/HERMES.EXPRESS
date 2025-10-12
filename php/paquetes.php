@@ -12,6 +12,17 @@ $response = [ 'exito' => false, 'mensaje' => '', 'total' => 0, 'headers' => [], 
 try {
     $mysqli = db_connect();
 
+    // Asegurar que la tabla exista (evita error si aún no se ha importado nada)
+    $tabla = $mysqli->real_escape_string(PAQUETES_TABLE);
+    $mysqli->query(
+        "CREATE TABLE IF NOT EXISTS `{$tabla}` (
+            `id` INT NOT NULL AUTO_INCREMENT,
+            `data` JSON NOT NULL,
+            `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (`id`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;"
+    );
+
     // Parámetros opcionales
     $limit = isset($_GET['limit']) ? max(1, min(5000, (int)$_GET['limit'])) : 1000;
     $offset = isset($_GET['offset']) ? max(0, (int)$_GET['offset']) : 0;

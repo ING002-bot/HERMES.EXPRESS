@@ -28,8 +28,8 @@ if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $datos['fechaInicio']) ||
     exit;
 }
 
-// Configurar el comando para ejecutar el script de Python
-$pythonScript = __DIR__ . '/../../selenium_utils.py';
+// Configurar el comando para ejecutar el script de Python (selenium_utils.py está en la raíz del proyecto)
+$pythonScript = __DIR__ . '/../selenium_utils.py';
 $command = sprintf(
     'python "%s" --fecha-inicio "%s" --fecha-fin "%s" --usuario "%s" --contrasena "%s"',
     $pythonScript,

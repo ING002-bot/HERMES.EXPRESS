@@ -9,7 +9,7 @@ function log_line($msg) {
     @file_put_contents($logFile, '['.date('Y-m-d H:i:s')."] $msg\n", FILE_APPEND);
 }
 
-$response = ['exito'=>false,'mensaje'=>'','salida'=>''];
+$response = ['exito'=>false,'mensaje'=>'','salida'=>'','python'=>''];
 
 try {
     $root = realpath(__DIR__ . '/..');
@@ -20,27 +20,47 @@ try {
 
     if (!function_exists('exec')) throw new Exception('exec() deshabilitado en PHP');
 
-// Ruta absoluta (la tuya que sí funciona en CMD)
-$python = 'C:\\Users\\JULIO DME\\AppData\\Local\\Programs\\Python\\Python313\\python.exe';
+    // Detectar Python (similar a import_paquetes.php)
+    $candidatos = [
+        'C:\\Users\\JULIO DME\\AppData\\Local\\Programs\\Python\\Python313\\python.exe',
+        'C:\\Users\\JULIO DME\\AppData\\Local\\Programs\\Python\\Python312\\python.exe',
+        'C:\\Python313\\python.exe',
+        'C:\\Python312\\python.exe',
+        'python',
+        'py -3',
+        'py'
+    ];
 
-// Usa comillas dobles explícitas para Windows (NO escapeshellcmd/arg aquí)
-$cmd = '"' . $python . '" "' . $script . '" 2>&1';
-log_line("CMD: $cmd");
+    $salida = [];
+    $codigo = 0;
+    $raw = '';
+    $elegido = '';
 
-$salida = [];
-$codigo = 0;
-exec($cmd, $salida, $codigo);
+    foreach ($candidatos as $cand) {
+        if (preg_match('/\\\\|\//', $cand)) {
+            if (!file_exists($cand)) { log_line("SKIP inexistente: $cand"); continue; }
+            $cmd = '"' . $cand . '" ' . '"' . $script . '" 2>&1';
+        } else {
+            $cmd = $cand . ' ' . '"' . $script . '" 2>&1';
+        }
+        $salida = [];
+        $codigo = 0;
+        log_line("PROBANDO: $cmd");
+        exec($cmd, $salida, $codigo);
+        $raw = implode("\n", $salida);
+        log_line("CODE: $codigo\nOUT:\n$raw");
+        if ($codigo === 0) { $elegido = $cand; break; }
+    }
 
-    log_line("CODE: $codigo");
-    log_line("OUT:\n" . implode("\n", $salida));
+    $response['python'] = $elegido ?: 'no_detectado';
+    $response['salida'] = $raw;
 
-    $response['salida'] = implode("\n", $salida);
     if ($codigo === 0) {
         $response['exito'] = true;
         $response['mensaje'] = 'Ejecución completada. Revisa downloads/';
     } else {
         $response['exito'] = false;
-        $response['mensaje'] = 'El script finalizó con código ' . $codigo;
+        $response['mensaje'] = 'El script finalizó con código ' . $codigo . ' (Python: ' . ($elegido ?: 'no_detectado') . ')';
     }
 } catch (Throwable $e) {
     $response['exito'] = false;

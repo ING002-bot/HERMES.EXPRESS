@@ -135,12 +135,11 @@
                         <button id="btnEjecutarSelenium" class="btn btn-primario" onclick="ejecutarSelenium()">
                             <i class="fas fa-play me-1"></i> Ejecutar Selenium (Descargar Excel SAVAR)
                         </button>
-                        <button type="button" class="btn btn-primary" onclick="cargarPaquetesDesdeBD()">
-                            Refrescar Paquetes (BD)
-                          </button>
+                        <button id="btnImportarDownloads" class="btn btn-exito ms-2" onclick="importarDesdeDownloadsYMostrar()" title="Importar TODOS los Excel de downloads/ a la BD y mostrarlos">
+                            <i class="fas fa-database me-1"></i> Importar downloads → BD
+                        </button>
                     </div>
                 </div>
-                
                 <div class="tabla-container">
                     <table id="tablaPaquetes">
                         <thead>
@@ -155,8 +154,7 @@
                                 <th>Acciones</th>
                             </tr>
                         </thead>
-                        <tbody id="cuerpoTablaPaquetes">
-                        </tbody>
+                        <tbody id="cuerpoTablaPaquetes"></tbody>
                     </table>
                 </div>
             </section>
@@ -1206,6 +1204,81 @@ async function cargarPaquetesDesdeBD() {
     alert('Error cargando paquetes desde BD: ' + e.message);
   }
 }
+async function ejecutarSelenium() {
+  try {
+    const btn = document.getElementById('btnEjecutarSelenium');
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Ejecutando Selenium...';
+    }
+
+    // Ejecuta Selenium para descargar el Excel (usa php/run_selenium.php)
+    const resp = await fetch('php/run_selenium.php', { method: 'POST', cache: 'no-store' });
+    const raw = await resp.text();
+    let data;
+    try { data = JSON.parse(raw); } catch (e) {
+      alert('La respuesta de Selenium no es JSON.\n\nCuerpo:\n' + raw.slice(0,2000));
+      return;
+    }
+    if (!data.exito) {
+      alert('Selenium reportó error: ' + (data.mensaje || 'Desconocido'));
+      return;
+    }
+    alert(data.mensaje || 'Descarga completada. Revisando Excel más reciente...');
+
+    // Opción A: cargar el último Excel en la tabla directamente
+    if (typeof cargarUltimoExcelEnPaquetes === 'function') {
+      await cargarUltimoExcelEnPaquetes();
+    } else {
+      // Opción B: si prefieres cargar desde BD (si ya importaste a BD)
+      if (typeof cargarPaquetesDesdeBD === 'function') {
+        await cargarPaquetesDesdeBD();
+      }
+    }
+  } catch (e) {
+    console.error('Error en ejecutarSelenium():', e);
+    alert('Error ejecutando Selenium: ' + e.message);
+  } finally {
+    const btn = document.getElementById('btnEjecutarSelenium');
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-play me-1"></i> Ejecutar Selenium (Descargar Excel SAVAR)';
+    }
+  }
+}
+/* Importa todos los Excel de downloads/ a la BD y luego los muestra en la tabla */
+async function importarDesdeDownloadsYMostrar() {
+  try {
+    const btn = document.getElementById('btnImportarDownloads');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Importando...'; }
+
+    const resp = await fetch('php/import_paquetes.php', { method: 'POST', cache: 'no-store' });
+    const raw = await resp.text();
+    let data;
+    try { data = JSON.parse(raw); } catch (e) {
+      alert('La respuesta de importación no es JSON.\n\nCuerpo (primeros 2000 chars):\n' + raw.slice(0,2000));
+      return;
+    }
+    if (!data.exito) {
+      alert('Error al importar: ' + (data.mensaje || 'Desconocido'));
+      return;
+    }
+
+    const detalle = Array.isArray(data.detalle)
+      ? ('\n' + data.detalle.map(d => `- ${d.archivo || ''}: ${d.insertados ?? d.error}`).join('\n'))
+      : '';
+    alert(`Importación completada. Insertados: ${data.insertados || 0}${detalle}`);
+
+    await cargarPaquetesDesdeBD();
+  } catch (e) {
+    console.error('Error en importarDesdeDownloadsYMostrar:', e);
+    alert('Error en importación: ' + e.message);
+  } finally {
+    const btn = document.getElementById('btnImportarDownloads');
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-database me-1"></i> Importar downloads → BD'; }
+  }
+}
+
 // Exponer en global para poder llamarla desde consola o botones
 window.cargarPaquetesDesdeBD = cargarPaquetesDesdeBD;
 window.inferHeaders = inferHeaders;

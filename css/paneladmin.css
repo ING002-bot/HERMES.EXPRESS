@@ -1045,3 +1045,65 @@
 #usuarioForm .form-check-input:focus {
     box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
 }
+
+.btn-exito {
+    background-color: #28a745;
+    color: #fff;
+    border: none;
+    padding: 10px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.btn-exito:hover {
+    background-color: #218838;
+}
+
+/* Asegura que los botones de la sección Paquetes hagan wrap y no queden fuera de vista */
+#seccion-paquetes .d-flex {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Mejora visual de la tabla de Paquetes */
+#seccion-paquetes .tabla-container {
+  max-height: 65vh;
+  overflow: auto;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+
+#tablaPaquetes {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+#tablaPaquetes thead th {
+  position: sticky;
+  top: 0;
+  background: #f8f9fa;
+  z-index: 2;
+  text-transform: uppercase;
+  font-size: 12px;
+  letter-spacing: .5px;
+  border-bottom: 1px solid #e9ecef;
+}
+
+#tablaPaquetes th, #tablaPaquetes td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #f1f3f5;
+  vertical-align: middle;
+}
+
+#tablaPaquetes tbody tr:nth-child(odd) { background: #fcfcfd; }
+#tablaPaquetes tbody tr:hover { background: #f5f9ff; }
+
+/* Evitar desborde feo de celdas; recorta con elipsis en celdas muy largas */
+#tablaPaquetes td {
+  max-width: 280px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
