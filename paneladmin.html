@@ -133,10 +133,10 @@
                             <i class="fas fa-file-excel me-1"></i> Excel
                         </button>
                         <button id="btnEjecutarSelenium" class="btn btn-primario" onclick="ejecutarSelenium()">
-                            <i class="fas fa-play me-1"></i> Ejecutar Selenium (Descargar Excel SAVAR)
+                            <i class="fas fa-play me-1"></i> Extracción de datos
                         </button>
                         <button id="btnImportarDownloads" class="btn btn-exito ms-2" onclick="importarDesdeDownloadsYMostrar()" title="Importar TODOS los Excel de downloads/ a la BD y mostrarlos">
-                            <i class="fas fa-database me-1"></i> Importar downloads → BD
+                            <i class="fas fa-database me-1"></i> Mostrar datos
                         </button>
                     </div>
                 </div>
@@ -1209,7 +1209,7 @@ async function ejecutarSelenium() {
     const btn = document.getElementById('btnEjecutarSelenium');
     if (btn) {
       btn.disabled = true;
-      btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Ejecutando Selenium...';
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Extrayendo datos...';
     }
 
     // Ejecuta Selenium para descargar el Excel (usa php/run_selenium.php)
@@ -1242,7 +1242,7 @@ async function ejecutarSelenium() {
     const btn = document.getElementById('btnEjecutarSelenium');
     if (btn) {
       btn.disabled = false;
-      btn.innerHTML = '<i class="fas fa-play me-1"></i> Ejecutar Selenium (Descargar Excel SAVAR)';
+      btn.innerHTML = '<i class="fas fa-play me-1"></i> Extracción de datos';
     }
   }
 }
@@ -1250,7 +1250,7 @@ async function ejecutarSelenium() {
 async function importarDesdeDownloadsYMostrar() {
   try {
     const btn = document.getElementById('btnImportarDownloads');
-    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Importando...'; }
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Mostrando datos...'; }
 
     const resp = await fetch('php/import_paquetes.php', { method: 'POST', cache: 'no-store' });
     const raw = await resp.text();
@@ -1275,7 +1275,7 @@ async function importarDesdeDownloadsYMostrar() {
     alert('Error en importación: ' + e.message);
   } finally {
     const btn = document.getElementById('btnImportarDownloads');
-    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-database me-1"></i> Importar downloads → BD'; }
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-database me-1"></i> Mostrar datos'; }
   }
 }
 

@@ -66,16 +66,41 @@ try {
     $response['python'] = $elegido ?: 'no_detectado';
 
     // El script imprime un JSON, intentamos parsearlo para responder coherente
-    $data = json_decode($raw, true);
+    // Sanitizar posible BOM/bytes no UTF-8 y extraer JSON si viene mezclado
+    $rawUtf8 = $raw;
+    if (strncmp($rawUtf8, "\xEF\xBB\xBF", 3) === 0) {
+        $rawUtf8 = substr($rawUtf8, 3);
+    }
+    $tmp = @iconv('UTF-8', 'UTF-8//IGNORE', $rawUtf8);
+    if ($tmp !== false) { $rawUtf8 = $tmp; }
+    if (!is_string($rawUtf8)) { $rawUtf8 = (string)$rawUtf8; }
+
+    $data = json_decode($rawUtf8, true);
     if (json_last_error() === JSON_ERROR_NONE && is_array($data)) {
         $response = array_merge($response, $data);
         $response['exito'] = !empty($data['exito']);
     } else {
-        // Si no pudimos decodificar, devolvemos la salida cruda y pista del Python usado
-        $response['exito'] = ($codigo === 0);
-        $response['mensaje'] = ($codigo === 0 ? 'Importación completada' : 'Error en importación')
-            . '. Python: ' . ($elegido ?: 'no_detectado')
-            . ". Respuesta cruda:\n" . $raw;
+        // Intentar localizar fragmento JSON dentro de salida mixta
+        $start = strpos($rawUtf8, '{');
+        $end = strrpos($rawUtf8, '}');
+        if ($start !== false && $end !== false && $end > $start) {
+            $fragment = substr($rawUtf8, $start, $end - $start + 1);
+            $dataFrag = json_decode($fragment, true);
+            if (json_last_error() === JSON_ERROR_NONE && is_array($dataFrag)) {
+                $response = array_merge($response, $dataFrag);
+                $response['exito'] = !empty($dataFrag['exito']);
+            } else {
+                $response['exito'] = ($codigo === 0);
+                $response['mensaje'] = ($codigo === 0 ? 'Importación completada' : 'Error en importación')
+                    . '. Python: ' . ($elegido ?: 'no_detectado')
+                    . ". Respuesta cruda:\n" . substr($rawUtf8, 0, 4000);
+            }
+        } else {
+            $response['exito'] = ($codigo === 0);
+            $response['mensaje'] = ($codigo === 0 ? 'Importación completada' : 'Error en importación')
+                . '. Python: ' . ($elegido ?: 'no_detectado')
+                . ". Respuesta cruda:\n" . substr($rawUtf8, 0, 4000);
+        }
     }
 } catch (Throwable $e) {
     $response['exito'] = false;
@@ -84,6 +109,14 @@ try {
 
 // Construir cuerpo JSON y luego enviar cabeceras
 $body = json_encode($response, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+if ($body === false) {
+    $fallback = [
+        'exito' => false,
+        'mensaje' => 'La respuesta contenía caracteres inválidos. Se sanitizó la salida. Revise import_paquetes.log para más detalles.',
+        'python' => ($response['python'] ?? 'desconocido')
+    ];
+    $body = json_encode($fallback, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+}
 header('Content-Type: application/json; charset=utf-8');
 header('Content-Length: ' . strlen($body));
 @ob_end_clean();

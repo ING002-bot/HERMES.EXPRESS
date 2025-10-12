@@ -167,3 +167,43 @@ OUT:
 [2025-10-12 17:48:23] CODE: 0
 OUT:
 {"exito": true, "mensaje": "Importación completada de 1 archivo(s) desde downloads/", "insertados": 356, "detalle": [{"archivo": "Detalle Pedidos.xlsx", "insertados": 356}]}
+[2025-10-12 17:54:17] SKIP inexistente: C:\Users\JULIO DME\AppData\Local\Programs\Python\Python313\python.exe
+[2025-10-12 17:54:17] SKIP inexistente: C:\Users\JULIO DME\AppData\Local\Programs\Python\Python312\python.exe
+[2025-10-12 17:54:17] SKIP inexistente: C:\Python313\python.exe
+[2025-10-12 17:54:17] SKIP inexistente: C:\Python312\python.exe
+[2025-10-12 17:54:17] PROBANDO: python "C:\xampp\htdocs\HERMES.EXPRESS\import_excel_to_db.py" 2>&1
+[2025-10-12 17:54:30] CODE: 0
+OUT:
+{"exito": true, "mensaje": "Importación completada de 1 archivo(s) desde downloads/", "insertados": 356, "detalle": [{"archivo": "Detalle Pedidos.xlsx", "insertados": 356}]}
+[2025-10-12 17:54:49] SKIP inexistente: C:\Users\JULIO DME\AppData\Local\Programs\Python\Python313\python.exe
+[2025-10-12 17:54:49] SKIP inexistente: C:\Users\JULIO DME\AppData\Local\Programs\Python\Python312\python.exe
+[2025-10-12 17:54:49] SKIP inexistente: C:\Python313\python.exe
+[2025-10-12 17:54:49] SKIP inexistente: C:\Python312\python.exe
+[2025-10-12 17:54:49] PROBANDO: python "C:\xampp\htdocs\HERMES.EXPRESS\import_excel_to_db.py" 2>&1
+[2025-10-12 17:54:52] CODE: 0
+OUT:
+{"exito": true, "mensaje": "Importación completada de 1 archivo(s) desde downloads/", "insertados": 356, "detalle": [{"archivo": "Detalle Pedidos.xlsx", "insertados": 356}]}
+[2025-10-12 17:56:35] SKIP inexistente: C:\Users\JULIO DME\AppData\Local\Programs\Python\Python313\python.exe
+[2025-10-12 17:56:35] SKIP inexistente: C:\Users\JULIO DME\AppData\Local\Programs\Python\Python312\python.exe
+[2025-10-12 17:56:35] SKIP inexistente: C:\Python313\python.exe
+[2025-10-12 17:56:35] SKIP inexistente: C:\Python312\python.exe
+[2025-10-12 17:56:35] PROBANDO: python "C:\xampp\htdocs\HERMES.EXPRESS\import_excel_to_db.py" 2>&1
+[2025-10-12 17:56:38] CODE: 0
+OUT:
+{"exito": true, "mensaje": "Importación completada de 1 archivo(s) desde downloads/", "insertados": 356, "detalle": [{"archivo": "Detalle Pedidos.xlsx", "insertados": 356}]}
+[2025-10-12 17:59:49] SKIP inexistente: C:\Users\JULIO DME\AppData\Local\Programs\Python\Python313\python.exe
+[2025-10-12 17:59:49] SKIP inexistente: C:\Users\JULIO DME\AppData\Local\Programs\Python\Python312\python.exe
+[2025-10-12 17:59:49] SKIP inexistente: C:\Python313\python.exe
+[2025-10-12 17:59:49] SKIP inexistente: C:\Python312\python.exe
+[2025-10-12 17:59:49] PROBANDO: python "C:\xampp\htdocs\HERMES.EXPRESS\import_excel_to_db.py" 2>&1
+[2025-10-12 17:59:53] CODE: 0
+OUT:
+{"exito": true, "mensaje": "Importación completada de 1 archivo(s) desde downloads/", "insertados": 356, "detalle": [{"archivo": "Detalle Pedidos.xlsx", "insertados": 356}]}
+[2025-10-12 18:10:59] SKIP inexistente: C:\Users\JULIO DME\AppData\Local\Programs\Python\Python313\python.exe
+[2025-10-12 18:10:59] SKIP inexistente: C:\Users\JULIO DME\AppData\Local\Programs\Python\Python312\python.exe
+[2025-10-12 18:10:59] SKIP inexistente: C:\Python313\python.exe
+[2025-10-12 18:10:59] SKIP inexistente: C:\Python312\python.exe
+[2025-10-12 18:10:59] PROBANDO: python "C:\xampp\htdocs\HERMES.EXPRESS\import_excel_to_db.py" 2>&1
+[2025-10-12 18:11:09] CODE: 0
+OUT:
+{"exito": true, "mensaje": "Importación completada de 1 archivo(s) desde downloads/", "insertados": 356, "detalle": [{"archivo": "Detalle Pedidos.xlsx", "insertados": 356}]}
