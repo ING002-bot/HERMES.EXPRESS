@@ -223,3 +223,7 @@ OUT:
 [2025-10-12 18:23:48] CODE: 0
 OUT:
 {"exito": true, "mensaje": "Importación completada de 1 archivo(s) desde downloads/", "insertados": 356, "detalle": [{"archivo": "Detalle Pedidos.xlsx", "insertados": 356}]}
+[2025-10-18 18:48:03] PROBANDO: "C:\Users\JULIO DME\AppData\Local\Programs\Python\Python313\python.exe" "C:\xampp\htdocs\HERMES.EXPRESS\import_excel_to_db.py" 2>&1
+[2025-10-18 18:48:06] CODE: 0
+OUT:
+{"exito": true, "mensaje": "Importación completada de 1 archivo(s) desde downloads/", "insertados": 356, "detalle": [{"archivo": "Detalle Pedidos.xlsx", "insertados": 356}]}

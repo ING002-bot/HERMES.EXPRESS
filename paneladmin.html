@@ -20,6 +20,125 @@
     <title>HERMES - Panel Administrador</title>
 </head>
 <body>
+    <script>
+    // Stub global para evitar ReferenceError si aún no se definió
+    if (typeof window.safeCargarRutasConfig === 'undefined') {
+        window.safeCargarRutasConfig = function(){
+            if (typeof window.cargarRutasConfig === 'function') {
+                try { return window.cargarRutasConfig(); } catch(e){ console.warn(e); }
+            }
+
+        // ====== Asignación ======
+        async function cargarPaquetesSinAsignar() {
+            try {
+                const resp = await fetch('php/admin.php?accion=todos_paquetes', { cache: 'no-store' });
+                const raw = await resp.text();
+                let data; try { data = JSON.parse(raw); } catch(e){ console.error('Respuesta no JSON', raw); return; }
+                if (!data.exito) return;
+                const tbody = document.getElementById('cuerpoSinAsignar');
+                if (!tbody) return;
+                const sin = (data.datos || []).filter(p => !p.empleado_id);
+                tbody.innerHTML = sin.map(p => `
+                    <tr>
+                        <td>${p.id}</td>
+                        <td>${p.codigo || ''}</td>
+                        <td>${p.destinatario || ''}</td>
+                        <td>${p.distrito || ''}</td>
+                        <td>
+                            <button class="btn btn-pequeno btn-primario" onclick="reasignarPrompt(${p.id})">Reasignar</button>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (e) { console.error('cargarPaquetesSinAsignar', e); }
+        }
+
+        async function asignarPaquetesAuto() {
+            try {
+                const fd = new URLSearchParams(); fd.append('accion','asignar_paquetes_auto');
+                const r = await fetch('php/admin.php', { method:'POST', body: fd });
+                const d = await r.json();
+                alert(`Asignación: asignados=${d.asignados||0}, sin_ruta=${d.sin_ruta||0}, sin_empleado=${d.sin_empleado||0}`);
+                await cargarPaquetesSinAsignar();
+                if (typeof cargarResumenAsignados === 'function') { await cargarResumenAsignados(); }
+            } catch(e){ console.error('asignarPaquetesAuto', e); alert('Error asignando'); }
+        }
+
+        async function reasignarPrompt(paqueteId){
+            try {
+                const empleadoId = prompt('ID de empleado destino:');
+                if (!empleadoId) return;
+                const fd = new FormData();
+                fd.append('accion','reasignar_paquete');
+                fd.append('paquete_id', paqueteId);
+                fd.append('empleado_id', empleadoId);
+                const r = await fetch('php/admin.php', { method:'POST', body: fd });
+                const d = await r.json();
+                if (!d.exito) { alert(d.mensaje || 'No se pudo reasignar'); return; }
+                await cargarPaquetesSinAsignar();
+                if (typeof cargarResumenAsignados === 'function') { await cargarResumenAsignados(); }
+            } catch(e){ console.error('reasignarPrompt', e); }
+        }
+        window.asignarPaquetesAuto = asignarPaquetesAuto;
+        window.reasignarPrompt = reasignarPrompt;
+
+        async function cargarResumenAsignados(){
+            try{
+                const r = await fetch('php/admin.php?accion=todos_paquetes');
+                const d = await r.json();
+                if (!d.exito) return;
+                const items = Array.isArray(d.datos) ? d.datos : [];
+                const asignados = items.filter(x => Number(x.empleado_id) > 0);
+                const porEmpleado = {};
+                for (const p of asignados){
+                    const empId = Number(p.empleado_id);
+                    if (!empId) continue;
+                    const key = String(empId);
+                    if (!porEmpleado[key]) porEmpleado[key] = { empleado_id: empId, empleado_nombre: p.empleado_nombre || ('Empleado '+key), zona: p.zona || '', total:0, lista: [] };
+                    porEmpleado[key].total++;
+                    porEmpleado[key].lista.push({ id: p.id, codigo: p.codigo || '', destinatario: p.destinatario || '', distrito: p.distrito || '' });
+                }
+                const tbody = document.getElementById('cuerpoResumenAsignados');
+                if (!tbody) return;
+                const arr = Object.values(porEmpleado).sort((a,b)=>b.total-a.total);
+                if (arr.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="4" class="text-center text-muted">Sin asignaciones</td></tr>`;
+                    const cont = document.getElementById('listaAsignadosEmpleado'); if (cont) cont.style.display='none';
+                    return;
+                }
+                tbody.innerHTML = arr.map(e => `
+                    <tr>
+                        <td>${e.empleado_nombre}</td>
+                        <td>${e.zona || ''}</td>
+                        <td class="text-center">${e.total}</td>
+                        <td><button class="btn btn-pequeno" onclick="verPaquetesEmpleado(${e.empleado_id})">Ver</button></td>
+                    </tr>
+                `).join('');
+                window.__asignados_por_empleado = porEmpleado;
+            }catch(err){ console.error('cargarResumenAsignados', err); }
+        }
+        function verPaquetesEmpleado(empleadoId){
+            const data = (window.__asignados_por_empleado||{})[String(empleadoId)];
+            const cont = document.getElementById('listaAsignadosEmpleado');
+            const titulo = document.getElementById('tituloListaEmpleado');
+            const tbody = document.getElementById('cuerpoListaEmpleado');
+            if (!data || !cont || !tbody || !titulo) return;
+            titulo.textContent = `Paquetes de ${data.empleado_nombre} (${data.total})`;
+            tbody.innerHTML = data.lista.map(p => `
+                <tr>
+                    <td>${p.id}</td>
+                    <td>${p.codigo}</td>
+                    <td>${p.destinatario}</td>
+                    <td>${p.distrito}</td>
+                </tr>
+            `).join('');
+            cont.style.display = '';
+        }
+        window.cargarResumenAsignados = cargarResumenAsignados;
+        window.verPaquetesEmpleado = verPaquetesEmpleado;
+            return null;
+        };
+    }
+    </script>
     <div class="contenedor">
         <!-- Botón de menú móvil -->
         <button class="menu-movil" id="btnMenuMovil" aria-label="Menú">
@@ -41,8 +160,8 @@
                 <li><a href="javascript:void(0)" onclick="mostrarSeccion('vehiculos', this)">
                     <span class="icono">🚛</span>Vehículos
                 </a></li>
-                <li><a href="javascript:void(0)" onclick="mostrarSeccion('rutas', this)">
-                    <span class="icono">🗺️</span>Rutas
+                <li><a href="javascript:void(0)" onclick="mostrarSeccion('configuracion', this)">
+                    <span class="icono">⚙️</span>Configuración
                 </a></li>
                 <li><a href="javascript:void(0)" onclick="mostrarSeccion('pagos', this)">
                     <span class="icono">💰</span>Pagos Empleados
@@ -108,6 +227,69 @@
                     <div class="actividad-reciente">
                         <h3>Actividad Reciente</h3>
                         <div id="listaActividad" class="lista-actividad">
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Sección Asignar -->
+            <section id="seccion-asignar" class="seccion">
+                <div class="seccion-header d-flex justify-content-between align-items-center">
+                    <h2>Asignación de Paquetes</h2>
+                    <div class="acciones">
+                        <button id="btnAsignarAuto" class="btn btn-primario">Asignar automáticamente</button>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-body">
+                        <h3>Paquetes sin asignar</h3>
+                        <div class="tabla-container">
+                            <table id="tablaSinAsignar">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Código</th>
+                                        <th>Destinatario</th>
+                                        <th>Distrito</th>
+                                        <th>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="cuerpoSinAsignar"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div class="card" style="margin-top: 16px;">
+                    <div class="card-body">
+                        <h3>Resumen por empleado</h3>
+                        <div class="tabla-container">
+                            <table id="tablaResumenAsignados">
+                                <thead>
+                                    <tr>
+                                        <th>Empleado</th>
+                                        <th>Zona</th>
+                                        <th>Total asignados</th>
+                                        <th>Ver</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="cuerpoResumenAsignados"></tbody>
+                            </table>
+                        </div>
+                        <div id="listaAsignadosEmpleado" style="margin-top:12px; display:none;">
+                            <h4 id="tituloListaEmpleado">Paquetes del empleado</h4>
+                            <div class="tabla-container">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>ID</th>
+                                            <th>Código</th>
+                                            <th>Destinatario</th>
+                                            <th>Distrito</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="cuerpoListaEmpleado"></tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -187,30 +369,30 @@
                 </div>
             </section>
 
-            <section id="seccion-rutas" class="seccion">
-                <div class="controles-rutas d-flex justify-content-end align-items-center mb-3">
-                    <button class="btn btn-primario me-2" onclick="nuevaRuta()">+ Nueva Ruta</button>
+            <section id="seccion-configuracion" class="seccion">
+                <div class="seccion-header">
+                    <h2>Configuración</h2>
                 </div>
-                
-                <div class="tabla-container">
-                    <table id="tablaRutas">
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>Nombre</th>
-                                <th>Origen</th>
-                                <th>Destino</th>
-                                <th>Distancia (km)</th>
-                                <th>Tiempo Estimado (min)</th>
-                                <th>Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody id="cuerpoTablaRutas">
-                        </tbody>
-                    </table>
+                <div class="card">
+                    <div class="card-body">
+                        <h3>Rutas</h3>
+                        <p>Lista de rutas predefinidas con sus sectores. Puedes editar nombre y zonas.</p>
+                        <div class="tabla-container">
+                            <table id="tablaRutasConfig">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Nombre</th>
+                                        <th>Zonas</th>
+                                        <th>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="cuerpoTablaRutasConfig"></tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
             </section>
-
 
             <section id="seccion-pagos" class="seccion">
                 <div class="seccion-header">
@@ -367,10 +549,22 @@
                                 </div>
                                 <div class="mb-3">
                                     <label for="tipo" class="form-label">Tipo de Usuario</label>
-                                    <select class="form-select" id="tipo" name="tipo" required>
+                                    <select class="form-select" id="tipo" name="tipo" required onchange="(function(sel){ var g=document.getElementById('grupoZona'); var z=document.getElementById('zona'); if(!g||!z) return; if(sel.value==='empleado'){ g.classList.remove('d-none'); z.required=true; } else { g.classList.add('d-none'); z.required=false; z.value=''; } })(this)">
                                         <option value="admin">Administrador</option>
                                         <option value="asistente">Asistente</option>
                                         <option value="empleado">Empleado</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3 d-none" id="grupoZona">
+                                    <label for="zona" class="form-label">Zona</label>
+                                    <select class="form-select" id="zona" name="zona">
+                                        <option value="">Seleccione zona</option>
+                                        <option value="URBANO">URBANO</option>
+                                        <option value="PUEBLOS">PUEBLOS</option>
+                                        <option value="PLAYAS">PLAYAS</option>
+                                        <option value="COOPERATIVAS">COOPERATIVAS</option>
+                                        <option value="EXCOOPERATIVA">EXCOOPERATIVA</option>
+                                        <option value="FERREÑAFE">FERREÑAFE</option>
                                     </select>
                                 </div>
                                 <div class="mb-3">
@@ -859,19 +1053,15 @@
         // Funciones para guardar nuevos registros
         function guardarVehiculo() {
             const formData = new FormData();
-            formData.append('accion', 'crear_vehiculo');
-            formData.append('placa', document.getElementById('placa').value);
-            formData.append('marca', document.getElementById('marca').value);
-            formData.append('modelo', document.getElementById('modelo').value);
-            formData.append('anio', document.getElementById('anio').value);
-            formData.append('capacidad', document.getElementById('capacidad').value);
-            formData.append('estado', document.getElementById('estado').value);
-            
-            const empleadoId = document.getElementById('empleadoId').value;
-            if (empleadoId) {
-                formData.append('empleado_id', empleadoId);
-            }
-            
+            // Acción esperada por admin.php
+            formData.append('accion', 'nuevo_vehiculo');
+            // IDs correctos del modal de vehículo
+            formData.append('placa', document.getElementById('placaVehiculo').value);
+            formData.append('marca', document.getElementById('marcaVehiculo').value);
+            formData.append('modelo', document.getElementById('modeloVehiculo').value);
+            formData.append('capacidad', document.getElementById('capacidadVehiculo').value);
+            formData.append('estado', document.getElementById('estadoVehiculo').value);
+
             fetch('php/admin.php', {
                 method: 'POST',
                 body: formData
@@ -916,6 +1106,7 @@
                     alert('Ruta creada exitosamente');
                     cerrarModal('modalRuta');
                     cargarRutas();
+                    cargarRutasConfig();
                 } else {
                     alert('Error: ' + data.mensaje);
                 }
@@ -1132,7 +1323,7 @@
         function exportarPagos() {
             alert('Función de exportar pagos - Por implementar');
         }
-        5
+        
         // Carga el último Excel descargado y lo renderiza en la tabla de Paquetes
 async function cargarUltimoExcelEnPaquetes() {
     try {
@@ -1528,7 +1719,20 @@ function renderPaquetesDesdeExcel(rows) {
         
         function mostrarRutas(rutas) {
             const tbody = document.getElementById('cuerpoTablaRutas');
+            if (!tbody) { return; }
             tbody.innerHTML = '';
+            
+            if (!rutas || !Array.isArray(rutas)) {
+                console.error('Error: Los datos de rutas no son válidos', rutas);
+                return;
+            }
+            
+            if (rutas.length === 0) {
+                const fila = document.createElement('tr');
+                fila.innerHTML = '<td colspan="7" class="texto-centrado">No hay rutas registradas</td>';
+                tbody.appendChild(fila);
+                return;
+            }
             
             rutas.forEach(ruta => {
                 const fila = document.createElement('tr');
@@ -1669,6 +1873,7 @@ function renderPaquetesDesdeExcel(rows) {
                 'empleados': 'Gestión de Empleados',
                 'vehiculos': 'Gestión de Vehículos',
                 'rutas': 'Gestión de Rutas',
+                'configuracion': 'Configuración',
                 'reportes': 'Reportes',
                 'pagos': 'Pagos Empleados',
                 'asignar': 'Asignar Paquetes por Distrito'
@@ -1706,6 +1911,13 @@ function renderPaquetesDesdeExcel(rows) {
                                 break;
                             case 'seccion-vehiculos':
                                 cargarVehiculos().catch(console.error);
+                                break;
+                            case 'seccion-configuracion':
+                                safeCargarRutasConfig();
+                                break;
+                            case 'seccion-asignar':
+                                if (typeof cargarPaquetesSinAsignar === 'function') cargarPaquetesSinAsignar();
+                                if (typeof cargarResumenAsignados === 'function') cargarResumenAsignados();
                                 break;
                             // Agrega más casos según sea necesario
                         }
@@ -1790,6 +2002,7 @@ function renderPaquetesDesdeExcel(rows) {
                     cargarEmpleados();
                     cargarVehiculos();
                     cargarRutas();
+                    try { safeCargarRutasConfig(); } catch(e){ console.warn(e); }
                     // Pre-cargar selects de Asignar
                     cargarEmpleadosAsignar();
                     cargarDistritosAsignar();
@@ -1799,6 +2012,56 @@ function renderPaquetesDesdeExcel(rows) {
                     window.location.href = 'login.html';
                 });
         });
+    </script>
+    <script>
+    // Funciones de Asignación
+    async function cargarPaquetesSinAsignar() {
+        try {
+            const resp = await fetch('php/admin.php?accion=todos_paquetes', { cache: 'no-store' });
+            const raw = await resp.text();
+            let data; try { data = JSON.parse(raw); } catch(e){ console.error('Respuesta no JSON', raw); return; }
+            if (!data.exito) return;
+            const tbody = document.getElementById('cuerpoSinAsignar');
+            if (!tbody) return;
+            const sin = (data.datos || []).filter(p => !p.empleado_id);
+            tbody.innerHTML = sin.map(p => `
+                <tr>
+                    <td>${p.id}</td>
+                    <td>${p.codigo || ''}</td>
+                    <td>${p.destinatario || ''}</td>
+                    <td>${p.distrito || ''}</td>
+                    <td>
+                        <button class="btn btn-pequeno btn-primario" onclick="reasignarPrompt(${p.id})">Reasignar</button>
+                    </td>
+                </tr>
+            `).join('');
+        } catch (e) { console.error('cargarPaquetesSinAsignar', e); }
+    }
+    async function asignarPaquetesAuto() {
+        try {
+            const fd = new URLSearchParams(); fd.append('accion','asignar_paquetes_auto');
+            const r = await fetch('php/admin.php', { method:'POST', body: fd });
+            const d = await r.json();
+            alert(`Asignación: asignados=${d.asignados||0}, sin_ruta=${d.sin_ruta||0}, sin_empleado=${d.sin_empleado||0}`);
+            await cargarPaquetesSinAsignar();
+        } catch(e){ console.error('asignarPaquetesAuto', e); alert('Error asignando'); }
+    }
+    async function reasignarPrompt(paqueteId){
+        try {
+            const empleadoId = prompt('ID de empleado destino:');
+            if (!empleadoId) return;
+            const fd = new FormData();
+            fd.append('accion','reasignar_paquete');
+            fd.append('paquete_id', paqueteId);
+            fd.append('empleado_id', empleadoId);
+            const r = await fetch('php/admin.php', { method:'POST', body: fd });
+            const d = await r.json();
+            if (!d.exito) { alert(d.mensaje || 'No se pudo reasignar'); return; }
+            await cargarPaquetesSinAsignar();
+        } catch(e){ console.error('reasignarPrompt', e); }
+    }
+    // Enlazar botón
+    document.getElementById('btnAsignarAuto')?.addEventListener('click', asignarPaquetesAuto);
     </script>
     
     <!-- jQuery (debe cargarse primero) -->
@@ -1814,7 +2077,7 @@ function renderPaquetesDesdeExcel(rows) {
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     
     <!-- Nuestros scripts -->
-    <script src="js/gestion_usuarios.js"></script>
+    <script src="js/gestion_usuarios.js?v=20251018-2"></script>
     <script src="js/exportar.js"></script>
     
     <!-- Inicialización de la página -->
@@ -1845,6 +2108,126 @@ function renderPaquetesDesdeExcel(rows) {
                 mostrarSeccion('dashboard', document.querySelector('a[onclick*="dashboard"]'));
             }
         });
+    </script>
+    
+    <!-- Modal Editar Ruta -->
+    <div id="modalEditarRuta" class="modal" style="display:none;">
+        <div class="modal-contenido">
+            <h3>Editar Ruta</h3>
+            <form id="formEditarRuta">
+                <input type="hidden" id="editarRutaId">
+                <div class="grupo-form">
+                    <label for="editarRutaNombre">Nombre</label>
+                    <input type="text" id="editarRutaNombre" required>
+                </div>
+                <div class="grupo-form">
+                    <label for="editarRutaZonas">Zonas (separadas por comas)</label>
+                    <textarea id="editarRutaZonas" rows="4"></textarea>
+                </div>
+                <div class="modal-acciones">
+                    <button type="button" class="btn btn-secundario" onclick="(function(){ const m=document.getElementById('modalEditarRuta'); if(m) m.style.display='none'; if (typeof cerrarModal==='function') cerrarModal('modalEditarRuta'); })()">Cancelar</button>
+                    <button type="submit" class="btn btn-primario">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <script>
+    // Enlazar submit del formulario del modal
+    (function(){
+        const form = document.getElementById('formEditarRuta');
+        if (!form) return;
+        form.addEventListener('submit', async function(e){
+            e.preventDefault();
+            const id = document.getElementById('editarRutaId').value;
+            const nombre = document.getElementById('editarRutaNombre').value.trim();
+            const zonas = document.getElementById('editarRutaZonas').value.trim();
+            if (!id || !nombre) { alert('ID y Nombre son obligatorios'); return; }
+            const fd = new FormData();
+            fd.append('accion','actualizar_ruta');
+            fd.append('id', id);
+            fd.append('nombre', nombre);
+            fd.append('zonas', zonas);
+            try{
+                const r = await fetch('php/admin.php', { method:'POST', body: fd });
+                const d = await r.json();
+                if (!d.exito) { alert(d.mensaje || 'No se pudo actualizar'); return; }
+                if (typeof cerrarModal === 'function') cerrarModal('modalEditarRuta');
+                const modal = document.getElementById('modalEditarRuta');
+                if (modal) modal.style.display='none';
+                if (typeof window.cargarRutasConfig === 'function') window.cargarRutasConfig();
+            } catch(err){ console.error('Actualizar ruta', err); alert('Error al actualizar ruta'); }
+        });
+    })();
+    </script>
+    
+    <!-- Fallback: define cargarRutasConfig si aún no existe -->
+    <script>
+    if (typeof window.cargarRutasConfig === 'undefined') {
+        window.cargarRutasConfig = async function() {
+            try {
+                const resp = await fetch('php/admin.php?accion=rutas', { cache: 'no-store' });
+                const data = await resp.json();
+                const tbody = document.getElementById('cuerpoTablaRutasConfig');
+                if (!tbody) return;
+                const esc = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+                if (!data.exito || !Array.isArray(data.datos) || !data.datos.length) {
+                    tbody.innerHTML = '<tr><td colspan="4" class="texto-centrado">Sin rutas</td></tr>';
+                    return;
+                }
+                tbody.innerHTML = data.datos.map(r => {
+                    const id = esc(r.id);
+                    const zonas = esc(r.zonas || '');
+                    const nombre = esc(r.nombre || '');
+                    return `
+                        <tr>
+                            <td>${id}</td>
+                            <td>${nombre}</td>
+                            <td style="white-space:pre-wrap">${zonas}</td>
+                            <td>
+                                <button class="btn btn-pequeno btn-primario"
+                                    data-id="${id}" data-nombre="${nombre}" data-zonas="${zonas}"
+                                    onclick="_editarRutaInline(this)">Editar</button>
+                                <button class="btn btn-pequeno btn-secundario"
+                                    data-id="${id}"
+                                    onclick="_eliminarRutaConfig(this)">Eliminar</button>
+                            </td>
+                        </tr>`;
+                }).join('');
+            } catch (e) { console.error('fallback cargarRutasConfig', e); }
+        };
+    }
+    // Handlers globales usados por los botones del fallback
+    if (typeof window._editarRutaInline === 'undefined') {
+        window._editarRutaInline = function(btn){
+            try{
+                document.getElementById('editarRutaId').value = btn.getAttribute('data-id') || '';
+                document.getElementById('editarRutaNombre').value = btn.getAttribute('data-nombre') || '';
+                document.getElementById('editarRutaZonas').value = btn.getAttribute('data-zonas') || '';
+                if (typeof abrirModal === 'function') {
+                    abrirModal('modalEditarRuta');
+                } else {
+                    const m = document.getElementById('modalEditarRuta');
+                    if (m) m.style.display='block';
+                }
+            } catch(e){ console.error('EditarRutaInline', e); }
+        };
+    }
+    if (typeof window._eliminarRutaConfig === 'undefined') {
+        window._eliminarRutaConfig = async function(btn){
+            const id = btn.getAttribute('data-id');
+            if (!id) return;
+            if (!confirm('¿Eliminar esta ruta?')) return;
+            const fd = new FormData();
+            fd.append('accion','eliminar_ruta');
+            fd.append('id', id);
+            try{
+                const r = await fetch('php/admin.php', { method: 'POST', body: fd });
+                const d = await r.json();
+                if (!d.exito) { alert(d.mensaje || 'No se pudo eliminar'); return; }
+                if (typeof window.cargarRutasConfig === 'function') window.cargarRutasConfig();
+            } catch(e){ console.error(e); alert('Error eliminando ruta'); }
+        };
+    }
     </script>
 </body>
 </html>

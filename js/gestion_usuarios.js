@@ -118,10 +118,30 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
         ],
-        language: {
-            url: '//cdn.datatables.net/plug-ins/1.10.25/i18n/Spanish.json'
-        },
         responsive: true
+    });
+
+    // Helper: mostrar/ocultar selector de zona según tipo
+    function updateZonaVisibility() {
+        const $form = $('#usuarioForm');
+        const $tipo = $form.find('#tipo');
+        const tipo = $tipo.val();
+        const $grp = $form.find('#grupoZona');
+        const $zona = $form.find('#zona');
+        if ($grp.length === 0) return;
+        if (tipo === 'empleado') {
+            $grp.removeClass('d-none');
+            $zona.prop('required', true);
+        } else {
+            $grp.addClass('d-none');
+            $zona.prop('required', false).val('');
+        }
+    }
+    // Cambio del select tipo dentro del formulario del modal
+    $(document).on('change', '#usuarioForm #tipo', updateZonaVisibility);
+    // Al mostrar el modal, recalcular visibilidad por si el DOM fue regenerado
+    $('#usuarioModal').on('shown.bs.modal', function(){
+        updateZonaVisibility();
     });
 
     // Mostrar modal para crear/editar usuario
@@ -132,6 +152,16 @@ document.addEventListener('DOMContentLoaded', function() {
         form.setAttribute('data-action', 'crear');
         
         // Mostrar el modal
+        // Limpiar explícito para evitar autocompletado/states previos
+        $('#usuario').val('');
+        $('#nombre').val('');
+        $('#email').val('');
+        $('#clave').val('');
+        $('#activo').prop('checked', true);
+        // Tipo por defecto: empleado (para que aparezca zona si hace falta) o vacío si prefieres elegir
+        $('#usuarioForm #tipo').val('empleado');
+        $('#usuarioForm #zona').val('');
+        updateZonaVisibility();
         usuarioModal.show();
     });
 
@@ -163,7 +193,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 $('#usuario').val(data.usuario);
                 $('#nombre').val(data.nombre);
                 $('#email').val(data.email);
-                $('#tipo').val(data.tipo);
+                $('#usuarioForm #tipo').val(data.tipo);
+                $('#usuarioForm #zona').val(data.zona || '');
                 $('#activo').prop('checked', data.activo == 1);
                 
                 // Mostrar campo de contraseña vacío
@@ -172,6 +203,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 $('#usuarioModalLabel').text('Editar Usuario');
                 $('#usuarioForm').attr('data-action', 'actualizar');
                 $('#usuarioModal').modal('show');
+                // Actualizar visibilidad de zona según tipo cargado
+                updateZonaVisibility();
             })
             .catch(error => {
                 console.error('Error:', error);
@@ -213,11 +246,18 @@ document.addEventListener('DOMContentLoaded', function() {
         return false;
     });
 
-    // Enviar formulario
-    $('#usuarioForm').submit(function(e) {
+    // Enviar formulario (asegurar único binding y evitar dobles envíos)
+    let enviandoUsuario = false;
+    $('#usuarioForm').off('submit').on('submit', function(e) {
         e.preventDefault();
+        if (enviandoUsuario) return false;
+        enviandoUsuario = true;
+        const $submitBtn = $('#usuarioForm button[type="submit"], #usuarioForm .btn-guardar');
+        const prevText = $submitBtn.text();
+        $submitBtn.prop('disabled', true).text('Guardando...');
         
-        const id = $('#usuario_id').val();
+        const formEl = document.getElementById('usuarioForm');
+        const id = (document.getElementById('usuario_id') || {}).value || '';
         
         // Prevenir modificación del administrador (ID 1)
         if (id == 1) {
@@ -227,34 +267,48 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         // Validar campos requeridos
-        const usuario = $('#usuario').val().trim();
-        const nombre = $('#nombre').val().trim();
-        const email = $('#email').val().trim();
-        const clave = $('#clave').val();
+        const usuario = (formEl.querySelector('#usuario')?.value || '').trim();
+        const nombre  = (formEl.querySelector('#nombre')?.value  || '').trim();
+        const email   = (formEl.querySelector('#email')?.value   || '').trim();
+        const clave   = (formEl.querySelector('#clave')?.value   || '');
         
         if (!usuario || !nombre || !email) {
             mostrarAlerta('warning', 'Por favor complete todos los campos requeridos');
+            enviandoUsuario = false; $submitBtn.prop('disabled', false).text(prevText || 'Guardar');
             return false;
         }
         
         // Si es un nuevo usuario, validar la contraseña
         if (!id && !clave) {
             mostrarAlerta('warning', 'La contraseña es obligatoria para nuevos usuarios');
+            enviandoUsuario = false; $submitBtn.prop('disabled', false).text(prevText || 'Guardar');
             return false;
         }
         
+        const tipoSel = (formEl.querySelector('#tipo')?.value || '').trim();
+        const zonaSel = (formEl.querySelector('#zona')?.value || '').trim();
+        if (tipoSel === 'empleado' && !zonaSel) {
+            mostrarAlerta('warning', 'Seleccione la zona para empleados');
+            enviandoUsuario = false; $submitBtn.prop('disabled', false).text(prevText || 'Guardar');
+            return false;
+        }
+
         const formData = {
             usuario: usuario,
             nombre: nombre,
             email: email,
-            tipo: $('#tipo').val(),
-            activo: $('#activo').is(':checked') ? 1 : 0
+            tipo: tipoSel,
+            activo: (formEl.querySelector('#activo')?.checked ? 1 : 0)
         };
+        if (tipoSel === 'empleado') {
+            formData.zona = zonaSel;
+        }
         
         // Solo incluir la contraseña si se proporcionó
         if (clave) {
             if (clave.length < 6) {
                 mostrarAlerta('warning', 'La contraseña debe tener al menos 6 caracteres');
+                enviandoUsuario = false; $submitBtn.prop('disabled', false).text(prevText || 'Guardar');
                 return false;
             }
             formData.clave = clave;
@@ -274,14 +328,26 @@ document.addEventListener('DOMContentLoaded', function() {
             url += `&id=${id}`;
         }
         
+        console.debug('Enviando usuario (urlencoded):', formData);
+        const bodyParams = new URLSearchParams();
+        Object.keys(formData).forEach(k => bodyParams.append(k, formData[k]));
         fetch(url, {
             method: method,
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
             },
-            body: JSON.stringify(formData)
+            body: bodyParams.toString()
         })
-        .then(response => response.json())
+        .then(async (response) => {
+            const raw = await response.text();
+            let data;
+            try { data = JSON.parse(raw); } catch(_) { data = { error: raw || 'Error desconocido' }; }
+            if (!response.ok) {
+                const msg = (data && (data.error || data.mensaje)) || `Error ${response.status}`;
+                throw new Error(msg);
+            }
+            return data;
+        })
         .then(data => {
             if (data.error) {
                 mostrarAlerta('danger', data.error);
@@ -292,8 +358,12 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         })
         .catch(error => {
-            console.error('Error:', error);
-            mostrarAlerta('danger', 'Error al procesar la solicitud');
+            console.error('Error crear/actualizar usuario:', error.message || error);
+            mostrarAlerta('danger', error.message || 'Error al procesar la solicitud');
+        })
+        .finally(() => {
+            enviandoUsuario = false;
+            $submitBtn.prop('disabled', false).text(prevText || 'Guardar');
         });
     });
 

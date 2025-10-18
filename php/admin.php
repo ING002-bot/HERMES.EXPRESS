@@ -65,6 +65,54 @@ function registrarAccion($accion, $id_entidad, $detalles = '') {
         error_log('Error al registrar acción: ' . $e->getMessage());
         return false;
     }
+
+}
+
+function seedRutas() {
+    global $pdo;
+    try {
+        // asegurar columna zonas
+        try { $pdo->exec("ALTER TABLE rutas ADD COLUMN zonas TEXT NULL"); } catch (Exception $e) { }
+
+        $rutas = [
+            ['nombre'=>'URBANO', 'zonas'=> 'Chiclayo, Leonardo Ortiz, La Victoria, Santa Victoria'],
+            ['nombre'=>'PUEBLOS', 'zonas'=> 'Lambayeque, Mochumi, Tucume, Illimo, Nueva Arica, Jayanca, Pacora, Morrope, Motupe, Olmos, Salas'],
+            ['nombre'=>'PLAYAS', 'zonas'=> 'San Jose, Santa Rosa, Pimentel, Reque, Monsefu, Eten, Puerto Eten'],
+            ['nombre'=>'COOPERATIVAS', 'zonas'=> 'Pomalca, Tuman, Patapo, Pucala, Saltur, Chongoyape'],
+            ['nombre'=>'EXCOOPERATIVA', 'zonas'=> 'Ucupe, Mocupec, Zaña, Cayalti, Oyotun, Lagunas'],
+            ['nombre'=>'FERREÑAFE', 'zonas'=> 'Ferreñafe, Picsi, Pitipo, Motupillo, Pueblo Nuevo']
+        ];
+
+        // correcciones ortográficas según imágenes
+        $reemplazos = [
+            'Mocupec' => 'Mocupe'
+        ];
+        foreach ($rutas as &$r) {
+            foreach ($reemplazos as $a=>$b) { $r['zonas'] = str_replace($a, $b, $r['zonas']); }
+        }
+
+        // upsert por nombre
+        $select = $pdo->prepare('SELECT id FROM rutas WHERE nombre = ?');
+        $insert = $pdo->prepare('INSERT INTO rutas (nombre, origen, destino, distancia, tiempo_estimado, zonas) VALUES (?,?,?,?,?,?)');
+        $update = $pdo->prepare('UPDATE rutas SET zonas = ? WHERE id = ?');
+
+        $creadas = 0; $actualizadas = 0;
+        foreach ($rutas as $r) {
+            $select->execute([$r['nombre']]);
+            $row = $select->fetch(PDO::FETCH_ASSOC);
+            if ($row) {
+                $update->execute([$r['zonas'], $row['id']]);
+                $actualizadas++;
+            } else {
+                $insert->execute([$r['nombre'], '', '', 0, 0, $r['zonas']]);
+                $creadas++;
+            }
+        }
+
+        echo json_encode(['exito'=>true, 'creadas'=>$creadas, 'actualizadas'=>$actualizadas]);
+    } catch (Throwable $e) {
+        echo json_encode(['exito'=>false, 'mensaje'=>'Error al sembrar rutas: '.$e->getMessage()]);
+    }
 }
 
 // Verificar sesión de administrador o asistente
@@ -93,6 +141,12 @@ switch($accion) {
     case 'rutas':
         obtenerRutas();
         break;
+    case 'actualizar_ruta':
+        actualizarRuta();
+        break;
+    case 'seed_rutas':
+        seedRutas();
+        break;
     case 'nuevo_empleado':
         crearEmpleado();
         break;
@@ -120,17 +174,14 @@ switch($accion) {
     case 'eliminar_ruta':
         eliminarRuta();
         break;
-    case 'generar_reporte':
+    case 'generar_reporte': 
         generarReporte();
         break;
-    case 'nuevo_vehiculo':
-        crearVehiculo();
+    case 'asignar_paquetes_auto':
+        asignarPaquetesAuto();
         break;
-    case 'nueva_ruta':
-        crearRuta();
-        break;
-    case 'nuevo_empleado':
-        crearEmpleado();
+    case 'reasignar_paquete':
+        reasignarPaquete();
         break;
     default:
         echo json_encode(['exito' => false, 'mensaje' => 'Acción no válida']);
@@ -179,13 +230,47 @@ function obtenerTodosLosPaquetes() {
     global $pdo;
     
     try {
-        $stmt = $pdo->query("
-            SELECT p.*, u.nombre as empleado_nombre
-            FROM paquetes p 
+        // Preparar paths para JSON en paquetes_json (coincidir con asignación)
+        $pathDistrito = "COALESCE(
+            JSON_UNQUOTE(JSON_EXTRACT(data, '$.distrito')),
+            JSON_UNQUOTE(JSON_EXTRACT(data, '$.Distrito')),
+            JSON_UNQUOTE(JSON_EXTRACT(data, '$.DISTRITO')),
+            JSON_UNQUOTE(JSON_EXTRACT(data, '$.data.distrito')),
+            JSON_UNQUOTE(JSON_EXTRACT(data, '$.data.Distrito')),
+            JSON_UNQUOTE(JSON_EXTRACT(data, '$.destino.distrito')),
+            JSON_UNQUOTE(JSON_EXTRACT(data, '$.destino.Distrito')),
+            JSON_UNQUOTE(JSON_EXTRACT(data, '$.direccion.distrito')),
+            JSON_UNQUOTE(JSON_EXTRACT(data, '$.direccion.Distrito')),
+            JSON_UNQUOTE(JSON_EXTRACT(data, '$.Direccion.distrito')),
+            JSON_UNQUOTE(JSON_EXTRACT(data, '$.Direccion.Distrito')),
+            JSON_UNQUOTE(JSON_EXTRACT(data, '$.DireccionDestino.distrito')),
+            JSON_UNQUOTE(JSON_EXTRACT(data, '$.DireccionDestino.Distrito'))
+        )";
+        $pathDireccion = "COALESCE(
+            JSON_UNQUOTE(JSON_EXTRACT(data, '$.DireccionDestino')),
+            JSON_UNQUOTE(JSON_EXTRACT(data, '$.Direccion')),
+            JSON_UNQUOTE(JSON_EXTRACT(data, '$.direccion_destino')),
+            JSON_UNQUOTE(JSON_EXTRACT(data, '$.direccion'))
+        )";
+
+        $sql = "
+            SELECT p.id, p.codigo, p.destinatario, p.distrito, p.empleado_id, u.nombre AS empleado_nombre, u.zona AS zona, 'paquetes' AS origen
+            FROM paquetes p
             LEFT JOIN usuarios u ON p.empleado_id = u.id
-            ORDER BY p.fecha_envio DESC
-        ");
-        $paquetes = $stmt->fetchAll();
+            UNION ALL
+            SELECT pj.id,
+                   JSON_UNQUOTE(JSON_EXTRACT(pj.data, '$.Codigo')) AS codigo,
+                   COALESCE(JSON_UNQUOTE(JSON_EXTRACT(pj.data, '$.Cliente')), JSON_UNQUOTE(JSON_EXTRACT(pj.data, '$.Destinatario'))) AS destinatario,
+                   TRIM(COALESCE(NULLIF($pathDistrito, ''), NULLIF(TRIM(SUBSTRING_INDEX($pathDireccion, ',', -1)), ''))) AS distrito,
+                   pj.empleado_id,
+                   u2.nombre AS empleado_nombre,
+                   u2.zona AS zona,
+                   'paquetes_json' AS origen
+            FROM paquetes_json pj
+            LEFT JOIN usuarios u2 ON pj.empleado_id = u2.id
+        ";
+        $stmt = $pdo->query($sql);
+        $paquetes = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
         echo json_encode([
             'exito' => true,
@@ -275,6 +360,51 @@ function obtenerRutas() {
     }
 }
 
+function actualizarRuta() {
+    global $pdo;
+    try {
+        $id = isset($_POST['id']) ? (int)$_POST['id'] : 0;
+        $nombre = isset($_POST['nombre']) ? limpiar_dato($_POST['nombre']) : '';
+        $origen = isset($_POST['origen']) ? limpiar_dato($_POST['origen']) : null;
+        $destino = isset($_POST['destino']) ? limpiar_dato($_POST['destino']) : null;
+        $distancia = isset($_POST['distancia']) ? $_POST['distancia'] : null;
+        $tiempo_estimado = isset($_POST['tiempo_estimado']) ? $_POST['tiempo_estimado'] : null;
+        $zonas = isset($_POST['zonas']) ? trim($_POST['zonas']) : null; // coma-separado
+
+        if ($id <= 0) {
+            echo json_encode(['exito' => false, 'mensaje' => 'ID inválido']);
+            return;
+        }
+
+        // Asegurar que la tabla tenga la columna zonas
+        try { $pdo->exec("ALTER TABLE rutas ADD COLUMN zonas TEXT NULL"); } catch (Exception $e) { /* ya existe */ }
+
+        // Construir SET dinámico
+        $campos = [];
+        $params = [];
+        if ($nombre !== '') { $campos[] = 'nombre = ?'; $params[] = $nombre; }
+        if ($origen !== null) { $campos[] = 'origen = ?'; $params[] = $origen; }
+        if ($destino !== null) { $campos[] = 'destino = ?'; $params[] = $destino; }
+        if ($distancia !== null && $distancia !== '') { $campos[] = 'distancia = ?'; $params[] = (float)$distancia; }
+        if ($tiempo_estimado !== null && $tiempo_estimado !== '') { $campos[] = 'tiempo_estimado = ?'; $params[] = (int)$tiempo_estimado; }
+        if ($zonas !== null) { $campos[] = 'zonas = ?'; $params[] = $zonas; }
+
+        if (!count($campos)) {
+            echo json_encode(['exito' => false, 'mensaje' => 'No hay cambios para aplicar']);
+            return;
+        }
+
+        $params[] = $id;
+        $sql = 'UPDATE rutas SET ' . implode(', ', $campos) . ' WHERE id = ?';
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+
+        echo json_encode(['exito' => true, 'mensaje' => 'Ruta actualizada exitosamente']);
+    } catch (PDOException $e) {
+        echo json_encode(['exito' => false, 'mensaje' => 'Error al actualizar ruta']);
+    }
+}
+
 function crearEmpleado() {
     global $pdo;
     
@@ -286,7 +416,7 @@ function crearEmpleado() {
         $datos = $_POST;
         
         // Validar campos obligatorios
-        $camposRequeridos = ['nombre', 'usuario', 'email', 'clave', 'tipo'];
+        $camposRequeridos = ['nombre', 'usuario', 'email', 'clave', 'tipo', 'zona'];
         $camposFaltantes = [];
         
         foreach ($camposRequeridos as $campo) {
@@ -310,6 +440,15 @@ function crearEmpleado() {
         $email = filter_var(limpiar_dato($datos['email']), FILTER_VALIDATE_EMAIL);
         $clave = $datos['clave'];
         $tipo = limpiar_dato($datos['tipo']);
+        $zona = strtoupper(trim(limpiar_dato($datos['zona'])));
+        $zonasPermitidas = ['URBANO','PUEBLOS','PLAYAS','COOPERATIVAS','EXCOOPERATIVA','FERREÑAFE'];
+        if (!in_array($zona, $zonasPermitidas, true)) {
+            http_response_code(400);
+            echo json_encode(['exito' => false, 'mensaje' => 'Zona inválida']);
+            return;
+        }
+        // Asegurar columna zona en usuarios
+        try { $pdo->exec("ALTER TABLE usuarios ADD COLUMN zona VARCHAR(50) NULL"); } catch (Exception $e) { /* ya existe */ }
         
         // Validar formato de email
         if (!$email) {
@@ -349,8 +488,8 @@ function crearEmpleado() {
         try {
             // Insertar el nuevo empleado
             $stmt = $pdo->prepare("
-                INSERT INTO usuarios (nombre, usuario, email, clave, tipo, activo, fecha_registro) 
-                VALUES (:nombre, :usuario, :email, :clave, :tipo, 1, NOW())
+                INSERT INTO usuarios (nombre, usuario, email, clave, tipo, zona, activo, fecha_registro) 
+                VALUES (:nombre, :usuario, :email, :clave, :tipo, :zona, 1, NOW())
             ");
             
             $stmt->execute([
@@ -358,7 +497,8 @@ function crearEmpleado() {
                 ':usuario' => $usuario,
                 ':email' => $email,
                 ':clave' => $clave_hash,
-                ':tipo' => $tipo
+                ':tipo' => $tipo,
+                ':zona' => $zona
             ]);
             
             $id_empleado = $pdo->lastInsertId();
@@ -526,6 +666,9 @@ function crearPaquete() {
     global $pdo;
     
     try {
+        // Asegurar columna distrito para soportar asignación por zonas
+        try { $pdo->exec("ALTER TABLE paquetes ADD COLUMN distrito VARCHAR(100) NULL"); } catch (Exception $e) { /* ya existe */ }
+
         $remitente = limpiar_dato($_POST['remitente'] ?? '');
         $destinatario = limpiar_dato($_POST['destinatario'] ?? '');
         $direccion_origen = limpiar_dato($_POST['direccion_origen'] ?? '');
@@ -533,6 +676,14 @@ function crearPaquete() {
         $peso = floatval($_POST['peso'] ?? 0);
         $precio = floatval($_POST['precio'] ?? 0);
         $tipo_ruta = limpiar_dato($_POST['tipo_ruta'] ?? '');
+        $distrito_in = limpiar_dato($_POST['distrito'] ?? '');
+        // Derivar distrito del destino si no viene explícito: tomar el último segmento tras la última coma
+        $distrito = $distrito_in;
+        if ($distrito === '' && $direccion_destino !== '') {
+            $partes = explode(',', $direccion_destino);
+            $ultimo = trim(end($partes));
+            $distrito = $ultimo;
+        }
         
         if (empty($remitente) || empty($destinatario) || empty($direccion_origen) || empty($direccion_destino) || $peso <= 0 || $precio <= 0 || empty($tipo_ruta)) {
             echo json_encode(['exito' => false, 'mensaje' => 'Todos los campos son obligatorios y deben ser válidos']);
@@ -542,11 +693,11 @@ function crearPaquete() {
         $codigo = 'PKG' . date('Ymd') . str_pad(rand(1, 9999), 4, '0', STR_PAD_LEFT);
         
         $stmt = $pdo->prepare("
-            INSERT INTO paquetes (codigo, remitente, destinatario, direccion_origen, direccion_destino, peso, precio, tipo_ruta, estado, fecha_envio) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pendiente', CURDATE())
+            INSERT INTO paquetes (codigo, remitente, destinatario, direccion_origen, direccion_destino, distrito, peso, precio, tipo_ruta, estado, fecha_envio) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pendiente', CURDATE())
         ");
         
-        $stmt->execute([$codigo, $remitente, $destinatario, $direccion_origen, $direccion_destino, $peso, $precio, $tipo_ruta]);
+        $stmt->execute([$codigo, $remitente, $destinatario, $direccion_origen, $direccion_destino, $distrito, $peso, $precio, $tipo_ruta]);
         
         echo json_encode([
             'exito' => true,
@@ -837,5 +988,152 @@ function generarPDF($datos, $tipo) {
     
     echo $html;
     exit;
+}
+// Asignación automática de paquetes por zona/distrito
+function asignarPaquetesAuto() {
+    global $pdo;
+    header('Content-Type: application/json');
+    try {
+        // Asegurar columnas necesarias (idempotente)
+        try { $pdo->exec("ALTER TABLE paquetes ADD COLUMN distrito VARCHAR(100) NULL"); } catch (Exception $e) { }
+        try { $pdo->exec("ALTER TABLE paquetes ADD COLUMN empleado_id INT NULL"); } catch (Exception $e) { }
+        // Soporte para paquetes_json
+        try { $pdo->exec("ALTER TABLE paquetes_json ADD COLUMN empleado_id INT NULL"); } catch (Exception $e) { }
+
+        // Construir mapa distrito -> zona (nombre de ruta) con normalización
+        $rutas = $pdo->query("SELECT nombre, zonas FROM rutas")->fetchAll(PDO::FETCH_ASSOC);
+        $mapDistritoZona = [];
+        $normalizar = function($str) {
+            $s = strtolower(trim($str));
+            // reemplazos básicos de acentos y ñ
+            $s = strtr($s, [
+                'á'=>'a','é'=>'e','í'=>'i','ó'=>'o','ú'=>'u','ä'=>'a','ë'=>'e','ï'=>'i','ö'=>'o','ü'=>'u','ñ'=>'n'
+            ]);
+            // normalizar espacios
+            $s = preg_replace('/\s+/', ' ', $s);
+            // sinónimos/comunes
+            $syn = [
+                'jose leonardo ortiz' => 'leonardo ortiz',
+                'j.l. ortiz' => 'leonardo ortiz',
+                'j l ortiz' => 'leonardo ortiz',
+                'ferreñafe' => 'ferrenafe'
+            ];
+            if (isset($syn[$s])) $s = $syn[$s];
+            return $s;
+        };
+        foreach ($rutas as $r) {
+            $zonas = array_map('trim', explode(',', (string)$r['zonas']));
+            foreach ($zonas as $distrito) {
+                if ($distrito !== '') {
+                    $key = $normalizar($distrito);
+                    $mapDistritoZona[$key] = strtoupper(trim($r['nombre']));
+                }
+            }
+        }
+
+        // Paquetes sin asignar con distrito (tabla paquetes)
+        $paquetes = $pdo->query("SELECT id, distrito, 'paquetes' AS origen FROM paquetes WHERE (empleado_id IS NULL OR empleado_id = 0) AND distrito IS NOT NULL AND TRIM(distrito) <> ''")->fetchAll(PDO::FETCH_ASSOC);
+        // Paquetes sin asignar con distrito desde paquetes_json (leer desde data->distrito)
+        try {
+            // Intentar múltiples rutas posibles para 'distrito' (keys en distintos formatos y anidaciones comunes)
+            $pathDistrito = "COALESCE(
+                JSON_UNQUOTE(JSON_EXTRACT(data, '$.distrito')),
+                JSON_UNQUOTE(JSON_EXTRACT(data, '$.Distrito')),
+                JSON_UNQUOTE(JSON_EXTRACT(data, '$.DISTRITO')),
+                JSON_UNQUOTE(JSON_EXTRACT(data, '$.data.distrito')),
+                JSON_UNQUOTE(JSON_EXTRACT(data, '$.data.Distrito')),
+                JSON_UNQUOTE(JSON_EXTRACT(data, '$.destino.distrito')),
+                JSON_UNQUOTE(JSON_EXTRACT(data, '$.destino.Distrito')),
+                JSON_UNQUOTE(JSON_EXTRACT(data, '$.direccion.distrito')),
+                JSON_UNQUOTE(JSON_EXTRACT(data, '$.direccion.Distrito')),
+                JSON_UNQUOTE(JSON_EXTRACT(data, '$.Direccion.distrito')),
+                JSON_UNQUOTE(JSON_EXTRACT(data, '$.Direccion.Distrito')),
+                JSON_UNQUOTE(JSON_EXTRACT(data, '$.DireccionDestino.distrito')),
+                JSON_UNQUOTE(JSON_EXTRACT(data, '$.DireccionDestino.Distrito'))
+            )";
+            // Fallback: derivar distrito desde campos de dirección tomando el último segmento tras comas
+            $pathDireccion = "COALESCE(
+                JSON_UNQUOTE(JSON_EXTRACT(data, '$.DireccionDestino')),
+                JSON_UNQUOTE(JSON_EXTRACT(data, '$.Direccion')),
+                JSON_UNQUOTE(JSON_EXTRACT(data, '$.direccion_destino')),
+                JSON_UNQUOTE(JSON_EXTRACT(data, '$.direccion'))
+            )";
+            $sqlJson = "SELECT id,
+                            TRIM(
+                                COALESCE(
+                                    NULLIF($pathDistrito, ''),
+                                    NULLIF(TRIM(SUBSTRING_INDEX($pathDireccion, ',', -1)), '')
+                                )
+                            ) AS distrito,
+                            'paquetes_json' AS origen
+                        FROM paquetes_json
+                        WHERE (empleado_id IS NULL OR empleado_id = 0)
+                          AND (
+                                ($pathDistrito IS NOT NULL AND TRIM($pathDistrito) <> '')
+                                OR ($pathDireccion IS NOT NULL AND TRIM($pathDireccion) <> '')
+                              )";
+            $paquetesJson = $pdo->query($sqlJson)->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            $paquetesJson = [];
+        }
+        $paquetes = array_merge($paquetes, $paquetesJson);
+        $asignados = 0; $sinRuta = 0; $sinEmpleado = 0; $detalles = [];
+
+        foreach ($paquetes as $p) {
+            $d = $normalizar($p['distrito']);
+            $zona = $mapDistritoZona[$d] ?? null;
+            if (!$zona) { $sinRuta++; $detalles[] = ['paquete'=>$p['id'], 'motivo'=>'sin_ruta_para_distrito', 'distrito'=>$p['distrito']]; continue; }
+
+            // Empleado activo de esa zona con menor carga
+            $stmt = $pdo->prepare("
+                SELECT u.id, COALESCE(SUM(p2.estado IN ('pendiente','en_ruta')),0) AS carga
+                FROM usuarios u
+                LEFT JOIN paquetes p2 ON p2.empleado_id = u.id
+                WHERE u.activo = 1 AND u.tipo IN ('empleado','asistente') AND UPPER(u.zona) = ?
+                GROUP BY u.id
+                ORDER BY carga ASC, u.id ASC
+                LIMIT 1
+            ");
+            $stmt->execute([$zona]);
+            $empleado = $stmt->fetch(PDO::FETCH_ASSOC);
+            if (!$empleado) { $sinEmpleado++; $detalles[] = ['paquete'=>$p['id'], 'motivo'=>'sin_empleado_en_zona', 'zona'=>$zona]; continue; }
+
+            if (($p['origen'] ?? 'paquetes') === 'paquetes_json') {
+                $upd = $pdo->prepare("UPDATE paquetes_json SET empleado_id = ? WHERE id = ?");
+                $upd->execute([(int)$empleado['id'], (int)$p['id']]);
+            } else {
+                $upd = $pdo->prepare("UPDATE paquetes SET empleado_id = ? WHERE id = ?");
+                $upd->execute([(int)$empleado['id'], (int)$p['id']]);
+            }
+            $asignados++;
+        }
+
+        echo json_encode(['exito'=>true, 'asignados'=>$asignados, 'sin_ruta'=>$sinRuta, 'sin_empleado'=>$sinEmpleado, 'total'=>count($paquetes), 'detalle'=>$detalles]);
+    } catch (Throwable $e) {
+        echo json_encode(['exito'=>false, 'mensaje'=>'Error en asignación: '.$e->getMessage()]);
+    }
+}
+
+// Reasignación manual de paquete a empleado específico
+function reasignarPaquete() {
+    global $pdo;
+    header('Content-Type: application/json');
+    try {
+        $paquete_id = isset($_POST['paquete_id']) ? (int)$_POST['paquete_id'] : 0;
+        $empleado_id = isset($_POST['empleado_id']) ? (int)$_POST['empleado_id'] : 0;
+        if ($paquete_id <= 0 || $empleado_id <= 0) { echo json_encode(['exito'=>false, 'mensaje'=>'Parámetros inválidos']); return; }
+
+        // Validar empleado
+        $stmt = $pdo->prepare("SELECT id FROM usuarios WHERE id = ? AND activo = 1");
+        $stmt->execute([$empleado_id]);
+        if (!$stmt->fetch()) { echo json_encode(['exito'=>false, 'mensaje'=>'Empleado no válido']); return; }
+
+        $upd = $pdo->prepare("UPDATE paquetes SET empleado_id = ? WHERE id = ?");
+        $upd->execute([$empleado_id, $paquete_id]);
+
+        echo json_encode(['exito'=>true, 'mensaje'=>'Paquete reasignado']);
+    } catch (Throwable $e) {
+        echo json_encode(['exito'=>false, 'mensaje'=>'Error al reasignar: '.$e->getMessage()]);
+    }
 }
 ?>

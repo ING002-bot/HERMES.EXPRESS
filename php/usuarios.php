@@ -30,6 +30,8 @@ $action = isset($_GET['action']) ? $_GET['action'] : '';
 try {
     $pdo = new PDO("mysql:host=$servidor;dbname=$base_datos;charset=utf8", $usuario_db, $clave_db);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    // Asegurar columna zona en usuarios para todos los casos (idempotente)
+    try { $pdo->exec("ALTER TABLE usuarios ADD COLUMN zona VARCHAR(50) NULL"); } catch (Exception $e) {}
 
     switch ($action) {
         case 'obtener':
@@ -38,7 +40,7 @@ try {
                 throw new Exception('ID de usuario no válido');
             }
             
-            $stmt = $pdo->prepare("SELECT id, usuario, nombre, email, tipo, activo FROM usuarios WHERE id = ?");
+            $stmt = $pdo->prepare("SELECT id, usuario, nombre, email, tipo, zona, activo FROM usuarios WHERE id = ?");
             $stmt->execute([$id]);
             $usuario = $stmt->fetch(PDO::FETCH_ASSOC);
             
@@ -56,7 +58,7 @@ try {
                 $totalRegistros = $stmtTotal->fetch(PDO::FETCH_ASSOC)['total'];
                 
                 // Construir la consulta base
-                $sql = "SELECT id, usuario, nombre, email, tipo, activo, fecha_creacion 
+                $sql = "SELECT id, usuario, nombre, email, tipo, zona, activo, fecha_creacion 
                         FROM usuarios ";
                 
                 // Aplicar búsqueda si existe
@@ -82,6 +84,7 @@ try {
                 $order = " ORDER BY ";
                 if (isset($_GET['order']) && count($_GET['order'])) {
                     $orderBy = [];
+                    // Mantener índices esperados por la tabla (sin contar zona)
                     $columnas = [
                         0 => 'id',
                         1 => 'usuario',
@@ -138,32 +141,68 @@ try {
             break;
 
         case 'crear':
-            $data = json_decode(file_get_contents('php://input'), true);
+            $raw = file_get_contents('php://input');
+            $data = json_decode($raw, true);
+            if (!is_array($data) || empty($data)) {
+                // fallback a form-encoded
+                $data = $_POST;
+            }
+            // Asegurar columna zona (idempotente)
+            try { $pdo->exec("ALTER TABLE usuarios ADD COLUMN zona VARCHAR(50) NULL"); } catch (Exception $e) {}
             
-            // Validar datos
-            if (empty($data['usuario']) || empty($data['nombre']) || empty($data['email']) || empty($data['tipo']) || empty($data['clave'])) {
-                throw new Exception('Todos los campos son obligatorios');
+            // Validar datos (zona solo obligatoria para empleados)
+            $usuario = isset($data['usuario']) ? trim($data['usuario']) : '';
+            $nombre  = isset($data['nombre'])  ? trim($data['nombre'])  : '';
+            $email   = isset($data['email'])   ? trim($data['email'])   : '';
+            $tipo    = isset($data['tipo'])    ? trim($data['tipo'])    : '';
+            $clave   = isset($data['clave'])   ? (string)$data['clave'] : '';
+            $faltantes = [];
+            if ($usuario === '') $faltantes[] = 'usuario';
+            if ($nombre === '')  $faltantes[] = 'nombre';
+            if ($email === '')   $faltantes[] = 'email';
+            if ($tipo === '')    $faltantes[] = 'tipo';
+            if ($clave === '')   $faltantes[] = 'clave';
+            if (!empty($faltantes)) {
+                throw new Exception('Campos obligatorios faltantes: ' . implode(', ', $faltantes));
+            }
+            $zona = isset($data['zona']) ? strtoupper(trim($data['zona'])) : null;
+            $tiposPermitidos = ['admin','asistente','empleado'];
+            if (!in_array($tipo, $tiposPermitidos, true)) {
+                throw new Exception('Tipo de usuario inválido');
+            }
+            $zonasPermitidas = ['URBANO','PUEBLOS','PLAYAS','COOPERATIVAS','EXCOOPERATIVA','FERREÑAFE'];
+            if ($tipo === 'empleado') {
+                if (empty($zona)) {
+                    throw new Exception('La zona es obligatoria para empleados');
+                }
+                if (!in_array($zona, $zonasPermitidas, true)) {
+                    throw new Exception('Zona inválida');
+                }
+            } else {
+                // Para admin/asistente, permitir zona nula
+                $zona = null;
             }
             
             // Verificar si el usuario ya existe
             $stmt = $pdo->prepare("SELECT id FROM usuarios WHERE usuario = ?");
-            $stmt->execute([$data['usuario']]);
+            $stmt->execute([$usuario]);
             if ($stmt->rowCount() > 0) {
                 throw new Exception('El nombre de usuario ya está en uso');
             }
             
             // Encriptar contraseña
-            $clave_hash = password_hash($data['clave'], PASSWORD_DEFAULT);
+            $clave_hash = password_hash($clave, PASSWORD_DEFAULT);
             
             // Insertar nuevo usuario
-            $stmt = $pdo->prepare("INSERT INTO usuarios (usuario, clave, nombre, email, tipo, activo) VALUES (?, ?, ?, ?, ?, ?)");
+            $stmt = $pdo->prepare("INSERT INTO usuarios (usuario, clave, nombre, email, tipo, zona, activo) VALUES (?, ?, ?, ?, ?, ?, ?)");
             $stmt->execute([
-                $data['usuario'],
+                $usuario,
                 $clave_hash,
-                $data['nombre'],
-                $data['email'],
-                $data['tipo'],
-                isset($data['activo']) ? 1 : 0
+                $nombre,
+                $email,
+                $tipo,
+                $zona,
+                (isset($data['activo']) && ($data['activo'] === 1 || $data['activo'] === '1' || $data['activo'] === true || $data['activo'] === 'on')) ? 1 : 0
             ]);
             
             $response = ['success' => 'Usuario creado correctamente'];
@@ -192,6 +231,7 @@ try {
             if (!empty($data['nombre'])) $updates[] = 'nombre = ?';
             if (!empty($data['email'])) $updates[] = 'email = ?';
             if (!empty($data['tipo'])) $updates[] = 'tipo = ?';
+            if (!empty($data['zona'])) $updates[] = 'zona = ?';
             if (isset($data['activo'])) $updates[] = 'activo = ?';
             
             // Si se proporciona una nueva contraseña, actualizarla
@@ -205,6 +245,11 @@ try {
             }
             
             // Agregar los parámetros en el orden correcto
+            // Orden de parámetros según $updates construidos
+            if (!empty($data['nombre'])) $params[] = $data['nombre'];
+            if (!empty($data['email'])) $params[] = $data['email'];
+            if (!empty($data['tipo'])) $params[] = $data['tipo'];
+            if (!empty($data['zona'])) $params[] = strtoupper(trim($data['zona']));
             $params[] = $id;
             
             // Construir y ejecutar la consulta
