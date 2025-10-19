@@ -1014,23 +1014,32 @@ function asignarPaquetesAuto() {
         $rutas = array_merge(is_array($rutas)?$rutas:[], $fallback);
         $mapDistritoZona = [];
         $normalizar = function($str) {
-            $s = strtolower(trim($str));
+            $s = trim((string)$str);
+            if (function_exists('mb_strtolower')) {
+                $s = mb_strtolower($s, 'UTF-8');
+            } else {
+                $s = strtolower($s);
+            }
             // reemplazos básicos de acentos y ñ
             $s = strtr($s, [
-                'á'=>'a','é'=>'e','í'=>'i','ó'=>'o','ú'=>'u','ä'=>'a','ë'=>'e','ï'=>'i','ö'=>'o','ü'=>'u','ñ'=>'n'
+                'á'=>'a','é'=>'e','í'=>'i','ó'=>'o','ú'=>'u','ä'=>'a','ë'=>'e','ï'=>'i','ö'=>'o','ü'=>'u',
+                'ñ'=>'n','Ñ'=>'n'
             ]);
+            // limpiar signos/puntuación raros
+            $s = preg_replace('/[^a-z0-9\s]/', ' ', $s);
             // normalizar espacios
-            $s = preg_replace('/\s+/', ' ', $s);
-            // sinónimos/comunes
+            $s = preg_replace('/\s+/', ' ', trim($s));
+            // sinónimos/comunes exactos
             $syn = [
                 'jose leonardo ortiz' => 'leonardo ortiz',
                 'j.l. ortiz' => 'leonardo ortiz',
                 'j l ortiz' => 'leonardo ortiz',
-                'ferreñafe' => 'ferrenafe',
-                // Alias locales: Saña -> Zaña
+                'ferrenafe' => 'ferrenafe',
                 'sana' => 'zana'
             ];
-            if (isset($syn[$s])) $s = $syn[$s];
+            if (isset($syn[$s])) return $syn[$s];
+            // equivalencia por contención (p.ej. "sector sana centro" -> zana)
+            if (strpos($s, 'sana') !== false) return 'zana';
             return $s;
         };
         foreach ($rutas as $r) {
