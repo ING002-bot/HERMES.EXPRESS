@@ -110,7 +110,26 @@ function mostrarRutas(rutas) {
     const container = document.getElementById('listaRutas');
     container.innerHTML = '';
 
-    rutas.forEach(ruta => {
+    // Rutas constantes (no editables/ni eliminables)
+    if (typeof window !== 'undefined' && window.RUTAS) {
+        Object.keys(window.RUTAS).forEach(nombreRuta => {
+            const zonas = Array.isArray(window.RUTAS[nombreRuta]) ? window.RUTAS[nombreRuta] : [];
+            const div = document.createElement('div');
+            div.className = 'item-ruta';
+            div.innerHTML = `
+                <h4>${nombreRuta}</h4>
+                <p><strong>Zonas:</strong> ${zonas.join(', ')}</p>
+                <div class="acciones-item">
+                    <button class="btn btn-pequeno btn-primario" disabled title="Ruta constante">Editar</button>
+                    <button class="btn btn-pequeno btn-secundario" disabled title="Ruta constante">Eliminar</button>
+                </div>
+            `;
+            container.appendChild(div);
+        });
+    }
+
+    // Rutas dinámicas desde la BD (si existen)
+    (Array.isArray(rutas) ? rutas : []).forEach(ruta => {
         const div = document.createElement('div');
         div.className = 'item-ruta';
         div.innerHTML = `

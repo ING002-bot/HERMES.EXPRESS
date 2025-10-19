@@ -1002,6 +1002,16 @@ function asignarPaquetesAuto() {
 
         // Construir mapa distrito -> zona (nombre de ruta) con normalización
         $rutas = $pdo->query("SELECT nombre, zonas FROM rutas")->fetchAll(PDO::FETCH_ASSOC);
+        // Fallback en memoria (siempre se fusiona para asegurar cobertura de zonas clave)
+        $fallback = [
+            ['nombre'=>'URBANO', 'zonas'=> 'Chiclayo, Leonardo Ortiz, La Victoria, Santa Victoria'],
+            ['nombre'=>'PUEBLOS', 'zonas'=> 'Lambayeque, Mochumi, Tucume, Illimo, Nueva Arica, Jayanca, Pacora, Morrope, Motupe, Olmos, Salas'],
+            ['nombre'=>'PLAYAS', 'zonas'=> 'San Jose, Santa Rosa, Pimentel, Reque, Monsefu, Eten, Puerto Eten'],
+            ['nombre'=>'COOPERATIVAS', 'zonas'=> 'Pomalca, Tuman, Patapo, Pucala, Saltur, Chongoyape'],
+            ['nombre'=>'EXCOOPERATIVA', 'zonas'=> 'Ucupe, Mocupe, Zaña, Saña, Cayalti, Oyotun, Lagunas'],
+            ['nombre'=>'FERREÑAFE', 'zonas'=> 'Ferreñafe, Picsi, Pitipo, Motupillo, Pueblo Nuevo']
+        ];
+        $rutas = array_merge(is_array($rutas)?$rutas:[], $fallback);
         $mapDistritoZona = [];
         $normalizar = function($str) {
             $s = strtolower(trim($str));
@@ -1016,7 +1026,9 @@ function asignarPaquetesAuto() {
                 'jose leonardo ortiz' => 'leonardo ortiz',
                 'j.l. ortiz' => 'leonardo ortiz',
                 'j l ortiz' => 'leonardo ortiz',
-                'ferreñafe' => 'ferrenafe'
+                'ferreñafe' => 'ferrenafe',
+                // Alias locales: Saña -> Zaña
+                'sana' => 'zana'
             ];
             if (isset($syn[$s])) $s = $syn[$s];
             return $s;

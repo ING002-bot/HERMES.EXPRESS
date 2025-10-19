@@ -17,6 +17,7 @@
     <link rel="stylesheet" href="css/paneladmin.css">
     <link rel="stylesheet" href="css/paneladmin-responsive.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="js/rutas.constants.js"></script>
     <title>HERMES - Panel Administrador</title>
 </head>
 <body>
@@ -102,7 +103,7 @@
                 const arr = Object.values(porEmpleado).sort((a,b)=>b.total-a.total);
                 if (arr.length === 0) {
                     tbody.innerHTML = `<tr><td colspan="4" class="text-center text-muted">Sin asignaciones</td></tr>`;
-                    const cont = document.getElementById('listaAsignadosEmpleado'); if (cont) cont.style.display='none';
+                    const cont = document.getElementById('listaAsignadosEmpleado'); if (cont) cont.style.display='';
                     return;
                 }
                 tbody.innerHTML = arr.map(e => `
@@ -137,6 +138,27 @@
         window.verPaquetesEmpleado = verPaquetesEmpleado;
             return null;
         };
+    }
+    </script>
+    <script>
+    async function seedRutasDesdeUI(){
+        try{
+            const btns = Array.from(document.querySelectorAll('button')).filter(b => /Sincronizar rutas/i.test(b.textContent||''));
+            btns.forEach(b=>{ b.disabled = true; b.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sincronizando...'; });
+            const form = new URLSearchParams(); form.append('accion','seed_rutas');
+            const resp = await fetch('php/admin.php', { method:'POST', body: form });
+            const raw = await resp.text();
+            let data; try { data = JSON.parse(raw); } catch (e) { data = { exito:false, mensaje: 'Respuesta no JSON', raw }; }
+            if (!data.exito) { alert('Error al sincronizar rutas: ' + (data.mensaje || 'Desconocido')); return; }
+            alert(`Rutas sincronizadas. Creadas: ${data.creadas||0}, Actualizadas: ${data.actualizadas||0}`);
+            if (typeof window.cargarRutasConfig === 'function') window.cargarRutasConfig();
+        } catch(e){
+            console.error('seedRutasDesdeUI', e);
+            alert('Error al sincronizar rutas: ' + e.message);
+        } finally {
+            const btns = Array.from(document.querySelectorAll('button')).filter(b => /Sincronizar rutas/i.test(b.textContent||''));
+            btns.forEach(b=>{ b.disabled = false; b.textContent = 'Sincronizar rutas'; });
+        }
     }
     </script>
     <div class="contenedor">
@@ -261,7 +283,10 @@
                 </div>
                 <div class="card" style="margin-top: 16px;">
                     <div class="card-body">
-                        <h3>Resumen por empleado</h3>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h3>Resumen por empleado</h3>
+                            <button class="btn btn-secundario" onclick="(function(){ if (typeof cargarResumenAsignados==='function') cargarResumenAsignados(); })()">Actualizar resumen</button>
+                        </div>
                         <div class="tabla-container">
                             <table id="tablaResumenAsignados">
                                 <thead>
@@ -375,7 +400,10 @@
                 </div>
                 <div class="card">
                     <div class="card-body">
-                        <h3>Rutas</h3>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h3>Rutas</h3>
+                            <button class="btn btn-primario" onclick="seedRutasDesdeUI()">Sincronizar rutas</button>
+                        </div>
                         <p>Lista de rutas predefinidas con sus sectores. Puedes editar nombre y zonas.</p>
                         <div class="tabla-container">
                             <table id="tablaRutasConfig">
@@ -1879,6 +1907,11 @@ function renderPaquetesDesdeExcel(rows) {
                 'asignar': 'Asignar Paquetes por Distrito'
             };
             document.getElementById('tituloSeccion').textContent = titulos[seccion] || 'Panel de Administración';
+            // Cargar datos específicos de la sección
+            if (seccion === 'asignar') {
+                try { if (typeof cargarPaquetesSinAsignar === 'function') cargarPaquetesSinAsignar(); } catch(e){}
+                try { if (typeof cargarResumenAsignados === 'function') cargarResumenAsignados(); } catch(e){}
+            }
             
             return false;
         }
@@ -2042,8 +2075,16 @@ function renderPaquetesDesdeExcel(rows) {
             const fd = new URLSearchParams(); fd.append('accion','asignar_paquetes_auto');
             const r = await fetch('php/admin.php', { method:'POST', body: fd });
             const d = await r.json();
-            alert(`Asignación: asignados=${d.asignados||0}, sin_ruta=${d.sin_ruta||0}, sin_empleado=${d.sin_empleado||0}`);
+            let msg = `Asignación:\n- asignados=${d.asignados||0}\n- sin_ruta=${d.sin_ruta||0}\n- sin_empleado=${d.sin_empleado||0}`;
+            if (Array.isArray(d.detalle) && d.detalle.length) {
+                const sinRuta = d.detalle.filter(x=>x.motivo==='sin_ruta_para_distrito').slice(0,5);
+                if (sinRuta.length) {
+                    msg += `\n\nEjemplos sin ruta (distrito):\n` + sinRuta.map(x=>`• ${x.distrito}`).join('\n');
+                }
+            }
+            alert(msg);
             await cargarPaquetesSinAsignar();
+            if (typeof cargarResumenAsignados === 'function') { await cargarResumenAsignados(); }
         } catch(e){ console.error('asignarPaquetesAuto', e); alert('Error asignando'); }
     }
     async function reasignarPrompt(paqueteId){
@@ -2058,6 +2099,7 @@ function renderPaquetesDesdeExcel(rows) {
             const d = await r.json();
             if (!d.exito) { alert(d.mensaje || 'No se pudo reasignar'); return; }
             await cargarPaquetesSinAsignar();
+            if (typeof cargarResumenAsignados === 'function') { await cargarResumenAsignados(); }
         } catch(e){ console.error('reasignarPrompt', e); }
     }
     // Enlazar botón
@@ -2142,6 +2184,27 @@ function renderPaquetesDesdeExcel(rows) {
             const nombre = document.getElementById('editarRutaNombre').value.trim();
             const zonas = document.getElementById('editarRutaZonas').value.trim();
             if (!id || !nombre) { alert('ID y Nombre son obligatorios'); return; }
+            // Caso: rutas constantes (ID con prefijo CONST-): actualizar solo la vista
+            if (String(id).startsWith('CONST-')) {
+                try {
+                    const row = window.__editConstTarget; // tr
+                    if (row) {
+                        const celdas = row.querySelectorAll('td');
+                        if (celdas[1]) celdas[1].textContent = nombre; // columna Nombre
+                        if (celdas[2]) celdas[2].textContent = zonas;   // columna Zonas
+                        // Actualizar datos del botón
+                        const btn = row.querySelector('button.btn.btn-pequeno.btn-primario');
+                        if (btn) {
+                            btn.setAttribute('data-nombre', nombre);
+                            btn.setAttribute('data-zonas', zonas);
+                        }
+                    }
+                    if (typeof cerrarModal === 'function') cerrarModal('modalEditarRuta');
+                    else { const m=document.getElementById('modalEditarRuta'); if (m) m.style.display='none'; }
+                    alert('Ruta constante actualizada en la vista.');
+                } catch(err){ console.error('Actualizar ruta constante', err); }
+                return; // No enviar al servidor
+            }
             const fd = new FormData();
             fd.append('accion','actualizar_ruta');
             fd.append('id', id);
@@ -2158,6 +2221,58 @@ function renderPaquetesDesdeExcel(rows) {
             } catch(err){ console.error('Actualizar ruta', err); alert('Error al actualizar ruta'); }
         });
     })();
+    </script>
+    
+    <!-- Renderizador principal de rutas desde constantes -->
+    <script>
+    (function(){
+        function esc(s){ return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+        window.cargarRutasConfig = function(){
+            try {
+                const tbody = document.getElementById('cuerpoTablaRutasConfig');
+                if (!tbody) return;
+                if (!window.RUTAS) { tbody.innerHTML = '<tr><td colspan="4">RUTAS no disponible</td></tr>'; return; }
+                const filas = [];
+                let idx = 1;
+                Object.keys(RUTAS).forEach(nombreRuta => {
+                    const zonas = Array.isArray(RUTAS[nombreRuta]) ? RUTAS[nombreRuta] : [];
+                    const id = idx++;
+                    filas.push(`
+                        <tr>
+                            <td>${id}</td>
+                            <td>${esc(nombreRuta)}</td>
+                            <td style="white-space:pre-wrap">${esc(zonas.join(', '))}</td>
+                            <td>
+                                <button class="btn btn-pequeno btn-primario" title="Editar"
+                                    data-id="CONST-${id}"
+                                    data-nombre="${esc(nombreRuta)}"
+                                    data-zonas="${esc(zonas.join(', '))}"
+                                    onclick="editarRutaConstante(this)">Editar</button>
+                            </td>
+                        </tr>`);
+                });
+                tbody.innerHTML = filas.join('');
+            } catch(e){ console.error('cargarRutasConfig (constantes)', e); }
+        };
+    })();
+    </script>
+    <script>
+    // Abrir modal para editar una ruta constante (solo edición visual)
+    if (typeof window.editarRutaConstante === 'undefined') {
+        window.editarRutaConstante = function(btn){
+            try{
+                const id = btn.getAttribute('data-id') || '';
+                const nombre = btn.getAttribute('data-nombre') || '';
+                const zonas = btn.getAttribute('data-zonas') || '';
+                document.getElementById('editarRutaId').value = id; // ej: CONST-1
+                document.getElementById('editarRutaNombre').value = nombre;
+                document.getElementById('editarRutaZonas').value = zonas;
+                window.__editConstTarget = btn.closest('tr');
+                if (typeof abrirModal === 'function') abrirModal('modalEditarRuta');
+                else { const m=document.getElementById('modalEditarRuta'); if (m) m.style.display='block'; }
+            }catch(e){ console.error('editarRutaConstante', e); }
+        }
+    }
     </script>
     
     <!-- Fallback: define cargarRutasConfig si aún no existe -->
