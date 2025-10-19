@@ -24,6 +24,23 @@ function enviarRespuesta($exito, $mensaje = '', $datos = null) {
     exit;
 }
 
+function obtenerDatosEmpleado() {
+    global $pdo;
+    try {
+        if (!isset($_SESSION['usuario_id'])) {
+            enviarRespuesta(false, 'Sesión no válida');
+        }
+        $id = (int)$_SESSION['usuario_id'];
+        $stmt = $pdo->prepare("SELECT id, nombre, usuario, email, tipo, zona, activo FROM usuarios WHERE id = ? LIMIT 1");
+        $stmt->execute([$id]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$row) { enviarRespuesta(false, 'Empleado no encontrado'); }
+        enviarRespuesta(true, '', $row);
+    } catch (Exception $e) {
+        enviarRespuesta(false, 'Error al obtener datos del empleado');
+    }
+}
+
 // Manejar errores para que no se muestren en la salida
 function manejarError($errno, $errstr, $errfile, $errline) {
     error_log("Error [$errno] $errstr en $errfile línea $errline");
@@ -61,7 +78,13 @@ switch($accion) {
     case 'mi_vehiculo':
         obtenerMiVehiculo();
         break;
+    case 'obtener_mi_vehiculo': // alias por compatibilidad
+        obtenerMiVehiculo();
+        break;
     case 'mi_ruta':
+        obtenerMiRuta();
+        break;
+    case 'obtener_ruta': // alias por compatibilidad
         obtenerMiRuta();
         break;
     case 'confirmar_entrega':
@@ -72,6 +95,9 @@ switch($accion) {
         break;
     case 'estadisticas':
         obtenerEstadisticasEmpleado();
+        break;
+    case 'obtener_datos_empleado':
+        obtenerDatosEmpleado();
         break;
     default:
         enviarRespuesta(false, 'Acción no válida');
@@ -90,29 +116,49 @@ function obtenerResumenEmpleado() {
         // Iniciar transacción
         $pdo->beginTransaction();
         
-        // Mis paquetes asignados
+        // Tabla paquetes
         $stmt = $pdo->prepare("SELECT COUNT(*) as total FROM paquetes WHERE empleado_id = ?");
         $stmt->execute([$empleado_id]);
-        $resultado = $stmt->fetch(PDO::FETCH_ASSOC);
-        $mis_paquetes = $resultado ? (int)$resultado['total'] : 0;
+        $pk_total = (int)($stmt->fetchColumn() ?: 0);
         
-        // Paquetes en ruta
-        $stmt = $pdo->prepare("SELECT COUNT(*) as total FROM paquetes WHERE empleado_id = ? AND estado = 'en_transito'");
+        $stmt = $pdo->prepare("SELECT COUNT(*) FROM paquetes WHERE empleado_id = ? AND estado = 'en_transito'");
         $stmt->execute([$empleado_id]);
-        $resultado = $stmt->fetch(PDO::FETCH_ASSOC);
-        $en_ruta = $resultado ? (int)$resultado['total'] : 0;
+        $pk_en_ruta = (int)($stmt->fetchColumn() ?: 0);
         
-        // Paquetes entregados hoy
-        $stmt = $pdo->prepare("SELECT COUNT(*) as total FROM paquetes WHERE empleado_id = ? AND estado = 'entregado' AND DATE(fecha_entrega) = CURDATE()");
+        $stmt = $pdo->prepare("SELECT COUNT(*) FROM paquetes WHERE empleado_id = ? AND estado = 'entregado' AND DATE(fecha_entrega) = CURDATE()");
         $stmt->execute([$empleado_id]);
-        $resultado = $stmt->fetch(PDO::FETCH_ASSOC);
-        $entregados_hoy = $resultado ? (int)$resultado['total'] : 0;
+        $pk_entregados_hoy = (int)($stmt->fetchColumn() ?: 0);
         
-        // Paquetes pendientes
-        $stmt = $pdo->prepare("SELECT COUNT(*) as total FROM paquetes WHERE empleado_id = ? AND estado = 'pendiente'");
+        $stmt = $pdo->prepare("SELECT COUNT(*) FROM paquetes WHERE empleado_id = ? AND estado = 'pendiente'");
         $stmt->execute([$empleado_id]);
-        $resultado = $stmt->fetch(PDO::FETCH_ASSOC);
-        $pendientes = $resultado ? (int)$resultado['total'] : 0;
+        $pk_pendientes = (int)($stmt->fetchColumn() ?: 0);
+        
+        // Tabla paquetes_json (aproximación por campos en data)
+        try {
+            $stmt = $pdo->prepare("SELECT COUNT(*) FROM paquetes_json WHERE empleado_id = ?");
+            $stmt->execute([$empleado_id]);
+            $pj_total = (int)($stmt->fetchColumn() ?: 0);
+            
+            $stmt = $pdo->prepare("SELECT COUNT(*) FROM paquetes_json WHERE empleado_id = ? AND JSON_UNQUOTE(JSON_EXTRACT(data, '$.Estado')) = 'en_transito'");
+            $stmt->execute([$empleado_id]);
+            $pj_en_ruta = (int)($stmt->fetchColumn() ?: 0);
+            
+            // Sin fecha_entrega en JSON, aproximamos con created_at hoy si Estado='entregado'
+            $stmt = $pdo->prepare("SELECT COUNT(*) FROM paquetes_json WHERE empleado_id = ? AND JSON_UNQUOTE(JSON_EXTRACT(data, '$.Estado')) = 'entregado' AND DATE(created_at) = CURDATE()");
+            $stmt->execute([$empleado_id]);
+            $pj_entregados_hoy = (int)($stmt->fetchColumn() ?: 0);
+            
+            $stmt = $pdo->prepare("SELECT COUNT(*) FROM paquetes_json WHERE empleado_id = ? AND (JSON_UNQUOTE(JSON_EXTRACT(data, '$.Estado')) IS NULL OR JSON_UNQUOTE(JSON_EXTRACT(data, '$.Estado')) = '' OR JSON_UNQUOTE(JSON_EXTRACT(data, '$.Estado')) = 'pendiente')");
+            $stmt->execute([$empleado_id]);
+            $pj_pendientes = (int)($stmt->fetchColumn() ?: 0);
+        } catch (Exception $e) {
+            $pj_total = $pj_en_ruta = $pj_entregados_hoy = $pj_pendientes = 0;
+        }
+
+        $mis_paquetes = $pk_total + $pj_total;
+        $en_ruta = $pk_en_ruta + $pj_en_ruta;
+        $entregados_hoy = $pk_entregados_hoy + $pj_entregados_hoy;
+        $pendientes = $pk_pendientes + $pj_pendientes;
         
         $pdo->commit();
         
@@ -136,99 +182,73 @@ function obtenerMisPaquetes() {
     
     try {
         if (!isset($_SESSION['usuario_id'])) {
-            error_log("Error en obtenerMisPaquetes: No hay usuario_id en la sesión");
+            error_log('obtenerMisPaquetes: sesión sin usuario_id');
             enviarRespuesta(false, 'Sesión no válida');
         }
-        
-        $empleado_id = $_SESSION['usuario_id'];
-        error_log("Obteniendo paquetes para el empleado: $empleado_id");
-        
-        // Primero verificar si el empleado existe
-        $stmt = $pdo->prepare("SELECT id FROM empleados WHERE id = ?");
-        $stmt->execute([$empleado_id]);
-        if (!$stmt->fetch()) {
-            error_log("Error: No se encontró el empleado con ID: $empleado_id");
-            enviarRespuesta(false, 'Empleado no encontrado');
+
+        $empleado_id = (int)$_SESSION['usuario_id'];
+        $resultados = [];
+
+        // 1) paquetes (tabla relacional simple)
+        try {
+            $stmt = $pdo->prepare("SELECT id, codigo, destinatario, direccion_destino AS direccion, distrito, estado, peso, precio, fecha_envio, 'paquetes' AS origen FROM paquetes WHERE CAST(empleado_id AS UNSIGNED) = ? ORDER BY id DESC");
+            $stmt->execute([$empleado_id]);
+            $resultados = array_merge($resultados, $stmt->fetchAll(PDO::FETCH_ASSOC));
+        } catch (Exception $e) {
+            error_log('obtenerMisPaquetes paquetes error: '.$e->getMessage());
         }
-        
-        $query = "
-            SELECT 
-                p.id,
-                p.codigo,
-                p.descripcion,
-                p.peso,
-                p.estado,
-                p.fecha_creacion,
-                p.fecha_envio,
-                p.fecha_entrega,
-                p.fecha_entrega_estimada,
-                p.prioridad,
-                p.observaciones,
-                c.nombre as cliente_nombre,
-                c.direccion as direccion_entrega,
-                c.telefono as cliente_telefono,
-                CASE 
-                    WHEN p.estado = 'entregado' AND p.fecha_entrega IS NOT NULL THEN p.fecha_entrega
-                    WHEN p.estado = 'en_transito' AND p.fecha_envio IS NOT NULL THEN p.fecha_envio
-                    ELSE p.fecha_creacion
-                END as fecha_display
-            FROM paquetes p 
-            LEFT JOIN clientes c ON p.cliente_id = c.id
-            WHERE p.empleado_id = ? 
-            ORDER BY 
-                CASE p.estado 
-                    WHEN 'pendiente' THEN 1
-                    WHEN 'en_transito' THEN 2
-                    WHEN 'entregado' THEN 3
-                    ELSE 4
-                END,
-                p.prioridad DESC,
-                COALESCE(p.fecha_envio, p.fecha_creacion) DESC
-        ";
-        
-        error_log("Ejecutando consulta SQL para obtener paquetes");
-        $stmt = $pdo->prepare($query);
-        $stmt->execute([$empleado_id]);
-        $paquetes = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        
-        error_log("Paquetes encontrados: " . count($paquetes));
-        
-        // Formatear fechas y otros datos
-        foreach ($paquetes as &$paquete) {
-            try {
-                if (!empty($paquete['fecha_creacion'])) {
-                    $paquete['fecha_creacion_formateada'] = date('d/m/Y H:i', strtotime($paquete['fecha_creacion']));
-                } else {
-                    $paquete['fecha_creacion_formateada'] = 'No disponible';
-                }
-                
-                if (!empty($paquete['fecha_envio'])) {
-                    $paquete['fecha_envio_formateada'] = date('d/m/Y H:i', strtotime($paquete['fecha_envio']));
-                } else {
-                    $paquete['fecha_envio_formateada'] = 'Pendiente';
-                }
-                
-                if (!empty($paquete['fecha_entrega'])) {
-                    $paquete['fecha_entrega_formateada'] = date('d/m/Y H:i', strtotime($paquete['fecha_entrega']));
-                } else {
-                    $paquete['fecha_entrega_formateada'] = 'Pendiente';
-                }
-                
-                // Asegurar que todos los campos necesarios estén definidos
-                $paquete['estado_display'] = !empty($paquete['estado']) 
-                    ? ucfirst(str_replace('_', ' ', $paquete['estado']))
-                    : 'Desconocido';
-                    
-            } catch (Exception $e) {
-                error_log("Error al formatear datos del paquete ID {$paquete['id']}: " . $e->getMessage());
-                continue;
-            }
+
+        // 2) paquetes_json (con JSON_EXTRACT)
+        try {
+            $pathDistrito = "COALESCE(
+                JSON_UNQUOTE(JSON_EXTRACT(data, '$.distrito')),
+                JSON_UNQUOTE(JSON_EXTRACT(data, '$.Distrito')),
+                JSON_UNQUOTE(JSON_EXTRACT(data, '$.DISTRITO')),
+                JSON_UNQUOTE(JSON_EXTRACT(data, '$.data.distrito')),
+                JSON_UNQUOTE(JSON_EXTRACT(data, '$.data.Distrito')),
+                JSON_UNQUOTE(JSON_EXTRACT(data, '$.destino.distrito')),
+                JSON_UNQUOTE(JSON_EXTRACT(data, '$.destino.Distrito')),
+                JSON_UNQUOTE(JSON_EXTRACT(data, '$.direccion.distrito')),
+                JSON_UNQUOTE(JSON_EXTRACT(data, '$.direccion.Distrito')),
+                JSON_UNQUOTE(JSON_EXTRACT(data, '$.Direccion.distrito')),
+                JSON_UNQUOTE(JSON_EXTRACT(data, '$.Direccion.Distrito')),
+                JSON_UNQUOTE(JSON_EXTRACT(data, '$.DireccionDestino.distrito')),
+                JSON_UNQUOTE(JSON_EXTRACT(data, '$.DireccionDestino.Distrito'))
+            )";
+            $pathDireccion = "COALESCE(
+                JSON_UNQUOTE(JSON_EXTRACT(data, '$.DireccionDestino')),
+                JSON_UNQUOTE(JSON_EXTRACT(data, '$.Direccion')),
+                JSON_UNQUOTE(JSON_EXTRACT(data, '$.direccion_destino')),
+                JSON_UNQUOTE(JSON_EXTRACT(data, '$.direccion'))
+            )";
+
+            $sqlJson = "
+                SELECT id,
+                       JSON_UNQUOTE(JSON_EXTRACT(data, '$.Codigo')) AS codigo,
+                       COALESCE(JSON_UNQUOTE(JSON_EXTRACT(data, '$.Cliente')), JSON_UNQUOTE(JSON_EXTRACT(data, '$.Destinatario'))) AS destinatario,
+                       $pathDireccion AS direccion,
+                       TRIM(COALESCE(NULLIF($pathDistrito, ''), NULLIF(TRIM(SUBSTRING_INDEX($pathDireccion, ',', -1)), ''))) AS distrito,
+                       JSON_UNQUOTE(JSON_EXTRACT(data, '$.Estado')) AS estado,
+                       CAST(JSON_UNQUOTE(JSON_EXTRACT(data, '$.Peso')) AS DECIMAL(10,2)) AS peso,
+                       CAST(JSON_UNQUOTE(JSON_EXTRACT(data, '$.Precio')) AS DECIMAL(10,2)) AS precio,
+                       created_at AS fecha_envio,
+                       'paquetes_json' AS origen
+                FROM paquetes_json
+                WHERE CAST(empleado_id AS UNSIGNED) = ?
+                ORDER BY id DESC
+            ";
+            $stmt = $pdo->prepare($sqlJson);
+            $stmt->execute([$empleado_id]);
+            $resultados = array_merge($resultados, $stmt->fetchAll(PDO::FETCH_ASSOC));
+        } catch (Exception $e) {
+            // Si la tabla no existe o JSON_EXTRACT no está disponible, solo registramos
+            error_log('obtenerMisPaquetes paquetes_json error: '.$e->getMessage());
         }
-        
-        enviarRespuesta(true, '', $paquetes);
+
+        enviarRespuesta(true, '', $resultados);
     } catch (Exception $e) {
         error_log("Error en obtenerMisPaquetes: " . $e->getMessage());
-        enviarRespuesta(false, 'Error al obtener los paquetes');
+        enviarRespuesta(false, 'Error al obtener los paquetes: '.$e->getMessage());
     }
 }
 

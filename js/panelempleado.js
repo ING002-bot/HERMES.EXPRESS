@@ -33,6 +33,79 @@ function configurarEventosEmpleado() {
     }
 }
 
+function cargarDatosPerfil() {
+    fetch('php/empleado.php?accion=obtener_datos_empleado', { credentials: 'same-origin' })
+        .then(r => r.json())
+        .then(d => {
+            if (!d || !d.exito || !d.datos) {
+                mostrarNotificacion('Error al cargar datos del empleado', 'error');
+                return;
+            }
+            const emp = d.datos;
+            const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = String(val ?? ''); };
+            setVal('perfilNombre', emp.nombre);
+            setVal('perfilUsuario', emp.usuario);
+            setVal('perfilEmail', emp.email);
+        })
+        .catch(() => mostrarNotificacion('Error al cargar datos del empleado', 'error'));
+}
+
+function cargarMisPaquetes() {
+    const tbody = document.getElementById('cuerpoTablaMisPaquetes');
+    if (tbody) tbody.innerHTML = '<tr><td colspan="7">Cargando...</td></tr>';
+    fetch('php/empleado.php?accion=mis_paquetes', { credentials: 'same-origin' })
+        .then(r => r.json())
+        .then(d => {
+            if (!tbody) return;
+            if (!d || !d.exito) {
+                const msg = (d && d.mensaje) ? d.mensaje : 'No se pudieron cargar tus paquetes';
+                tbody.innerHTML = `<tr><td colspan="7">${msg}</td></tr>`;
+                return;
+            }
+            const rows = Array.isArray(d.datos) ? d.datos : [];
+            if (rows.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7">No tienes paquetes asignados</td></tr>';
+                return;
+            }
+            const esc = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+            tbody.innerHTML = rows.map(p => {
+                const estado = esc(p.estado || 'pendiente');
+                const fecha = p.fecha_envio ? new Date(p.fecha_envio).toLocaleDateString() : '';
+                return `
+                    <tr>
+                        <td>${esc(p.codigo)}</td>
+                        <td>${esc(p.destinatario)}</td>
+                        <td>${esc(p.direccion || '')}</td>
+                        <td>${estado}</td>
+                        <td>${p.peso != null ? esc(p.peso) : ''}</td>
+                        <td>${esc(fecha)}</td>
+                        <td>
+                            <button class="btn btn-pequeno">Ver</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        })
+        .catch(err => {
+            if (tbody) tbody.innerHTML = `<tr><td colspan="7">Error: ${err.message}</td></tr>`;
+        });
+}
+
+function cargarResumenEmpleado() {
+    fetch('php/empleado.php?accion=resumen', { credentials: 'same-origin' })
+        .then(r => r.json())
+        .then(d => {
+            if (!d || !d.exito || !d.datos) return;
+            const x = d.datos;
+            const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = String(val ?? '0'); };
+            set('misPaquetes', x.mis_paquetes);
+            set('enRuta', x.en_ruta);
+            set('entregadosHoy', x.entregados_hoy);
+            set('pendientes', x.pendientes);
+        })
+        .catch(console.error);
+}
+
 // Inicializar cuando carga la página
 document.addEventListener('DOMContentLoaded', function() {
     verificarSesion();
@@ -47,6 +120,13 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('Mapa listo, continuando con la inicialización...');
         cargarDatosEmpleado();
         configurarEventosEmpleado();
+        if (typeof cargarResumenEmpleado === 'function') { cargarResumenEmpleado(); }
+        // Cargar y mostrar Mis Paquetes de inmediato
+        if (typeof cargarMisPaquetes === 'function') { try { cargarMisPaquetes(); } catch(_){} }
+        if (typeof mostrarSeccion === 'function') {
+            const enlace = document.querySelector('.menu a[data-seccion="mis-paquetes"]');
+            mostrarSeccion('mis-paquetes', enlace || null);
+        }
         
         // Configurar el botón de iniciar ruta
         const iniciarRutaBtn = document.getElementById('iniciarRutaBtn');
@@ -723,6 +803,9 @@ function mostrarSeccion(seccionId, elemento) {
                         cargarDatosEmpleado();
                     } else {
                         console.error('La función cargarDatosEmpleado no está definida');
+                    }
+                    if (typeof cargarResumenEmpleado === 'function') {
+                        cargarResumenEmpleado();
                     }
                     break;
                     
