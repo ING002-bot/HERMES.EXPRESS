@@ -13,6 +13,9 @@ document.addEventListener('DOMContentLoaded', function() {
     verificarSesion();
     cargarDatos();
     configurarEventos();
+    if (typeof window.cargarRutasConfig === 'function') {
+        try { window.cargarRutasConfig(); } catch(e) { console.warn('cargarRutasConfig init', e); }
+    }
 });
 
 // ===============================
@@ -30,7 +33,6 @@ function cargarDatos() {
     cargarResumen();
     cargarPaquetes();
     cargarRutas();
-    cargarVehiculos();
     cargarActividad();
 }
 
@@ -220,9 +222,12 @@ function mostrarActividad(actividades) {
 // EVENTOS Y FILTROS
 // ===============================
 function configurarEventos() {
-    document.getElementById('buscarPaquete').addEventListener('input', filtrarPaquetes);
-    document.getElementById('filtroEstado').addEventListener('change', filtrarPaquetes);
-    document.getElementById('formPaquete').addEventListener('submit', guardarPaquete);
+    const buscar = document.getElementById('buscarPaquete');
+    if (buscar) buscar.addEventListener('input', filtrarPaquetes);
+    const filtro = document.getElementById('filtroEstado');
+    if (filtro) filtro.addEventListener('change', filtrarPaquetes);
+    const form = document.getElementById('formPaquete');
+    if (form) form.addEventListener('submit', guardarPaquete);
 }
 
 function filtrarPaquetes() {
@@ -246,21 +251,29 @@ function filtrarPaquetes() {
 // ===============================
 // UTILIDADES DE UI
 // ===============================
-function mostrarSeccion(seccion) {
+function mostrarSeccion(seccion, enlace) {
     document.querySelectorAll('.seccion').forEach(s => s.classList.remove('activa'));
     document.getElementById(`seccion-${seccion}`).classList.add('activa');
 
     document.querySelectorAll('.menu a').forEach(a => a.classList.remove('activo'));
-    document.querySelector(`[onclick="mostrarSeccion('${seccion}')"]`).classList.add('activo');
+    if (enlace && enlace.classList) {
+        enlace.classList.add('activo');
+    } else {
+        const sel = document.querySelector(`.menu a[onclick*="mostrarSeccion('${seccion}'"]`);
+        if (sel) sel.classList.add('activo');
+    }
 
     const titulos = {
         'inicio': 'Dashboard',
         'paquetes': 'Gestión de Paquetes',
         'rutas': 'Gestión de Rutas',
-        'vehiculos': 'Gestión de Vehículos',
         'reportes': 'Reportes'
     };
     document.getElementById('tituloSeccion').textContent = titulos[seccion];
+
+    if (seccion === 'rutas' && typeof window.cargarRutasConfig === 'function') {
+        try { window.cargarRutasConfig(); } catch(e) { console.warn('cargarRutasConfig nav', e); }
+    }
 }
 
 function cerrarModal(modalId) {

@@ -21,150 +21,7 @@
     <title>HERMES - Panel Administrador</title>
 </head>
 <body>
-    <script>
-    // Stub global para evitar ReferenceError si aún no se definió
-    if (typeof window.safeCargarRutasConfig === 'undefined') {
-        window.safeCargarRutasConfig = function(){
-            if (typeof window.cargarRutasConfig === 'function') {
-                try { return window.cargarRutasConfig(); } catch(e){ console.warn(e); }
-            }
-
-        // ====== Asignación ======
-        async function cargarPaquetesSinAsignar() {
-            try {
-                const resp = await fetch('php/admin.php?accion=todos_paquetes', { cache: 'no-store' });
-                const raw = await resp.text();
-                let data; try { data = JSON.parse(raw); } catch(e){ console.error('Respuesta no JSON', raw); return; }
-                if (!data.exito) return;
-                const tbody = document.getElementById('cuerpoSinAsignar');
-                if (!tbody) return;
-                const sin = (data.datos || []).filter(p => !p.empleado_id);
-                tbody.innerHTML = sin.map(p => `
-                    <tr>
-                        <td>${p.id}</td>
-                        <td>${p.codigo || ''}</td>
-                        <td>${p.destinatario || ''}</td>
-                        <td>${p.distrito || ''}</td>
-                        <td>
-                            <button class="btn btn-pequeno btn-primario" onclick="reasignarPrompt(${p.id})">Reasignar</button>
-                        </td>
-                    </tr>
-                `).join('');
-            } catch (e) { console.error('cargarPaquetesSinAsignar', e); }
-        }
-
-        async function asignarPaquetesAuto() {
-            try {
-                const fd = new URLSearchParams(); fd.append('accion','asignar_paquetes_auto');
-                const r = await fetch('php/admin.php', { method:'POST', body: fd });
-                const d = await r.json();
-                alert(`Asignación: asignados=${d.asignados||0}, sin_ruta=${d.sin_ruta||0}, sin_empleado=${d.sin_empleado||0}`);
-                await cargarPaquetesSinAsignar();
-                if (typeof cargarResumenAsignados === 'function') { await cargarResumenAsignados(); }
-            } catch(e){ console.error('asignarPaquetesAuto', e); alert('Error asignando'); }
-        }
-
-        async function reasignarPrompt(paqueteId){
-            try {
-                const empleadoId = prompt('ID de empleado destino:');
-                if (!empleadoId) return;
-                const fd = new FormData();
-                fd.append('accion','reasignar_paquete');
-                fd.append('paquete_id', paqueteId);
-                fd.append('empleado_id', empleadoId);
-                const r = await fetch('php/admin.php', { method:'POST', body: fd });
-                const d = await r.json();
-                if (!d.exito) { alert(d.mensaje || 'No se pudo reasignar'); return; }
-                await cargarPaquetesSinAsignar();
-                if (typeof cargarResumenAsignados === 'function') { await cargarResumenAsignados(); }
-            } catch(e){ console.error('reasignarPrompt', e); }
-        }
-        window.asignarPaquetesAuto = asignarPaquetesAuto;
-        window.reasignarPrompt = reasignarPrompt;
-
-        async function cargarResumenAsignados(){
-            try{
-                const r = await fetch('php/admin.php?accion=todos_paquetes', { cache: 'no-store' });
-                const d = await r.json();
-                if (!d.exito) return;
-                const items = Array.isArray(d.datos) ? d.datos : [];
-                const asignados = items.filter(x => Number(x.empleado_id) > 0);
-                const porEmpleado = {};
-                for (const p of asignados){
-                    const empId = Number(p.empleado_id);
-                    if (!empId) continue;
-                    const key = String(empId);
-                    if (!porEmpleado[key]) porEmpleado[key] = { empleado_id: empId, empleado_nombre: p.empleado_nombre || ('Empleado '+key), zona: p.zona || '', total:0, lista: [] };
-                    porEmpleado[key].total++;
-                    porEmpleado[key].lista.push({ id: p.id, codigo: p.codigo || '', destinatario: p.destinatario || '', distrito: p.distrito || '' });
-                }
-                const tbody = document.getElementById('cuerpoResumenAsignados');
-                if (!tbody) return;
-                const arr = Object.values(porEmpleado).sort((a,b)=>b.total-a.total);
-                if (arr.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="4" class="text-center text-muted">Sin asignaciones</td></tr>`;
-                    const cont = document.getElementById('listaAsignadosEmpleado'); if (cont) cont.style.display='';
-                    return;
-                }
-                tbody.innerHTML = arr.map(e => `
-                    <tr>
-                        <td>${e.empleado_nombre}</td>
-                        <td>${e.zona || ''}</td>
-                        <td class="text-center">${e.total}</td>
-                        <td><button class="btn btn-pequeno" onclick="verPaquetesEmpleado(${e.empleado_id})">Ver</button></td>
-                    </tr>
-                `).join('');
-                window.__asignados_por_empleado = porEmpleado;
-            }catch(err){ console.error('cargarResumenAsignados', err); }
-        }
-        function verPaquetesEmpleado(empleadoId){
-            const data = (window.__asignados_por_empleado||{})[String(empleadoId)];
-            const cont = document.getElementById('listaAsignadosEmpleado');
-            const titulo = document.getElementById('tituloListaEmpleado');
-            const tbody = document.getElementById('cuerpoListaEmpleado');
-            if (!data || !cont || !tbody || !titulo) return;
-            titulo.textContent = `Paquetes de ${data.empleado_nombre} (${data.total})`;
-            tbody.innerHTML = data.lista.map(p => `
-                <tr>
-                    <td>${p.id}</td>
-                    <td>${p.codigo}</td>
-                    <td>${p.destinatario}</td>
-                    <td>${p.distrito}</td>
-                </tr>
-            `).join('');
-            cont.style.display = '';
-        }
-        window.cargarResumenAsignados = cargarResumenAsignados;
-        window.verPaquetesEmpleado = verPaquetesEmpleado;
-            return null;
-        };
-    }
-    </script>
-    <script>
-    // Asegurar que el stub se ejecute y registre handlers globales
-    try { if (typeof window.safeCargarRutasConfig === 'function') window.safeCargarRutasConfig(); } catch(e) { console.warn(e); }
-    </script>
-    <script>
-    async function seedRutasDesdeUI(){
-        try{
-            const btns = Array.from(document.querySelectorAll('button')).filter(b => /Sincronizar rutas/i.test(b.textContent||''));
-            btns.forEach(b=>{ b.disabled = true; b.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sincronizando...'; });
-            const form = new URLSearchParams(); form.append('accion','seed_rutas');
-            const resp = await fetch('php/admin.php', { method:'POST', body: form });
-            const raw = await resp.text();
-            let data; try { data = JSON.parse(raw); } catch (e) { data = { exito:false, mensaje: 'Respuesta no JSON', raw }; }
-            if (!data.exito) { alert('Error al sincronizar rutas: ' + (data.mensaje || 'Desconocido')); return; }
-            alert(`Rutas sincronizadas. Creadas: ${data.creadas||0}, Actualizadas: ${data.actualizadas||0}`);
-            if (typeof window.cargarRutasConfig === 'function') window.cargarRutasConfig();
-        } catch(e){
-            console.error('seedRutasDesdeUI', e);
-            alert('Error al sincronizar rutas: ' + e.message);
-        } finally {
-            const btns = Array.from(document.querySelectorAll('button')).filter(b => /Sincronizar rutas/i.test(b.textContent||''));
-            btns.forEach(b=>{ b.disabled = false; b.textContent = 'Sincronizar rutas'; });
-        }
-    }
-    </script>
+    <script src="js/admin.shared.js"></script>
     <div class="contenedor">
         <!-- Botón de menú móvil -->
         <button class="menu-movil" id="btnMenuMovil" aria-label="Menú">
@@ -183,19 +40,16 @@
                 <li><a href="javascript:void(0)" onclick="mostrarSeccion('paquetes', this)">
                     <span class="icono">📦</span>Paquetes
                 </a></li>
-                <li><a href="javascript:void(0)" onclick="mostrarSeccion('configuracion', this)">
-                    <span class="icono">⚙️</span>Configuración
-                </a></li>
+                
                 <li><a href="javascript:void(0)" onclick="mostrarSeccion('pagos', this)">
                     <span class="icono">💰</span>Pagos Empleados
                 </a></li>
-                <li>
-                    <a href="#" onclick="mostrarSeccion('usuarios', this)" class="menu-item">
-                        <i class="fas fa-users-cog"></i> Gestión de Usuarios
-                    </a>
-                </li>
+                
                 <li><a href="javascript:void(0)" onclick="mostrarSeccion('asignar', this)">
                     <span class="icono">🧩</span>Asignar
+                </a></li>
+                <li><a href="javascript:void(0)" onclick="mostrarSeccion('configuracion', this)">
+                    <span class="icono">⚙️</span>Configuración
                 </a></li>
             </ul>
             
@@ -406,6 +260,52 @@
                         </div>
                     </div>
                 </div>
+                <div id="anchorUsuariosCfg"></div>
+                <div class="card" style="margin-top:16px;">
+                    <div class="card-body">
+                        <div class="controles-usuarios d-flex justify-content-end align-items-center mb-3">
+                            <button class="btn btn-primario me-2" onclick="mostrarFormularioUsuario('nuevo')">
+                                <i class="fas fa-plus"></i> Nuevo Usuario
+                            </button>
+                            <button class="btn btn-exportar me-2" onclick="exportarAPDF('usuarios')">
+                                <i class="fas fa-file-pdf me-1"></i> PDF
+                            </button>
+                            <button class="btn btn-exportar me-2" onclick="exportarAExcel('usuarios')">
+                                <i class="fas fa-file-excel me-1"></i> Excel
+                            </button>
+                        </div>
+                        <div class="seccion-header">
+                            <h2>Gestión de Usuarios</h2>
+                            <div class="acciones">
+                                
+                            </div>
+                        </div>
+                        <div id="alertContainer"></div>
+                        <div class="card">
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table id="usuariosTable" class="table table-striped table-hover" style="width:100%">
+                                        <thead>
+                                            <tr>
+                                                <th>ID</th>
+                                                <th>Usuario</th>
+                                                <th>Nombre</th>
+                                                <th>Email</th>
+                                                <th>Tipo</th>
+                                                <th>Estado</th>
+                                                <th>Fecha Creación</th>
+                                                <th>Acciones</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </section>
 
             <section id="seccion-pagos" class="seccion">
@@ -491,52 +391,6 @@
                 </div>
             </section>
 
-            <!-- Sección de Gestión de Usuarios -->
-            <section id="seccion-usuarios" class="seccion">
-                <div class="controles-usuarios d-flex justify-content-end align-items-center mb-3">
-                    <button class="btn btn-primario me-2" onclick="mostrarFormularioUsuario('nuevo')">
-                        <i class="fas fa-plus"></i> Nuevo Usuario
-                    </button>
-                    <button class="btn btn-exportar me-2" onclick="exportarAPDF('usuarios')">
-                        <i class="fas fa-file-pdf me-1"></i> PDF
-                    </button>
-                    <button class="btn btn-exportar me-2" onclick="exportarAExcel('usuarios')">
-                        <i class="fas fa-file-excel me-1"></i> Excel
-                    </button>
-                </div>
-                <div class="seccion-header">
-                    <h2>Gestión de Usuarios</h2>
-                    <div class="acciones">
-                        <!-- Botón de actualización eliminado -->
-                    </div>
-                </div>
-
-                <div id="alertContainer"></div>
-
-                <div class="card">
-                    <div class="card-body">
-                        <div class="table-responsive">
-                            <table id="usuariosTable" class="table table-striped table-hover" style="width:100%">
-                                <thead>
-                                    <tr>
-                                        <th>ID</th>
-                                        <th>Usuario</th>
-                                        <th>Nombre</th>
-                                        <th>Email</th>
-                                        <th>Tipo</th>
-                                        <th>Estado</th>
-                                        <th>Fecha Creación</th>
-                                        <th>Acciones</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <!-- Los datos se cargarán dinámicamente -->
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </section>
 
             <!-- Modal para Crear/Editar Usuario -->
             <div class="modal fade" id="usuarioModal" tabindex="-1" aria-labelledby="usuarioModalLabel" aria-hidden="true">

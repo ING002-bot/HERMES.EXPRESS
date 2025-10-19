@@ -19,6 +19,7 @@
   <link rel="stylesheet" href="css/paneladmin-responsive.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" media="print" onload="this.media='all'">
   <script src="js/rutas.constants.js"></script>
+  <script src="js/admin.shared.js"></script>
 
   <title>HERMES - Panel de Control</title>
 </head>
@@ -36,8 +37,7 @@
         <li><a href="javascript:void(0)" class="activo" onclick="mostrarSeccion('dashboard', this)"><span class="icono">📊</span>Dashboard</a></li>
         <li><a href="javascript:void(0)" onclick="mostrarSeccion('paquetes', this)"><span class="icono">📦</span>Paquetes</a></li>
         <li><a href="javascript:void(0)" onclick="mostrarSeccion('rutas', this)"><span class="icono">🗺️</span>Rutas</a></li>
-        <li><a href="javascript:void(0)" onclick="mostrarSeccion('vehiculos', this)"><span class="icono">🚛</span>Vehículos</a></li>
-        <li><a href="javascript:void(0)" onclick="mostrarSeccion('reportes', this)"><span class="icono">📊</span>Reportes</a></li>
+        
         <li><a href="javascript:void(0)" onclick="mostrarSeccion('asignar', this)"><span class="icono">🧩</span>Asignar</a></li>
       </ul>
       <div class="usuario-info">
@@ -147,50 +147,96 @@
       </section>
 
       <section id="seccion-rutas" class="seccion">
-        <div class="acciones-seccion">
-          <button class="btn btn-primario" onclick="nuevaRuta()">+ Nueva Ruta</button>
+        <div class="seccion-header">
+          <h2>Rutas</h2>
         </div>
-        <div id="listaRutas" class="lista-rutas"></div>
+        <div class="card">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center">
+              <h3>Rutas</h3>
+              <button class="btn btn-primario" onclick="seedRutasDesdeUI()">Sincronizar rutas</button>
+            </div>
+            <div class="tabla-container">
+              <table id="tablaRutasConfig">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Nombre</th>
+                    <th>Zonas</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="cuerpoTablaRutasConfig"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
       </section>
 
-      <section id="seccion-vehiculos" class="seccion">
-        <div class="acciones-seccion">
-          <button class="btn btn-primario" onclick="nuevoVehiculo()">+ Nuevo Vehículo</button>
-        </div>
-        <div id="listaVehiculos" class="lista-vehiculos"></div>
-      </section>
-
-      <section id="seccion-reportes" class="seccion">
-        <div class="filtros-reporte">
-          <input type="date" id="fechaInicio">
-          <input type="date" id="fechaFin">
-          <button class="btn btn-primario" onclick="generarReporte()">Generar Reporte</button>
-        </div>
-        <div id="contenidoReporte" class="contenido-reporte"></div>
-      </section>
+      
 
       <section id="seccion-asignar" class="seccion">
-        <div class="seccion-header">
-          <h2>Asignar Paquetes por Distrito</h2>
-          <p>Selecciona un empleado y distritos para asignar los paquetes correspondientes.</p>
+        <div class="seccion-header d-flex justify-content-between align-items-center">
+          <h2>Asignación de Paquetes</h2>
+          <div class="acciones">
+            <button id="btnAsignarAuto" class="btn btn-primario" onclick="asignarPaquetesAuto()">Asignar automáticamente</button>
+          </div>
         </div>
-        <div class="asignar-contenedor">
-          <div class="form-grupo">
-            <label for="selEmpleadoAsignar">Empleado:</label>
-            <select id="selEmpleadoAsignar" class="form-select">
-              <option value="">Seleccione empleado...</option>
-            </select>
+        <div class="card">
+          <div class="card-body">
+            <h3>Paquetes sin asignar</h3>
+            <div class="tabla-container">
+              <table id="tablaSinAsignar">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Código</th>
+                    <th>Destinatario</th>
+                    <th>Distrito</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="cuerpoSinAsignar"></tbody>
+              </table>
+            </div>
           </div>
-          <div class="form-grupo">
-            <label for="selDistritosAsignar">Distritos (múltiple):</label>
-            <select id="selDistritosAsignar" class="form-select" multiple size="8" style="min-width:260px;"></select>
+        </div>
+        <div class="card" style="margin-top: 16px;">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center">
+              <h3>Resumen por empleado</h3>
+              <button class="btn btn-secundario" onclick="cargarResumenAsignados()">Actualizar resumen</button>
+            </div>
+            <div class="tabla-container">
+              <table id="tablaResumenAsignados">
+                <thead>
+                  <tr>
+                    <th>Empleado</th>
+                    <th>Zona</th>
+                    <th>Total asignados</th>
+                    <th>Ver</th>
+                  </tr>
+                </thead>
+                <tbody id="cuerpoResumenAsignados"></tbody>
+              </table>
+            </div>
+            <div id="listaAsignadosEmpleado" style="margin-top:12px; display:none;">
+              <h4 id="tituloListaEmpleado">Paquetes del empleado</h4>
+              <div class="tabla-container">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Código</th>
+                      <th>Destinatario</th>
+                      <th>Distrito</th>
+                    </tr>
+                  </thead>
+                  <tbody id="cuerpoListaEmpleado"></tbody>
+                </table>
+              </div>
+            </div>
           </div>
-          <div class="form-acciones">
-            <button class="btn btn-primario" onclick="asignarPaquetesPorDistrito()">
-              <i class="fas fa-share-square me-1"></i> Asignar seleccionados
-            </button>
-          </div>
-          <div id="resultadoAsignacion" class="mt-2"></div>
         </div>
       </section>
     </main>
@@ -290,13 +336,14 @@
       window.history.pushState(null, null, window.location.href);
     };
 
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js')
-          .then(() => console.log('ServiceWorker ok'))
-          .catch(err => console.log('SW fail:', err));
-      });
-    }
+    // Registro de Service Worker desactivado (no existe sw.js/manifest en este proyecto)
+    // if ('serviceWorker' in navigator) {
+    //   window.addEventListener('load', () => {
+    //     navigator.serviceWorker.register('/sw.js')
+    //       .then(() => console.log('ServiceWorker ok'))
+    //       .catch(err => console.log('SW fail:', err));
+    //   });
+    // }
 
     window.addEventListener('load', () => {
       let pwa = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
@@ -323,6 +370,64 @@
         })
         .catch(() => window.location.href = 'login.html');
     });
+  </script>
+
+  <script>
+  // Utilidades de Rutas (botón "Sincronizar rutas")
+  async function seedRutasDesdeUI(){
+    try{
+      const btns = Array.from(document.querySelectorAll('button')).filter(b => /Sincronizar rutas/i.test(b.textContent||''));
+      btns.forEach(b=>{ b.disabled = true; b.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sincronizando...'; });
+      const form = new URLSearchParams(); form.append('accion','seed_rutas');
+      const resp = await fetch('php/admin.php', { method:'POST', body: form });
+      const raw = await resp.text();
+      let data; try { data = JSON.parse(raw); } catch (e) { data = { exito:false, mensaje: 'Respuesta no JSON', raw }; }
+      if (!data.exito) { alert('Error al sincronizar rutas: ' + (data.mensaje || 'Desconocido')); return; }
+      alert(`Rutas sincronizadas. Creadas: ${data.creadas||0}, Actualizadas: ${data.actualizadas||0}`);
+    } catch(e){
+      console.error('seedRutasDesdeUI', e);
+      alert('Error al sincronizar rutas: ' + e.message);
+    } finally {
+      const btns = Array.from(document.querySelectorAll('button')).filter(b => /Sincronizar rutas/i.test(b.textContent||''));
+      btns.forEach(b=>{ b.disabled = false; b.textContent = 'Sincronizar rutas'; });
+    }
+  }
+
+  // Cargar tabla de rutas (igual que en admin) con parse robusto
+  if (typeof window.cargarRutasConfig === 'undefined') {
+    window.cargarRutasConfig = async function() {
+      const tbody = document.getElementById('cuerpoTablaRutasConfig');
+      if (!tbody) return;
+      try {
+        tbody.innerHTML = '<tr><td colspan="4">Cargando...</td></tr>';
+        const resp = await fetch('php/admin.php?accion=rutas', { cache: 'no-store', credentials: 'same-origin' });
+        const raw = await resp.text();
+        let data; try { data = JSON.parse(raw); } catch(e){
+          tbody.innerHTML = `<tr><td colspan="4">Error: respuesta no JSON<br><small>${raw.slice(0,200)}</small></td></tr>`;
+          return;
+        }
+        if (!data || !data.exito || !Array.isArray(data.datos) || data.datos.length===0) {
+          tbody.innerHTML = '<tr><td colspan="4">No hay rutas</td></tr>';
+          return;
+        }
+        const esc = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        const fmtZonas = z => Array.isArray(z) ? z.join(', ') : String(z || '');
+        tbody.innerHTML = data.datos.map(r => `
+          <tr>
+            <td>${esc(r.id)}</td>
+            <td>${esc(r.nombre)}</td>
+            <td>${esc(fmtZonas(r.zonas))}</td>
+            <td>
+              <button class="btn btn-pequeno" disabled>Editar</button>
+            </td>
+          </tr>
+        `).join('');
+      } catch (e) {
+        tbody.innerHTML = '<tr><td colspan="4">Error al cargar rutas</td></tr>';
+        console.error('cargarRutasConfig', e);
+      }
+    }
+  }
   </script>
 
   <!-- Bibliotecas para exportación como en paneladmin -->
