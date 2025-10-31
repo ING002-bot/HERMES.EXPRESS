@@ -254,3 +254,77 @@ El sistema no puede encontrar la ruta especificada.
 [2025-10-12 17:43:54] SKIP inexistente: C:\Python313\python.exe
 [2025-10-12 17:43:54] SKIP inexistente: C:\Python312\python.exe
 [2025-10-12 17:43:54] PROBANDO: python "C:\xampp\htdocs\HERMES.EXPRESS\selenium_utils.py" 2>&1
+[2025-10-27 16:48:32] SKIP inexistente: C:\Users\JULIO DME\AppData\Local\Programs\Python\Python313\python.exe
+[2025-10-27 16:48:32] SKIP inexistente: C:\Users\JULIO DME\AppData\Local\Programs\Python\Python312\python.exe
+[2025-10-27 16:48:32] SKIP inexistente: C:\Python313\python.exe
+[2025-10-27 16:48:32] SKIP inexistente: C:\Python312\python.exe
+[2025-10-27 16:48:32] PROBANDO: python "C:\xampp\htdocs\HERMES.EXPRESS\selenium_utils.py" 2>&1
+[2025-10-27 16:49:51] CODE: 0
+OUT:
+=== EXTRACCION DE DATOS SAVAR EXPRESS ===
+
+Configurando consulta para el rango de fechas: 2025-09-15 al 2025-09-15
+
+PASO 1: INICIANDO SESION...
+Iniciando sesión en SAVAR con usuario: CHI.HER
+Navegando a la página de inicio de sesión...
+Página cargada correctamente
+Screenshot guardado: screenshot_login_page.png
+Buscando campos de login...
+Elemento encontrado: css selector=input[type='text']
+Elemento encontrado: css selector=input[type='password']
+Campos de login encontrados, completando credenciales...
+Usuario ingresado
+Contraseña ingresada
+Elemento encontrado: css selector=button[type='submit']
+Haciendo clic en el botón de envío...
+Esperando a que se complete el inicio de sesión...
+Error en el proceso de inicio de sesión: Message: invalid session id: session deleted as the browser has closed the connection
+from disconnected: not connected to DevTools
+  (Session info: chrome=141.0.7390.108); For documentation on this error, please visit: https://www.selenium.dev/documentation/webdriver/troubleshooting/errors#invalidsessionidexception
+Stacktrace:
+	GetHandleVerifier [0x0xd8fe43+66515]
+	GetHandleVerifier [0x0xd8fe84+66580]
+	(No symbol) [0x0xb7dc48]
+	(No symbol) [0x0xb6ce80]
+	(No symbol) [0x0xb8b81b]
+	(No symbol) [0x0xbf1c25]
+	(No symbol) [0x0xc0c4d9]
+	(No symbol) [0x0xbeafc6]
+	(No symbol) [0x0xbbc2ca]
+	(No symbol) [0x0xbbd154]
+	GetHandleVerifier [0x0xfe7353+2521315]
+	GetHandleVerifier [0x0xfe22d3+2500707]
+	GetHandleVerifier [0x0xdb7c94+229924]
+	GetHandleVerifier [0x0xda81f8+165768]
+	GetHandleVerifier [0x0xdaecad+193085]
+	GetHandleVerifier [0x0xd98158+100072]
+	GetHandleVerifier [0x0xd982f0+100480]
+	GetHandleVerifier [0x0xd825aa+11066]
+	BaseThreadInitThunk [0x0x76a80099+25]
+	RtlGetAppContainerNamedObjectPath [0x0x77407b6e+286]
+	RtlGetAppContainerNamedObjectPath [0x0x77407b3e+238]
+
+No se pudo guardar el screenshot del error
+Error: No se pudo iniciar sesion
+
+==================================================
+RESULTADO DE DESCARGA DE EXCEL:
+==================================================
+Estado: error
+Mensaje: No se pudo iniciar sesión
+
+==================================================
+PROCESO FINALIZADO
+==================================================
+Revisa los siguientes archivos:
+- datos_savar.json (datos extraídos)
+- downloads/ (archivos Excel descargados)
+- Screenshots (imágenes del proceso)
+
+Esperando 10 segundos antes de cerrar...
+[2025-10-27 16:50:56] SKIP inexistente: C:\Users\JULIO DME\AppData\Local\Programs\Python\Python313\python.exe
+[2025-10-27 16:50:56] SKIP inexistente: C:\Users\JULIO DME\AppData\Local\Programs\Python\Python312\python.exe
+[2025-10-27 16:50:56] SKIP inexistente: C:\Python313\python.exe
+[2025-10-27 16:50:56] SKIP inexistente: C:\Python312\python.exe
+[2025-10-27 16:50:56] PROBANDO: python "C:\xampp\htdocs\HERMES.EXPRESS\selenium_utils.py" 2>&1

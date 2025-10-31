@@ -2669,7 +2669,7 @@ def main():
     try:
         # Credenciales de prueba
         usuario = "CHI.HER"
-        contrasena = "10111222331"
+        contrasena = "123456789"
         
         # Definir fechas para la consulta (formato: YYYY-MM-DD)
         fecha_inicio = "2025-09-15"

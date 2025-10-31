@@ -243,3 +243,11 @@ OUT:
 [2025-10-19 17:40:34] CODE: 0
 OUT:
 {"exito": true, "mensaje": "Importación completada de 1 archivo(s) desde downloads/", "insertados": 356, "detalle": [{"archivo": "Detalle Pedidos.xlsx", "insertados": 356}]}
+[2025-10-27 17:24:52] SKIP inexistente: C:\Users\JULIO DME\AppData\Local\Programs\Python\Python313\python.exe
+[2025-10-27 17:24:52] SKIP inexistente: C:\Users\JULIO DME\AppData\Local\Programs\Python\Python312\python.exe
+[2025-10-27 17:24:52] SKIP inexistente: C:\Python313\python.exe
+[2025-10-27 17:24:52] SKIP inexistente: C:\Python312\python.exe
+[2025-10-27 17:24:52] PROBANDO: python "C:\xampp\htdocs\HERMES.EXPRESS\import_excel_to_db.py" 2>&1
+[2025-10-27 17:25:08] CODE: 0
+OUT:
+{"exito": true, "mensaje": "Importación completada de 1 archivo(s) desde downloads/", "insertados": 0, "detalle": [{"archivo": "Detalle Pedidos.xlsx", "insertados": 0}]}

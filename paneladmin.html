@@ -98,8 +98,8 @@
 
                 <div class="graficos-admin">
                     <div class="grafico-ventas">
-                        <h3>Ingresos por Mes</h3>
-                        <canvas id="graficoVentas" width="600" height="300"></canvas>
+                        <h3>Estado de Paquetes</h3>
+                        <canvas id="graficoEstados" width="600" height="300"></canvas>
                     </div>
                     <div class="actividad-reciente">
                         <h3>Actividad Reciente</h3>
@@ -109,7 +109,7 @@
                 </div>
             </section>
             <script>
-            // Mover la sección Configuración justo debajo de Asignar
+            // Mover la sección Configuración justo debajo de Asignar y dibujar gráfico de torta
             document.addEventListener('DOMContentLoaded', function(){
                 try {
                     const asignar = document.getElementById('seccion-asignar');
@@ -118,6 +118,58 @@
                         asignar.parentNode.insertBefore(config, asignar.nextElementSibling);
                     }
                 } catch(e) { console.warn('Reordenar secciones', e); }
+
+                // Cargar datos de paquetes y graficar: En almacén vs Entregados
+                (async function cargarYGraficarEstados(){
+                    try {
+                        const resp = await fetch('php/admin.php?accion=todos_paquetes', { cache: 'no-store' });
+                        const data = await resp.json();
+                        const items = Array.isArray(data?.datos) ? data.datos : [];
+                        const total = items.length;
+                        const entregados = items.filter(p => String(p?.estado || '').toLowerCase() === 'entregado').length;
+                        const almacen = Math.max(0, total - entregados);
+                        dibujarTorta('graficoEstados', {
+                            'En almacén': almacen,
+                            'Entregados': entregados
+                        });
+                    } catch (e) {
+                        console.warn('No se pudo cargar/graficar estados', e);
+                    }
+                })();
+
+                function dibujarTorta(canvasId, valores){
+                    const canvas = document.getElementById(canvasId);
+                    if (!canvas) return;
+                    const ctx = canvas.getContext('2d');
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    const total = Object.values(valores).reduce((a,b)=>a+Number(b||0),0) || 1;
+                    const centerX = canvas.width / 2;
+                    const centerY = canvas.height / 2;
+                    const radio = Math.min(centerX, centerY) - 20;
+                    const colores = ['#ffc107', '#28a745'];
+                    let anguloIni = 0;
+                    let idx = 0;
+                    for (const [label, cantidad] of Object.entries(valores)){
+                        const angulo = (Number(cantidad||0)/total) * 2 * Math.PI;
+                        ctx.beginPath();
+                        ctx.arc(centerX, centerY, radio, anguloIni, anguloIni + angulo);
+                        ctx.lineTo(centerX, centerY);
+                        ctx.fillStyle = colores[idx % colores.length];
+                        ctx.fill();
+                        anguloIni += angulo;
+                        idx++;
+                    }
+                    // Leyenda
+                    let y = 20; idx = 0;
+                    for (const [label, cantidad] of Object.entries(valores)){
+                        ctx.fillStyle = colores[idx % colores.length];
+                        ctx.fillRect(10, y, 15, 15);
+                        ctx.fillStyle = '#333';
+                        ctx.font = '12px Arial';
+                        ctx.fillText(`${label}: ${cantidad}`, 30, y + 12);
+                        y += 20; idx++;
+                    }
+                }
             });
             </script>
 
