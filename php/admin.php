@@ -43,7 +43,7 @@ function registrarAccion($accion, $id_entidad, $detalles = '') {
                 ON DELETE SET NULL ON UPDATE CASCADE;
             ");
         }
-        
+
         $stmt = $pdo->prepare("
             INSERT INTO logs_acciones 
             (usuario_id, accion, id_entidad, detalles, ip, user_agent, fecha) 
@@ -66,6 +66,126 @@ function registrarAccion($accion, $id_entidad, $detalles = '') {
         return false;
     }
 
+}
+
+// ===================== ESCANEO DE CODIGOS =====================
+function escaneoEnsureSchema() {
+    global $pdo;
+    $pdo->exec("CREATE TABLE IF NOT EXISTS escaneo_lotes (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        nombre VARCHAR(100) NOT NULL,
+        creado_por VARCHAR(100) NULL,
+        fecha_creacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        ultimo_resumen TEXT NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    $pdo->exec("CREATE TABLE IF NOT EXISTS escaneos (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        lote_id INT NOT NULL,
+        codigo VARCHAR(120) NOT NULL,
+        fecha DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (lote_id) REFERENCES escaneo_lotes(id) ON DELETE CASCADE,
+        INDEX idx_lote (lote_id),
+        INDEX idx_codigo (codigo)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+}
+
+function escaneoCrearLote() {
+    global $pdo; header('Content-Type: application/json');
+    try {
+        escaneoEnsureSchema();
+        $nombre = trim($_POST['nombre'] ?? '');
+        if ($nombre==='') { echo json_encode(['exito'=>false,'mensaje'=>'Nombre requerido']); return; }
+        $creado_por = trim($_POST['creado_por'] ?? '');
+        $stmt = $pdo->prepare("INSERT INTO escaneo_lotes (nombre, creado_por) VALUES (?, ?)");
+        $stmt->execute([$nombre, $creado_por]);
+        echo json_encode(['exito'=>true, 'id'=>$pdo->lastInsertId()]);
+    } catch (Throwable $e) { echo json_encode(['exito'=>false,'mensaje'=>$e->getMessage()]); }
+}
+
+function escaneoListarLotes() {
+    global $pdo; header('Content-Type: application/json');
+    try {
+        escaneoEnsureSchema();
+        $r=$pdo->query("SELECT id, nombre, creado_por, fecha_creacion, ultimo_resumen FROM escaneo_lotes ORDER BY id DESC")->fetchAll(PDO::FETCH_ASSOC);
+        echo json_encode(['exito'=>true,'datos'=>$r]);
+    } catch(Throwable $e){ echo json_encode(['exito'=>false,'mensaje'=>$e->getMessage()]); }
+}
+
+function escaneoAgregar() {
+    global $pdo; header('Content-Type: application/json');
+    try {
+        escaneoEnsureSchema();
+        $lote_id = (int)($_POST['lote_id'] ?? 0);
+        $codigo = trim($_POST['codigo'] ?? '');
+        if ($lote_id<=0 || $codigo==='') { echo json_encode(['exito'=>false,'mensaje'=>'Parámetros inválidos']); return; }
+        $stmt = $pdo->prepare("INSERT INTO escaneos (lote_id, codigo) VALUES (?, ?)");
+        $stmt->execute([$lote_id, $codigo]);
+        echo json_encode(['exito'=>true]);
+    } catch (Throwable $e) { echo json_encode(['exito'=>false,'mensaje'=>$e->getMessage()]); }
+}
+
+function escaneoListar() {
+    global $pdo; header('Content-Type: application/json');
+    try {
+        escaneoEnsureSchema();
+        $lote_id=(int)($_GET['lote_id']??0);
+        $stmt=$pdo->prepare("SELECT id, codigo, fecha FROM escaneos WHERE lote_id=? ORDER BY id DESC");
+        $stmt->execute([$lote_id]);
+        echo json_encode(['exito'=>true,'datos'=>$stmt->fetchAll(PDO::FETCH_ASSOC)]);
+    } catch(Throwable $e){ echo json_encode(['exito'=>false,'mensaje'=>$e->getMessage()]); }
+}
+
+function escaneoComparar() {
+    global $pdo; header('Content-Type: application/json');
+    try {
+        escaneoEnsureSchema();
+        $lote_id = (int)($_GET['lote_id'] ?? $_POST['lote_id'] ?? 0);
+        if ($lote_id<=0) { echo json_encode(['exito'=>false,'mensaje'=>'lote_id requerido']); return; }
+        $solo_hoy = (int)($_GET['solo_hoy'] ?? $_POST['solo_hoy'] ?? 0) === 1;
+        $en_almacen = (int)($_GET['en_almacen'] ?? $_POST['en_almacen'] ?? 0) === 1;
+        $grupo = trim((string)($_GET['grupo'] ?? $_POST['grupo'] ?? ''));
+        // Códigos escaneados
+        $sc = $pdo->prepare("SELECT codigo FROM escaneos WHERE lote_id = ?");
+        $sc->execute([$lote_id]);
+        $escaneados = array_map(function($r){ return trim((string)$r['codigo']); }, $sc->fetchAll(PDO::FETCH_ASSOC));
+        // Códigos en paquetes con filtros
+        $where = [];
+        if ($solo_hoy) { $where[] = "fecha_envio = CURDATE()"; }
+        if ($en_almacen) { $where[] = "(estado IS NULL OR estado <> 'entregado')"; }
+        $sqlP = "SELECT codigo, distrito FROM paquetes" . (count($where)? (' WHERE '.implode(' AND ',$where)) : '');
+        $pk = $pdo->query($sqlP);
+        $rows = $pk->fetchAll(PDO::FETCH_ASSOC);
+        if ($grupo !== '') {
+            $rows = array_values(array_filter($rows, function($r) use ($grupo){
+                $g = mapDistritoAGrupo($r['distrito'] ?? '');
+                return strtoupper($g ?? '') === strtoupper($grupo);
+            }));
+        }
+        $paquetes = array_map(function($r){ return trim((string)$r['codigo']); }, $rows);
+        // Conteos
+        $cntEsc = array_count_values($escaneados);
+        $cntPaq = array_count_values($paquetes);
+        $todos = array_unique(array_merge(array_keys($cntEsc), array_keys($cntPaq)));
+        $faltantes = []; $sobrantes = []; $ok = [];
+        foreach ($todos as $c) {
+            $a = (int)($cntEsc[$c] ?? 0);
+            $b = (int)($cntPaq[$c] ?? 0);
+            if ($a === $b && $a>0) $ok[] = ['codigo'=>$c, 'cantidad'=>$a];
+            elseif ($a < $b) $faltantes[] = ['codigo'=>$c, 'esperado'=>$b, 'encontrado'=>$a];
+            elseif ($a > $b) $sobrantes[] = ['codigo'=>$c, 'esperado'=>$b, 'encontrado'=>$a];
+        }
+        $resumen = [
+            'total_escaneados' => array_sum($cntEsc),
+            'total_paquetes' => array_sum($cntPaq),
+            'coincidentes' => count($ok),
+            'faltantes' => count($faltantes),
+            'sobrantes' => count($sobrantes)
+        ];
+        // Guardar resumen en lote
+        $upd = $pdo->prepare("UPDATE escaneo_lotes SET ultimo_resumen = ? WHERE id = ?");
+        $upd->execute([json_encode($resumen), $lote_id]);
+        echo json_encode(['exito'=>true, 'resumen'=>$resumen, 'faltantes'=>$faltantes, 'sobrantes'=>$sobrantes]);
+    } catch (Throwable $e) { echo json_encode(['exito'=>false,'mensaje'=>$e->getMessage()]); }
 }
 
 function seedRutas() {
@@ -122,6 +242,113 @@ if (!isset($_SESSION['usuario_id']) || !in_array($_SESSION['tipo'], ['admin', 'a
     exit;
 }
 
+// ============ Finanzas: Importación y consultas ============
+function finanzasImportar() {
+    header('Content-Type: application/json');
+    try {
+        $base = realpath(__DIR__ . '/..');
+        $script = $base . DIRECTORY_SEPARATOR . 'import_finanzas.py';
+        if (!file_exists($script)) {
+            echo json_encode(['exito'=>false,'mensaje'=>'Script import_finanzas.py no encontrado']);
+            return;
+        }
+        // Permitir configurar saldo inicial y umbral por POST (opcional)
+        $env = [];
+        if (isset($_POST['saldo_inicial'])) { $env['SALDO_INICIAL'] = (string)$_POST['saldo_inicial']; }
+        if (isset($_POST['saldo_umbral'])) { $env['SALDO_UMBRAL'] = (string)$_POST['saldo_umbral']; }
+
+        // Probar distintas invocaciones de Python en Windows/Linux
+        $intentos = [
+            'py -3 -u %s',
+            'py -u %s',
+            'python -u %s',
+            'python3 -u %s',
+        ];
+        $resultados = [];
+        $exitCode = null;
+        foreach ($intentos as $fmt) {
+            $cmd = sprintf($fmt, escapeshellarg($script)) . ' 2>&1';
+            $salida = [];
+            $codigo = 0;
+            // Preparar entorno
+            $procEnv = null;
+            if (!empty($env)) {
+                $procEnv = [];
+                foreach ($env as $k=>$v) { $procEnv[$k] = $v; }
+            }
+            if ($procEnv !== null && function_exists('proc_open')) {
+                $descriptor = [1=>['pipe','w'], 2=>['pipe','w']];
+                $proc = @proc_open($cmd, $descriptor, $pipes, $base, $procEnv);
+                if (is_resource($proc)) {
+                    $out = stream_get_contents($pipes[1]);
+                    $err = stream_get_contents($pipes[2]);
+                    foreach ($pipes as $p) { if (is_resource($p)) fclose($p); }
+                    $codigo = proc_close($proc);
+                    $salida = explode("\n", trim($out . "\n" . $err));
+                } else {
+                    $salida = ['No se pudo iniciar el proceso con proc_open'];
+                    $codigo = 1;
+                }
+            } else {
+                @exec($cmd, $salida, $codigo);
+            }
+            $resultados[] = [ 'cmd' => $cmd, 'codigo' => $codigo, 'salida' => $salida ];
+            if ($codigo === 0) { $exitCode = 0; break; }
+        }
+
+        echo json_encode([
+            'exito' => $exitCode === 0,
+            'codigo' => $exitCode === null ? -1 : $exitCode,
+            'intentos' => $resultados,
+        ]);
+    } catch (Throwable $e) {
+        echo json_encode(['exito'=>false,'mensaje'=>'Error al importar: '.$e->getMessage()]);
+    }
+}
+
+function finanzasCaja() {
+    global $pdo;
+    header('Content-Type: application/json');
+    try {
+        // Si la tabla no existe, devolver vacío
+        $exists = $pdo->query("SHOW TABLES LIKE 'caja_chica_movimientos'")->rowCount() > 0;
+        if (!$exists) { echo json_encode(['exito'=>true,'datos'=>[]]); return; }
+        $stmt = $pdo->query("SELECT fecha, categoria, descripcion, monto, tipo, saldo_actual, alerta_saldo_bajo FROM caja_chica_movimientos ORDER BY fecha ASC, id ASC");
+        $datos = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        echo json_encode(['exito'=>true,'datos'=>$datos]);
+    } catch (Throwable $e) {
+        echo json_encode(['exito'=>false,'mensaje'=>'Error al obtener caja chica: '.$e->getMessage()]);
+    }
+}
+
+function finanzasResumenIE() {
+    global $pdo;
+    header('Content-Type: application/json');
+    try {
+        $exists = $pdo->query("SHOW TABLES LIKE 'resumen_ing_egr'")->rowCount() > 0;
+        if (!$exists) { echo json_encode(['exito'=>true,'datos'=>[]]); return; }
+        $stmt = $pdo->query("SELECT mes, total_ingresos, total_egresos, resultado_neto, alerta_resultado_negativo FROM resumen_ing_egr ORDER BY mes ASC");
+        $datos = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        echo json_encode(['exito'=>true,'datos'=>$datos]);
+    } catch (Throwable $e) {
+        echo json_encode(['exito'=>false,'mensaje'=>'Error al obtener resumen IE: '.$e->getMessage()]);
+    }
+}
+
+function finanzasResumenHermes() {
+    global $pdo;
+    header('Content-Type: application/json');
+    try {
+        $exists = $pdo->query("SHOW TABLES LIKE 'resumen_hermes'")->rowCount() > 0;
+        if (!$exists) { echo json_encode(['exito'=>true,'datos'=>[]]); return; }
+        $stmt = $pdo->query("SELECT mes, resultado_neto, variacion_pct FROM resumen_hermes ORDER BY mes ASC");
+        $datos = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        echo json_encode(['exito'=>true,'datos'=>$datos]);
+    } catch (Throwable $e) {
+        echo json_encode(['exito'=>false,'mensaje'=>'Error al obtener resumen Hermes: '.$e->getMessage()]);
+    }
+}
+
 
 $accion = $_GET['accion'] ?? $_POST['accion'] ?? '';
 
@@ -140,6 +367,9 @@ switch($accion) {
         break;
     case 'rutas':
         obtenerRutas();
+        break;
+    case 'crear_ruta':
+        crearRuta();
         break;
     case 'actualizar_ruta':
         actualizarRuta();
@@ -180,8 +410,50 @@ switch($accion) {
     case 'asignar_paquetes_auto':
         asignarPaquetesAuto();
         break;
+    case 'finanzas_importar':
+        finanzasImportar();
+        break;
+    case 'finanzas_caja':
+        finanzasCaja();
+        break;
+    case 'finanzas_resumen_ie':
+        finanzasResumenIE();
+        break;
+    case 'finanzas_resumen_hermes':
+        finanzasResumenHermes();
+        break;
+    case 'tarifas_listar':
+        tarifasListar();
+        break;
+    case 'tarifas_crear':
+        tarifasCrear();
+        break;
+    case 'tarifas_actualizar':
+        tarifasActualizar();
+        break;
+    case 'tarifas_eliminar':
+        tarifasEliminar();
+        break;
+    case 'tarifas_aplicar_paquetes':
+        tarifasAplicarPaquetes();
+        break;
     case 'reasignar_paquete':
         reasignarPaquete();
+        break;
+    case 'escaneo_crear_lote':
+        escaneoCrearLote();
+        break;
+    case 'escaneo_listar_lotes':
+        escaneoListarLotes();
+        break;
+    case 'escaneo_agregar':
+        escaneoAgregar();
+        break;
+    case 'escaneo_listar':
+        escaneoListar();
+        break;
+    case 'escaneo_comparar':
+        escaneoComparar();
         break;
     default:
         echo json_encode(['exito' => false, 'mensaje' => 'Acción no válida']);
@@ -376,8 +648,12 @@ function actualizarRuta() {
             return;
         }
 
-        // Asegurar que la tabla tenga la columna zonas
-        try { $pdo->exec("ALTER TABLE rutas ADD COLUMN zonas TEXT NULL"); } catch (Exception $e) { /* ya existe */ }
+        // Asegurar columna 'zonas' (opcional)
+        try {
+            $pdo->exec("ALTER TABLE rutas ADD COLUMN zonas TEXT NULL");
+        } catch (Exception $e) {
+            // Ignorar si ya existe
+        }
 
         // Construir SET dinámico
         $campos = [];
@@ -692,6 +968,11 @@ function crearPaquete() {
         
         $codigo = 'PKG' . date('Ymd') . str_pad(rand(1, 9999), 4, '0', STR_PAD_LEFT);
         
+        // Autoprecio desde tarifas si no viene precio o es 0
+        if ($precio <= 0) {
+            $precio = obtenerPrecioTarifaPorDistrito($distrito, $pdo) ?? 0;
+        }
+
         $stmt = $pdo->prepare("
             INSERT INTO paquetes (codigo, remitente, destinatario, direccion_origen, direccion_destino, distrito, peso, precio, tipo_ruta, estado, fecha_envio) 
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pendiente', CURDATE())
@@ -1155,6 +1436,200 @@ function reasignarPaquete() {
         echo json_encode(['exito'=>true, 'mensaje'=>'Paquete reasignado']);
     } catch (Throwable $e) {
         echo json_encode(['exito'=>false, 'mensaje'=>'Error al reasignar: '.$e->getMessage()]);
+    }
+}
+
+// ===================== TARIFAS POR ZONA =====================
+function tarifasEnsureSchema() {
+    global $pdo;
+    $pdo->exec("CREATE TABLE IF NOT EXISTS tarifas_zonas (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        grupo VARCHAR(50) NOT NULL,
+        nombre VARCHAR(100) NOT NULL,
+        unidad VARCHAR(20) NOT NULL DEFAULT 'Paquete',
+        precio DECIMAL(10,2) NOT NULL DEFAULT 0,
+        activo TINYINT(1) NOT NULL DEFAULT 1,
+        UNIQUE KEY uniq_grupo_nombre (grupo, nombre),
+        INDEX idx_grupo (grupo),
+        INDEX idx_nombre (nombre)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+}
+
+function tarifasSeedIfEmpty() {
+    global $pdo;
+    tarifasEnsureSchema();
+    $cnt = (int)$pdo->query("SELECT COUNT(*) AS c FROM tarifas_zonas")->fetch(PDO::FETCH_ASSOC)['c'];
+    if ($cnt > 0) return;
+    $data = [];
+    // URBANO
+    foreach ([['Chiclayo',1], ['Leonardo Ortiz',1], ['La Victoria',1], ['Santa Victoria',1]] as $r) {
+        $data[] = ['URBANO',$r[0],'Paquete',$r[1],1];
+    }
+    // PUEBLOS
+    foreach ([['Lambayeque',3], ['Mochumi',5], ['Tucume',5], ['Illimo',5], ['Nueva Arica',5], ['Jayanca',5], ['Pacora',5], ['Morrope',5], ['Motupe',5], ['Olmos',5], ['Salas',5]] as $r) {
+        $data[] = ['PUEBLOS',$r[0],'Paquete',$r[1],1];
+    }
+    // PLAYAS
+    foreach ([['San Jose',3], ['Santa Rosa',3], ['Pimentel',3], ['Reque',3], ['Monsefu',3], ['Eten',5], ['Puerto Eten',5]] as $r) {
+        $data[] = ['PLAYAS',$r[0],'Paquete',$r[1],1];
+    }
+    // COOPERATIVAS
+    foreach ([['Pomalca',3], ['Tuman',5], ['Patapo',5], ['Pucala',5], ['Sartur',5], ['Chongoyape',5]] as $r) {
+        $data[] = ['COOPERATIVAS',$r[0],'Paquete',$r[1],1];
+    }
+    // EXCOOPERATIVAS
+    foreach ([['Ucupe',5], ['Mocupe',5], ['Zaña',5], ['Cayalti',5], ['Oyutun',5], ['Lagunas',5]] as $r) {
+        $data[] = ['EXCOOPERATIVAS',$r[0],'Paquete',$r[1],1];
+    }
+    // FERREÑAFE
+    foreach ([['Ferreñafe',5], ['Picsi',5], ['Pitipo',5], ['Motupillo',5], ['Pueblo Nuevo',5]] as $r) {
+        $data[] = ['FERREÑAFE',$r[0],'Paquete',$r[1],1];
+    }
+    $ins = $pdo->prepare("INSERT INTO tarifas_zonas (grupo,nombre,unidad,precio,activo) VALUES (?,?,?,?,?)");
+    foreach ($data as $row) { $ins->execute($row); }
+}
+
+function tarifasListar() {
+    global $pdo;
+    header('Content-Type: application/json');
+    try {
+        tarifasSeedIfEmpty();
+        $grupo = isset($_GET['grupo']) ? trim($_GET['grupo']) : '';
+        $q = isset($_GET['q']) ? trim($_GET['q']) : '';
+        $sql = "SELECT id, grupo, nombre, unidad, precio, activo FROM tarifas_zonas WHERE 1=1";
+        $params = [];
+        if ($grupo !== '') { $sql .= " AND grupo = ?"; $params[] = $grupo; }
+        if ($q !== '') { $sql .= " AND (nombre LIKE ? OR grupo LIKE ?)"; $params[] = "%$q%"; $params[] = "%$q%"; }
+        $sql .= " ORDER BY grupo, nombre";
+        $stmt = $pdo->prepare($sql); $stmt->execute($params);
+        echo json_encode(['exito'=>true, 'datos'=>$stmt->fetchAll(PDO::FETCH_ASSOC)]);
+    } catch (Throwable $e) {
+        echo json_encode(['exito'=>false,'mensaje'=>'Error al listar tarifas: '.$e->getMessage()]);
+    }
+}
+
+function tarifasCrear() {
+    global $pdo; header('Content-Type: application/json');
+    try {
+        tarifasEnsureSchema();
+        $grupo = trim($_POST['grupo'] ?? '');
+        $nombre = trim($_POST['nombre'] ?? '');
+        $precio = (float)($_POST['precio'] ?? 0);
+        $activo = (int)($_POST['activo'] ?? 1);
+        if ($grupo==='' || $nombre==='') { echo json_encode(['exito'=>false,'mensaje'=>'Grupo y nombre son obligatorios']); return; }
+        $stmt = $pdo->prepare("INSERT INTO tarifas_zonas (grupo,nombre,unidad,precio,activo) VALUES (?,?,?,?,?)");
+        $stmt->execute([$grupo, $nombre, 'Paquete', $precio, $activo]);
+        echo json_encode(['exito'=>true, 'id'=>$pdo->lastInsertId()]);
+    } catch (Throwable $e) {
+        echo json_encode(['exito'=>false,'mensaje'=>'Error al crear tarifa: '.$e->getMessage()]);
+    }
+}
+
+function tarifasActualizar() {
+    global $pdo; header('Content-Type: application/json');
+    try {
+        tarifasEnsureSchema();
+        $id = (int)($_POST['id'] ?? 0);
+        if ($id<=0) { echo json_encode(['exito'=>false,'mensaje'=>'ID inválido']); return; }
+        $campos = [];$params=[];
+        if (isset($_POST['grupo'])) { $campos[]='grupo=?'; $params[] = trim($_POST['grupo']); }
+        if (isset($_POST['nombre'])) { $campos[]='nombre=?'; $params[] = trim($_POST['nombre']); }
+        if (isset($_POST['precio'])) { $campos[]='precio=?'; $params[] = (float)$_POST['precio']; }
+        if (isset($_POST['activo'])) { $campos[]='activo=?'; $params[] = (int)$_POST['activo']; }
+        if (!count($campos)) { echo json_encode(['exito'=>false,'mensaje'=>'Sin cambios']); return; }
+        $params[] = $id;
+        $sql = 'UPDATE tarifas_zonas SET '.implode(',', $campos).' WHERE id = ?';
+        $stmt = $pdo->prepare($sql); $stmt->execute($params);
+        echo json_encode(['exito'=>true]);
+    } catch (Throwable $e) {
+        echo json_encode(['exito'=>false,'mensaje'=>'Error al actualizar tarifa: '.$e->getMessage()]);
+    }
+}
+
+function tarifasEliminar() {
+    global $pdo; header('Content-Type: application/json');
+    try {
+        tarifasEnsureSchema();
+        $id = (int)($_POST['id'] ?? 0);
+        if ($id<=0) { echo json_encode(['exito'=>false,'mensaje'=>'ID inválido']); return; }
+        $stmt = $pdo->prepare('DELETE FROM tarifas_zonas WHERE id = ?');
+        $stmt->execute([$id]);
+        echo json_encode(['exito'=>true]);
+    } catch (Throwable $e) {
+        echo json_encode(['exito'=>false,'mensaje'=>'Error al eliminar tarifa: '.$e->getMessage()]);
+    }
+}
+
+// ===== Helpers y aplicación de tarifas a paquetes =====
+function normalizar_simple($str) {
+    $s = trim((string)$str);
+    if (function_exists('mb_strtolower')) $s = mb_strtolower($s,'UTF-8'); else $s = strtolower($s);
+    $s = strtr($s, ['á'=>'a','é'=>'e','í'=>'i','ó'=>'o','ú'=>'u','ä'=>'a','ë'=>'e','ï'=>'i','ö'=>'o','ü'=>'u','ñ'=>'n','Ñ'=>'n']);
+    $s = preg_replace('/[^a-z0-9\s]/', ' ', $s);
+    $s = preg_replace('/\s+/', ' ', trim($s));
+    $syn = [ 'jose leonardo ortiz'=>'leonardo ortiz','j.l. ortiz'=>'leonardo ortiz','j l ortiz'=>'leonardo ortiz','ferrenafe'=>'ferreñafe','sana'=>'zaña' ];
+    return $syn[$s] ?? $s;
+}
+
+function mapDistritoAGrupo($distrito) {
+    global $pdo;
+    $rutas = $pdo->query("SELECT nombre, zonas FROM rutas")->fetchAll(PDO::FETCH_ASSOC);
+    $fallback = [
+        ['nombre'=>'URBANO', 'zonas'=> 'Chiclayo, Leonardo Ortiz, La Victoria, Santa Victoria'],
+        ['nombre'=>'PUEBLOS', 'zonas'=> 'Lambayeque, Mochumi, Tucume, Illimo, Nueva Arica, Jayanca, Pacora, Morrope, Motupe, Olmos, Salas'],
+        ['nombre'=>'PLAYAS', 'zonas'=> 'San Jose, Santa Rosa, Pimentel, Reque, Monsefu, Eten, Puerto Eten'],
+        ['nombre'=>'COOPERATIVAS', 'zonas'=> 'Pomalca, Tuman, Patapo, Pucala, Saltur, Chongoyape'],
+        ['nombre'=>'EXCOOPERATIVAS', 'zonas'=> 'Ucupe, Mocupe, Zaña, Saña, Cayalti, Oyotun, Lagunas'],
+        ['nombre'=>'FERREÑAFE', 'zonas'=> 'Ferreñafe, Picsi, Pitipo, Motupillo, Pueblo Nuevo']
+    ];
+    $rutas = array_merge(is_array($rutas)?$rutas:[], $fallback);
+    $target = normalizar_simple($distrito);
+    foreach ($rutas as $r) {
+        $zonas = array_map('trim', explode(',', (string)$r['zonas']));
+        foreach ($zonas as $z) {
+            if (normalizar_simple($z) === $target) return strtoupper(trim($r['nombre']));
+        }
+    }
+    return null;
+}
+
+function obtenerPrecioTarifaPorDistrito($distrito) {
+    global $pdo;
+    tarifasEnsureSchema();
+    $grupo = mapDistritoAGrupo($distrito);
+    if (!$grupo) return null;
+    $stmt = $pdo->prepare("SELECT nombre, precio FROM tarifas_zonas WHERE grupo = ? AND activo = 1");
+    $stmt->execute([$grupo]);
+    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $target = normalizar_simple($distrito);
+    foreach ($rows as $r) {
+        if (normalizar_simple($r['nombre']) === $target) return (float)$r['precio'];
+    }
+    return null;
+}
+
+function tarifasAplicarPaquetes() {
+    global $pdo; header('Content-Type: application/json');
+    try {
+        tarifasEnsureSchema();
+        try { $pdo->exec("ALTER TABLE paquetes ADD COLUMN distrito VARCHAR(100) NULL"); } catch (Exception $e) {}
+        $sel = $pdo->query("SELECT id, distrito, precio FROM paquetes");
+        $paqs = $sel->fetchAll(PDO::FETCH_ASSOC);
+        $upd = $pdo->prepare("UPDATE paquetes SET precio = ? WHERE id = ?");
+        $aplicados=0; $sinPrecio=0; $sinGrupo=0; $total=count($paqs);
+        foreach ($paqs as $p) {
+            $d = trim((string)$p['distrito']);
+            if ($d === '') { $sinGrupo++; continue; }
+            $precio = obtenerPrecioTarifaPorDistrito($d);
+            if ($precio === null) { $sinPrecio++; continue; }
+            if ((float)$p['precio'] !== (float)$precio) {
+                $upd->execute([$precio, (int)$p['id']]);
+                $aplicados++;
+            }
+        }
+        echo json_encode(['exito'=>true, 'total'=>$total, 'actualizados'=>$aplicados, 'sin_precio'=>$sinPrecio, 'sin_grupo'=>$sinGrupo]);
+    } catch (Throwable $e) {
+        echo json_encode(['exito'=>false, 'mensaje'=>'Error aplicando tarifas: '.$e->getMessage()]);
     }
 }
 ?>

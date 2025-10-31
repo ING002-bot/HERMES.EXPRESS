@@ -5,121 +5,157 @@ let usuarioModal;
 document.addEventListener('DOMContentLoaded', function() {
     // Verificar que Bootstrap esté disponible
     if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
-        usuarioModal = new bootstrap.Modal(document.getElementById('usuarioModal'));
-    } else {
-        console.error('Bootstrap no está cargado correctamente');
-    }
-    
-    // Verificar que el elemento de la tabla existe
-    const $tablaUsuarios = $('#usuariosTable');
-    if ($tablaUsuarios.length === 0) {
-        console.error('No se encontró el elemento con ID "usuariosTable"');
-        return;
+        const modalEl = document.getElementById('usuarioModal');
+        if (modalEl) usuarioModal = new bootstrap.Modal(modalEl);
     }
 
-    // Inicializar DataTable
-    const usuariosTable = $('#usuariosTable').DataTable({
-        order: [[0, 'desc']],
-        processing: true,
-        serverSide: true,
-        responsive: true,
-        language: {
-            emptyTable: 'No hay datos disponibles',
-            loadingRecords: 'Cargando...',
-            processing: 'Procesando...',
-            search: 'Buscar:',
-            zeroRecords: 'No se encontraron registros coincidentes',
-            lengthMenu: 'Mostrar _MENU_ registros por página',
-            info: 'Mostrando _START_ a _END_ de _TOTAL_ registros',
-            infoEmpty: 'No hay registros disponibles',
-            infoFiltered: '(filtrado de _MAX_ registros en total)',
-            paginate: {
-                first: 'Primero',
-                last: 'Último',
-                next: 'Siguiente',
-                previous: 'Anterior'
+    // Instancia global para poder recargar desde otros handlers
+    window.usuariosDT = window.usuariosDT || null;
+
+    function initTablaUsuarios() {
+        const $tablaUsuarios = $('#usuariosTable');
+        if ($tablaUsuarios.length === 0) return false;
+        if ($.fn.dataTable.isDataTable('#usuariosTable')) {
+            // Si ya existe, intenta referenciar la instancia global
+            if (!window.usuariosDT) {
+                window.usuariosDT = $('#usuariosTable').DataTable();
             }
-        },
-        ajax: {
-            url: '/HERMES.EXPRESS/php/usuarios.php',
-            type: 'GET',
-            data: { action: 'listar' },
-            error: function(xhr, error, thrown) {
-                console.error('Error al cargar los datos:', error);
-                mostrarAlerta('danger', 'Error al cargar los datos de usuarios');
-            }
-        },
-        columns: [
-            { 
-                data: 'id',
-                className: 'text-center',
-                width: '5%'
-            },
-            { 
-                data: 'usuario',
-                render: function(data) {
-                    return `<strong>${data}</strong>`;
+            return true;
+        }
+        
+        // Inicializar DataTable
+        window.usuariosDT = $('#usuariosTable').DataTable({
+            order: [[0, 'desc']],
+            processing: true,
+            serverSide: true,
+            responsive: true,
+            deferRender: false,
+            language: {
+                emptyTable: 'No hay datos disponibles',
+                loadingRecords: 'Cargando...',
+                processing: 'Procesando...',
+                search: 'Buscar:',
+                zeroRecords: 'No se encontraron registros coincidentes',
+                lengthMenu: 'Mostrar _MENU_ registros por página',
+                info: 'Mostrando _START_ a _END_ de _TOTAL_ registros',
+                infoEmpty: 'No hay registros disponibles',
+                infoFiltered: '(filtrado de _MAX_ registros en total)',
+                paginate: {
+                    first: 'Primero',
+                    last: 'Último',
+                    next: 'Siguiente',
+                    previous: 'Anterior'
                 }
             },
-            { 
-                data: 'nombre',
-                render: function(data) {
-                    return data || '<span class="text-muted">No especificado</span>';
+            ajax: {
+                url: '/HERMES.EXPRESS/php/usuarios.php',
+                type: 'GET',
+                data: { action: 'listar' },
+                error: function(xhr, error, thrown) {
+                    console.error('Error al cargar los datos:', error);
+                    mostrarAlerta('danger', 'Error al cargar los datos de usuarios');
                 }
             },
-            { 
-                data: 'email',
-                render: function(data) {
-                    return data || '-';
-                }
-            },
-            { 
-                data: 'tipo',
-                className: 'text-center',
-                render: function(data) {
-                    const tipos = {
-                        'admin': '<span class="badge bg-danger">Administrador</span>',
-                        'asistente': '<span class="badge bg-primary">Asistente</span>'
-                    };
-                    return tipos[data] || data;
-                }
-            },
-            { 
-                data: 'activo',
-                className: 'text-center',
-                render: function(data) {
-                    return data == 1 
-                        ? '<span class="badge bg-success">Activo</span>' 
-                        : '<span class="badge bg-secondary">Inactivo</span>';
-                }
-            },
-            { 
-                data: 'fecha_creacion',
-                render: function(data) {
-                    return data ? new Date(data).toLocaleDateString('es-ES') : '-';
-                }
-            },
-            {
-                data: null,
-                orderable: false,
-                className: 'text-center',
-                render: function(data, type, row) {
-                    if (row.id === 1 || row.usuario === 'admin') {
-                        return '<span class="badge bg-secondary">Protegido</span>';
+            columns: [
+                { 
+                    data: 'id',
+                    className: 'text-center',
+                    width: '5%'
+                },
+                { 
+                    data: 'usuario',
+                    render: function(data) {
+                        return `<strong>${data}</strong>`;
                     }
-                    
-                    return `
-                        <button class="btn btn-sm btn-primary btn-editar me-1" data-id="${row.id}" title="Editar">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        <button class="btn btn-sm btn-danger btn-eliminar" data-id="${row.id}" title="Eliminar">
-                            <i class="fas fa-trash"></i>
-                        </button>`;
+                },
+                { 
+                    data: 'nombre',
+                    render: function(data) {
+                        return data || '<span class="text-muted">No especificado</span>';
+                    }
+                },
+                { 
+                    data: 'email',
+                    render: function(data) {
+                        return data || '-';
+                    }
+                },
+                { 
+                    data: 'tipo',
+                    className: 'text-center',
+                    render: function(data) {
+                        const key = String(data||'').trim().toLowerCase();
+                        const tipos = {
+                            'admin': '<span class="badge bg-danger">Administrador</span>',
+                            'asistente': '<span class="badge bg-primary">Asistente</span>',
+                            'empleado': '<span class="badge bg-info text-dark">Empleado</span>'
+                        };
+                        return tipos[key] || `<span class="badge bg-secondary">${data||'-'}</span>`;
+                    }
+                },
+                { 
+                    data: 'activo',
+                    className: 'text-center',
+                    render: function(data) {
+                        const val = (typeof data === 'number') ? data : String(data||'').trim().toLowerCase();
+                        const isActive = (val === 1 || val === '1' || val === 'activo' || val === 'true' || val === 'sí' || val === 'si');
+                        return isActive 
+                            ? '<span class="badge bg-success">ACTIVO</span>' 
+                            : '<span class="badge bg-secondary">INACTIVO</span>';
+                    }
+                },
+                { 
+                    data: 'fecha_creacion',
+                    render: function(data) {
+                        return data ? new Date(data).toLocaleDateString('es-ES') : '-';
+                    }
+                },
+                {
+                    data: null,
+                    orderable: false,
+                    className: 'text-center',
+                    render: function(data, type, row) {
+                        if (row.id === 1 || row.usuario === 'admin') {
+                            return '<span class="badge bg-secondary">Protegido</span>';
+                        }
+                        
+                        return `
+                            <button class="btn btn-sm btn-primary btn-editar me-1" data-id="${row.id}" title="Editar">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-sm btn-danger btn-eliminar" data-id="${row.id}" title="Eliminar">
+                                <i class="fas fa-trash"></i>
+                            </button>`;
+                    }
                 }
+            ],
+            responsive: true,
+            initComplete: function(){
+                try { this.api().ajax.reload(null, false); } catch(e) { /* noop */ }
             }
-        ],
-        responsive: true
-    });
+        });
+
+        console.debug('Usuarios DT inicializada v=20251030-3');
+        return true;
+    }
+
+    // Exponer para llamados externos
+    window.forceInitUsuarios = initTablaUsuarios;
+
+    // Intento inmediato
+    if (!initTablaUsuarios()) {
+        // Fallback: observar hasta que aparezca la tabla en el DOM
+        const obs = new MutationObserver(function() {
+            if (initTablaUsuarios()) { obs.disconnect(); }
+        });
+        obs.observe(document.body, { childList: true, subtree: true });
+
+        // Reintentos temporizados (por si DataTables tarda en cargar)
+        let intentos = 0; const t = setInterval(function(){
+            if (initTablaUsuarios()) { clearInterval(t); }
+            if (++intentos >= 10) clearInterval(t);
+        }, 700);
+    }
 
     // Helper: mostrar/ocultar selector de zona según tipo
     function updateZonaVisibility() {
@@ -145,7 +181,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Mostrar modal para crear/editar usuario
-    $('#btnNuevoUsuario').click(function() {
+    $('#btnNuevoUsuario').off('click').on('click', function() {
         const form = document.getElementById('usuarioForm');
         form.reset();
         document.getElementById('usuarioModalLabel').textContent = 'Nuevo Usuario';
@@ -162,7 +198,7 @@ document.addEventListener('DOMContentLoaded', function() {
         $('#usuarioForm #tipo').val('empleado');
         $('#usuarioForm #zona').val('');
         updateZonaVisibility();
-        usuarioModal.show();
+        if (usuarioModal) usuarioModal.show();
     });
 
     // Editar usuario
@@ -234,7 +270,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     mostrarAlerta('danger', data.error);
                 } else {
                     mostrarAlerta('success', 'Usuario eliminado correctamente');
-                    usuariosTable.ajax.reload();
+                    try { window.usuariosDT && window.usuariosDT.ajax.reload(null, false); } catch(_){ }
                 }
             })
             .catch(error => {
@@ -354,7 +390,7 @@ document.addEventListener('DOMContentLoaded', function() {
             } else {
                 mostrarAlerta('success', data.success || 'Operación realizada correctamente');
                 $('#usuarioModal').modal('hide');
-                usuariosTable.ajax.reload();
+                try { window.usuariosDT && window.usuariosDT.ajax.reload(null, false); } catch(_){ }
             }
         })
         .catch(error => {
