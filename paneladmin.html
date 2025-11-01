@@ -310,14 +310,21 @@
                   </div>
                   <div class="modal-body">
                     <input type="hidden" id="ruta_id">
-                    <div class="mb-3">
-                      <label for="ruta_nombre" class="form-label">Nombre</label>
-                      <input type="text" id="ruta_nombre" class="form-control" required>
-                    </div>
-                    <div class="mb-3">
-                      <label for="ruta_zonas" class="form-label">Zonas (separadas por coma)</label>
-                      <textarea id="ruta_zonas" class="form-control" placeholder="Ej: Chiclayo, Leonardo Ortiz, La Victoria"></textarea>
-                      <small class="text-muted">Se normalizan duplicados y capitalización al guardar.</small>
+                    <div class="form-grid">
+                      <div class="mb-3">
+                        <label for="ruta_nombre" class="form-label">Nombre de la ruta</label>
+                        <input type="text" id="ruta_nombre" class="form-control" placeholder="Ej: COOPERATIVAS" required>
+                        <small class="text-muted">Usa un nombre corto y descriptivo (se recomienda mayúsculas).</small>
+                      </div>
+                      <div class="mb-3 full-row">
+                        <div class="d-flex justify-content-between align-items-center">
+                          <label for="ruta_zonas" class="form-label">Zonas (separadas por coma)</label>
+                          <small id="rutaZonasCount" class="text-muted">0 zonas</small>
+                        </div>
+                        <textarea id="ruta_zonas" class="form-control" rows="5" placeholder="Ej: Pomalca, Tumán, Pátapo, Pucalá"></textarea>
+                        <div id="rutaZonasPreview" class="chips-preview" aria-live="polite"></div>
+                        <small class="text-muted">Duplicados y capitalización se normalizan al guardar. Vista previa abajo.</small>
+                      </div>
                     </div>
                   </div>
                   <div class="modal-footer">
@@ -327,6 +334,48 @@
                 </div>
               </div>
             </div>
+            <script>
+            // Mejora UX: vista previa tipo "chips" de zonas y contador
+            (function(){
+              const txt = document.getElementById('ruta_zonas');
+              const prev = document.getElementById('rutaZonasPreview');
+              const count = document.getElementById('rutaZonasCount');
+
+              function normalizarLista(valor){
+                const items = (valor||'').split(',').map(s=>s.trim()).filter(Boolean);
+                // dedup case-insensitive y Capitalizar Palabras
+                const uniq = Array.from(new Set(items.map(s=> s.toLowerCase())));
+                const caps = uniq.map(s=> s.split(' ').map(w=> w? (w[0].toUpperCase()+w.slice(1)) : '').join(' '));
+                return caps;
+              }
+
+              function autoResize(el){
+                if (!el) return;
+                el.style.height = 'auto';
+                el.style.height = Math.min(el.scrollHeight, 320) + 'px';
+              }
+
+              function render(){
+                if (!txt || !prev || !count) return;
+                const caps = normalizarLista(txt.value);
+                prev.innerHTML = '';
+                caps.forEach(z=>{
+                  const s = document.createElement('span');
+                  s.className = 'chip';
+                  s.textContent = z;
+                  prev.appendChild(s);
+                });
+                count.textContent = (caps.length||0) + (caps.length===1 ? ' zona' : ' zonas');
+                autoResize(txt);
+              }
+
+              txt?.addEventListener('input', render);
+              // Recalcular cada vez que se abre el modal
+              document.getElementById('rutaModal')?.addEventListener('shown.bs.modal', render);
+              // También forzar una primera renderización por si el modal se maneja sin bootstrap
+              setTimeout(render, 0);
+            })();
+            </script>
 
             <!-- Sección Escaneo -->
             <section id="seccion-escaneo" class="seccion">

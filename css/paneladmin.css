@@ -662,6 +662,15 @@
     border-radius: 8px;
 }
 
+.chip:hover { transform: translateY(-1px); filter: brightness(0.98); }
+
+.chips-preview .chip:nth-child(6n+1){ background:#e0f2fe; color:#0c4a6e; }
+.chips-preview .chip:nth-child(6n+2){ background:#dcfce7; color:#14532d; }
+.chips-preview .chip:nth-child(6n+3){ background:#fef9c3; color:#713f12; }
+.chips-preview .chip:nth-child(6n+4){ background:#fee2e2; color:#7f1d1d; }
+.chips-preview .chip:nth-child(6n+5){ background:#ede9fe; color:#4c1d95; }
+.chips-preview .chip:nth-child(6n+6){ background:#ffe4e6; color:#9f1239; }
+
 .stat-item h5 {
     font-size: 1.2rem;
     color: #333;
@@ -678,6 +687,102 @@
     gap: 8px;
     margin-top: 15px;
 }
+
+.chips-preview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+  justify-content: center;
+}
+
+/* Center footer actions and title for Ruta modal */
+#rutaModal .modal-footer { justify-content: center; gap: 12px; }
+#rutaModal .modal-header .modal-title { width: 100%; text-align: center; }
+#rutaModal .form-grid { max-width: 820px; margin: 0 auto; }
+
+/* Make the Ruta modal look like a polished card */
+#rutaModal .modal-dialog { max-width: 860px; margin: 4vh auto; }
+#rutaModal .modal-content {
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  box-shadow: 0 24px 64px rgba(0,0,0,.18);
+  overflow: hidden;
+}
+#rutaModal .modal-header {
+  background: linear-gradient(90deg, #111827 0%, #1f2937 100%);
+  color: #f9fafb;
+  border-bottom: 0;
+}
+#rutaModal .modal-header .btn-close {
+  filter: invert(1) grayscale(100%);
+  opacity: .8;
+}
+#rutaModal .modal-header .btn-close:hover { opacity: 1; }
+#rutaModal .modal-body { background: #ffffff; }
+
+/* Typography and controls inside Ruta modal */
+#rutaModal .form-label { font-weight: 600; color: #1f2937; }
+#rutaModal small.text-muted { color: #6b7280 !important; font-size: 12px; }
+#rutaModal .form-label + input::placeholder,
+#rutaModal textarea::placeholder { color: #9ca3af; }
+#rutaModal .form-control {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  transition: box-shadow .2s ease, border-color .2s ease;
+}
+#rutaModal .form-control:focus {
+  border-color: #93c5fd;
+  box-shadow: 0 0 0 3px rgba(59,130,246,.15);
+}
+
+/* Make the zonas label and counter align nicely */
+#rutaModal .d-flex.justify-content-between.align-items-center { margin-bottom: 6px; }
+#rutaModal #rutaZonasCount { margin-left: auto; }
+#rutaModal #rutaZonasCount {
+  background: #eef2ff;
+  color: #3730a3;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-weight: 600;
+}
+
+/* Better textarea look */
+#rutaModal textarea#ruta_zonas {
+  min-height: 120px;
+  resize: vertical;
+  line-height: 1.4;
+}
+
+/* Ensure chips styling always wins inside the modal */
+#rutaModal .chips-preview { gap: 10px; background:#f8fafc; border:1px solid #eef2f7; padding: 12px; border-radius: 12px; min-height: 44px; }
+#rutaModal .chips-preview .chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  background: #f1f5f9;
+  color: #1f2937;
+  border: 0;
+  border-radius: 999px;
+  font-size: 12px;
+  line-height: 1;
+  box-shadow: 0 1px 2px rgba(0,0,0,.06);
+}
+#rutaModal .chips-preview .chip:hover { transform: translateY(-1px); filter: brightness(.98); }
+
+/* Same color palette but scoped to modal for higher specificity */
+#rutaModal .chips-preview .chip:nth-child(6n+1){ background:#e0f2fe; color:#0c4a6e; }
+#rutaModal .chips-preview .chip:nth-child(6n+2){ background:#dcfce7; color:#14532d; }
+#rutaModal .chips-preview .chip:nth-child(6n+3){ background:#fef9c3; color:#713f12; }
+#rutaModal .chips-preview .chip:nth-child(6n+4){ background:#fee2e2; color:#7f1d1d; }
+#rutaModal .chips-preview .chip:nth-child(6n+5){ background:#ede9fe; color:#4c1d95; }
+#rutaModal .chips-preview .chip:nth-child(6n+6){ background:#ffe4e6; color:#9f1239; }
+
+/* Buttons contrast inside modal */
+#rutaModal .btn.btn-primary { background:#111827; border:0; }
+#rutaModal .btn.btn-primary:hover { filter: brightness(.95); }
+#rutaModal .btn.btn-secondary { background:#9ca3af; border:0; color:#111827; }
+#rutaModal .btn.btn-secondary:hover { filter: brightness(.95); }
 
 /* Generador de reportes */
 .generador-reportes {
@@ -900,15 +1005,16 @@
 }
 
 #usuarioModal .modal-header {
-    background-color: #f8f9fa;
-    border-bottom: 1px solid #e9ecef;
+    background: linear-gradient(90deg, #111827 0%, #1f2937 100%);
+    color: #ffffff;
+    border-bottom: 0;
     padding: 1.25rem 1.5rem;
     border-top-left-radius: 10px;
     border-top-right-radius: 10px;
 }
 
 #usuarioModal .modal-title {
-    color: #2c3e50;
+    color: #ffffff;
     font-weight: 600;
     font-size: 1.4rem;
 }
@@ -963,7 +1069,8 @@
 }
 
 #usuarioModal .btn-close {
-    opacity: 0.7;
+    filter: invert(1) grayscale(100%);
+    opacity: 0.85;
     transition: opacity 0.2s ease;
 }
 
