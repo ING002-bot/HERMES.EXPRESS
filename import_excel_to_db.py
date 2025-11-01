@@ -1,6 +1,9 @@
 import os
 import json
+import sys
+import shutil
 from pathlib import Path
+from datetime import datetime
 from typing import List, Dict, Any
 import hashlib
 
@@ -102,30 +105,49 @@ def insert_rows(rows: List[Dict[str, Any]]) -> int:
 
 def main():
     try:
-        downloads = DOWNLOADS_DIR
-        downloads.mkdir(parents=True, exist_ok=True)
-        files = find_all_excels(downloads)
-        total_insertados = 0
-        procesados = []
-        for excel in files:
-            try:
-                rows = read_excel_rows(excel)
-                inserted = insert_rows(rows)
-                total_insertados += inserted
-                procesados.append({'archivo': excel.name, 'insertados': inserted})
-            except Exception as e:
-                procesados.append({'archivo': excel.name, 'error': str(e)})
-
-        result = {
-            'exito': True,
-            'mensaje': f'Importación completada de {len(files)} archivo(s) desde downloads/',
-            'insertados': total_insertados,
-            'detalle': procesados,
-        }
-        print(json.dumps(result, ensure_ascii=False))
+        # Asegurar que el directorio de descargas exista
+        DOWNLOADS_DIR.mkdir(parents=True, exist_ok=True)
+        
+        # Obtener la ruta al escritorio del usuario
+        desktop = Path.home() / 'Desktop'
+        
+        # Buscar archivos Excel en el escritorio (último modificado primero)
+        excel_files = list(desktop.glob('*.xls*'))
+        excel_files.sort(key=lambda x: x.stat().st_mtime, reverse=True)
+        
+        if not excel_files:
+            print('No se encontraron archivos Excel en el escritorio')
+            return 1
+            
+        # Tomar el archivo más reciente
+        source_file = excel_files[0]
+        print(f'Archivo encontrado: {source_file}')
+        
+        # Crear un nombre único para el archivo en la carpeta de descargas
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        dest_file = DOWNLOADS_DIR / f"{timestamp}_{source_file.name}"
+        
+        # Copiar el archivo a la carpeta de descargas
+        import shutil
+        shutil.copy2(str(source_file), str(dest_file))
+        print(f'Archivo copiado a: {dest_file}')
+        
+        # Procesar el archivo copiado
+        print(f'Procesando archivo: {dest_file}')
+        rows = read_excel_rows(dest_file)
+        
+        if not rows:
+            print('El archivo está vacío o no se pudieron leer los datos')
+            return 1
+            
+        # Insertar en la base de datos
+        inserted = insert_rows(rows)
+        print(f'Se insertaron {inserted} registros en la base de datos')
+        
         return 0
+        
     except Exception as e:
-        print(json.dumps({'exito': False, 'mensaje': str(e)}))
+        print(f'Error: {str(e)}', file=sys.stderr)
         return 1
 
 

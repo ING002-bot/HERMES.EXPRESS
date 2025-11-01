@@ -184,6 +184,9 @@ document.addEventListener('DOMContentLoaded', function() {
     $('#btnNuevoUsuario').off('click').on('click', function() {
         const form = document.getElementById('usuarioForm');
         form.reset();
+        // Limpiar ID residual para evitar que dispare 'actualizar'
+        const hid = document.getElementById('usuario_id');
+        if (hid) hid.value = '';
         document.getElementById('usuarioModalLabel').textContent = 'Nuevo Usuario';
         form.setAttribute('data-action', 'crear');
         
@@ -269,8 +272,18 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (data.error) {
                     mostrarAlerta('danger', data.error);
                 } else {
-                    mostrarAlerta('success', 'Usuario eliminado correctamente');
+                    let msg = 'Usuario eliminado correctamente';
+                    if (data.desasignados) {
+                        const a = Number(data.desasignados.paquetes || 0);
+                        const b = Number(data.desasignados.paquetes_json || 0);
+                        const total = a + b;
+                        msg += ` — Paquetes desasignados: ${total}` + (total ? ` (paquetes: ${a}, paquetes_json: ${b})` : '');
+                    }
+                    mostrarAlerta('success', msg);
                     try { window.usuariosDT && window.usuariosDT.ajax.reload(null, false); } catch(_){ }
+                    // Refrescar vistas de asignación
+                    try { if (typeof cargarPaquetesSinAsignar === 'function') cargarPaquetesSinAsignar(); } catch(_){ }
+                    try { if (typeof cargarResumenAsignados === 'function') cargarResumenAsignados(); } catch(_){ }
                 }
             })
             .catch(error => {
@@ -350,8 +363,9 @@ document.addEventListener('DOMContentLoaded', function() {
             formData.clave = clave;
         }
         
-        // Determinar la acción (crear o actualizar)
-        const action = id ? 'actualizar' : 'crear';
+        // Determinar la acción (usar data-action como fuente de verdad)
+        const actionAttr = (formEl.getAttribute('data-action') || '').toLowerCase();
+        const action = actionAttr === 'crear' ? 'crear' : (actionAttr === 'actualizar' ? 'actualizar' : (id ? 'actualizar' : 'crear'));
         let url = `/HERMES.EXPRESS/php/usuarios.php?action=${action}`;
         const method = action === 'crear' ? 'POST' : 'PUT';
         

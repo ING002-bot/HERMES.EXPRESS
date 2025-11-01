@@ -41,9 +41,11 @@
                     <span class="icono">📦</span>Paquetes
                 </a></li>
                 
-                <li><a href="javascript:void(0)" onclick="mostrarSeccion('pagos', this)">
-                    <span class="icono">💰</span>Pagos Empleados
+                <li><a href="javascript:void(0)" onclick="mostrarSeccion('archivos-excel', this)">
+                    <i class="fas fa-file-excel menu-icon"></i>
+                    <span class="menu-text">Archivos Excel</span>
                 </a></li>
+                
                 
                 <li><a href="javascript:void(0)" onclick="mostrarSeccion('asignar', this)">
                     <span class="icono">🧩</span>Asignar
@@ -505,6 +507,38 @@
                   window.cargarLotesEscaneo = async function(){ await cargarLotes(); await cargarEscaneos(); setTimeout(()=>input?.focus(), 50); };
                 })();
                 </script>
+            <script>
+            // Sincronización de scroll inferior con la tabla de Paquetes
+            function initHScrollPaquetes(){
+  const cont = document.querySelector('#seccion-paquetes .tabla-container');
+  const tbl = document.getElementById('tablaPaquetes');
+  const hs = document.getElementById('hscrollPaquetes');
+  const inner = document.getElementById('hscrollPaquetesInner');
+  if (!cont || !tbl || !hs || !inner) return;
+  // Ocultar scroll horizontal del contenedor para que solo se vea la barra fija
+  cont.style.overflowX = 'hidden';
+  // Asegurar que la tabla pueda crecer horizontalmente (no wrap)
+  try {
+    tbl.style.whiteSpace = 'nowrap';
+    // Estimar un ancho mínimo por columna para garantizar desplazamiento
+    const colCount = (tbl.tHead && tbl.tHead.rows[0]) ? tbl.tHead.rows[0].cells.length : tbl.rows[0]?.cells.length || 10;
+    const minPerCol = 160; // px por columna
+    const minWidth = Math.max(tbl.scrollWidth, colCount * minPerCol);
+    tbl.style.minWidth = minWidth + 'px';
+    // Evitar que celdas rompan línea
+    tbl.querySelectorAll('th, td').forEach(el=>{ el.style.whiteSpace = 'nowrap'; });
+  } catch(_){ }
+  // Mostrar barra si hay overflow horizontal
+  const contentWidth = Math.max(tbl.scrollWidth, cont.scrollWidth, tbl.offsetWidth);
+  const overflow = contentWidth > cont.clientWidth + 2;
+  hs.style.display = overflow ? 'block' : 'none';
+  // Añadir un pequeño buffer para garantizar llegar al extremo derecho
+  inner.style.width = (contentWidth + 600) + 'px';
+  // Vincular desplazamientos
+  hs.onscroll = ()=> { cont.scrollLeft = hs.scrollLeft; };
+  cont.onscroll = ()=> { hs.scrollLeft = cont.scrollLeft; };
+}
+            </script>
             </section>
             <script>
             // Mover la sección Configuración justo debajo de Asignar y dibujar gráfico de torta
@@ -583,7 +617,13 @@
                 </div>
                 <div class="card">
                     <div class="card-body">
-                        <h3>Paquetes sin asignar</h3>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h3>Paquetes sin asignar</h3>
+                            <div>
+                              <button id="btnLimpiarAsignaciones" class="btn btn-peligro me-2" title="Quitar asignaciones a empleados inexistentes">Limpiar asignaciones</button>
+                              <button id="btnRefrescarSinAsignar" class="btn btn-secundario">Refrescar</button>
+                            </div>
+                        </div>
                         <div class="tabla-container">
                             <table id="tablaSinAsignar">
                                 <thead>
@@ -592,6 +632,8 @@
                                         <th>Código</th>
                                         <th>Destinatario</th>
                                         <th>Distrito</th>
+                                        <th>Peso</th>
+                                        <th>Teléfono</th>
                                         <th>Acciones</th>
                                     </tr>
                                 </thead>
@@ -671,21 +713,57 @@
                         <thead>
                             <tr>
                                 <th>Código</th>
-                                <th>Remitente</th>
-                                <th>Destinatario</th>
+                                <th>Departamento</th>
+                                <th>Provincia</th>
+                                <th>Distrito</th>
                                 <th>Estado</th>
+                                <th>Consignado</th>
+                                <th>Dirección Consignado</th>
                                 <th>Peso</th>
-                                <th>Precio</th>
-                                <th>Fecha</th>
+                                <th>Teléfono</th>
                                 <th>Acciones</th>
                             </tr>
                         </thead>
                         <tbody id="cuerpoTablaPaquetes"></tbody>
                     </table>
                 </div>
+                <!-- Barra de desplazamiento horizontal fija/sincronizada -->
+                <div id="hscrollPaquetes" style="position: fixed; left: 0; right: 0; bottom: 0; height: 14px; overflow-x: auto; overflow-y: hidden; background: rgba(255,255,255,0.95); border-top: 1px solid #e0e0e0; display: none; z-index: 999;">
+                  <div id="hscrollPaquetesInner" style="height: 1px;"></div>
+                </div>
             </section>
 
-            
+            <!-- Sección Archivos Excel -->
+            <section id="seccion-archivos-excel" class="seccion">
+                <div class="seccion-header d-flex justify-content-between align-items-center">
+                    <h2>Archivos Excel</h2>
+                    <div class="acciones">
+                        <button class="btn btn-primario" onclick="cargarArchivosExcel()">
+                            <i class="fas fa-sync-alt"></i> Actualizar
+                        </button>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table id="tablaArchivosExcel" class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Nombre del Archivo</th>
+                                        <th>Tamaño</th>
+                                        <th>Fecha de Modificación</th>
+                                        <th>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="cuerpoTablaArchivos">
+                                    <!-- Los archivos se cargarán aquí dinámicamente -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
 
             <section id="seccion-finanzas" class="seccion">
                 <div class="seccion-header d-flex justify-content-between align-items-center">
@@ -982,7 +1060,7 @@
                 </script>
             </section>
 
-            <section id="seccion-pagos" class="seccion">
+            <section id="seccion-pagos" class="seccion" style="display:none !important;">
                 <div class="seccion-header">
                     <h2>Gestión de Pagos a Empleados</h2>
                     <div class="acciones">
@@ -1907,7 +1985,6 @@ async function cargarUltimoExcelEnPaquetes() {
 async function cargarPaquetesDesdeBD() {
   try {
     const resp = await fetch('php/paquetes.php?limit=2000', { cache: 'no-store' });
-    // Parseo robusto (si no fuese JSON, te muestra qué devolvió)
     const raw = await resp.text();
     let data;
     try { data = JSON.parse(raw); } catch (e) {
@@ -1916,11 +1993,13 @@ async function cargarPaquetesDesdeBD() {
     }
     if (!data.exito) throw new Error(data.mensaje || 'Error desconocido');
 
-    const headers = data.headers && data.headers.length ? data.headers : inferHeaders(data.datos);
-    renderPaquetesDesdeBD(headers, data.datos);
+    // Guardar dataset original y headers para búsqueda/filtro
+    window.__paquetesOriginal = Array.isArray(data.datos) ? data.datos : [];
+    window.__paquetesHeaders = data.headers && data.headers.length ? data.headers : inferHeaders(window.__paquetesOriginal);
+    aplicarBusquedaYFiltro();
 
     const totalLbl = document.getElementById('totalPaquetes');
-    if (totalLbl) totalLbl.textContent = String(data.total || data.datos.length || 0);
+    if (totalLbl) totalLbl.textContent = String(data.total || window.__paquetesOriginal.length || 0);
 
     // No cambiar de sección automáticamente aquí para respetar la vista actual
   } catch (e) {
@@ -2010,6 +2089,35 @@ async function importarDesdeDownloadsYMostrar() {
 window.cargarPaquetesDesdeBD = cargarPaquetesDesdeBD;
 window.inferHeaders = inferHeaders;
 window.renderPaquetesDesdeBD = renderPaquetesDesdeBD;
+
+// Búsqueda y filtro en Paquetes
+function obtenerCampo(row, posiblesClaves){
+  for (const k of posiblesClaves){ if (row[k] != null) return String(row[k]); }
+  // intentar con variantes por mayúsculas
+  for (const k of posiblesClaves){
+    const keys = Object.keys(row);
+    const hit = keys.find(x=> x.toLowerCase()===String(k).toLowerCase());
+    if (hit){ return String(row[hit]); }
+  }
+  return '';
+}
+function aplicarBusquedaYFiltro(){
+  const q = (document.getElementById('buscarPaquete')?.value || '').trim().toLowerCase();
+  const estadoSel = (document.getElementById('filtroEstado')?.value || '').trim().toLowerCase();
+  const base = Array.isArray(window.__paquetesOriginal) ? window.__paquetesOriginal : [];
+  const filtrados = base.filter(row=>{
+    const codigo = obtenerCampo(row, ['Código','codigo','CODIGO']);
+    const consignado = obtenerCampo(row, ['Consignado','consignado','CONSIGNADO','Destinatario','destinatario','NOMBRE']);
+    const estado = obtenerCampo(row, ['Estado','estado','ESTADO']).toLowerCase();
+    const matchTexto = !q || codigo.toLowerCase().includes(q) || consignado.toLowerCase().includes(q);
+    const matchEstado = !estadoSel || estado === estadoSel;
+    return matchTexto && matchEstado;
+  });
+  renderPaquetesDesdeBD(window.__paquetesHeaders || inferHeaders(filtrados), filtrados);
+}
+// Eventos de UI
+document.getElementById('buscarPaquete')?.addEventListener('input', function(){ aplicarBusquedaYFiltro(); });
+document.getElementById('filtroEstado')?.addEventListener('change', function(){ aplicarBusquedaYFiltro(); });
 // Si no vienen headers, intenta inferir por llaves del primer objeto
 function inferHeaders(rows) {
   if (!Array.isArray(rows) || !rows.length) return [];
@@ -2017,60 +2125,110 @@ function inferHeaders(rows) {
 }
 
 function renderPaquetesDesdeBD(headers, rows) {
+  // Estilos compactos
+  try {
+    const tabla = document.getElementById('tablaPaquetes');
+    if (tabla){ tabla.style.fontSize='12px'; tabla.querySelectorAll('th,td').forEach(c=>{ c.style.padding='4px 8px'; }); }
+  } catch(_){ }
+
+  // Normalizar claves
+  const filasProcesadas = rows.map(row => {
+    const nuevo = {}; Object.keys(row||{}).forEach(k=>{ nuevo[String(k).toLowerCase()] = row[k]; }); return nuevo;
+  });
+
   const tabla = document.getElementById('tablaPaquetes');
   if (!tabla) return alert('No se encontró la tabla de Paquetes (id="tablaPaquetes").');
   const thead = tabla.querySelector('thead');
   const tbody = tabla.querySelector('tbody');
   if (!thead || !tbody) return alert('La tabla de Paquetes no tiene thead/tbody.');
 
-  const esc = (s) => String(s ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
+  // Encabezados fijos solicitados
+  const ordenFinal = [
+    'código',
+    'departamento',
+    'provincia',
+    'distrito',
+    'estado',
+    'consignado',
+    'dirección consignado',
+    'peso',
+    'teléfono',
+    'acciones'
+  ];
+  thead.innerHTML = '<tr>' + ordenFinal.map(lbl=> `<th>${lbl.replace(/\b\w/g, c=>c.toUpperCase())}</th>`).join('') + '</tr>';
 
-  // Encabezados
-  thead.innerHTML = '<tr>' + headers.map(h => `<th>${esc(h)}</th>`).join('') + '</tr>';
+  const esc = (s) => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 
-  // Cuerpo
   let html = '';
-  for (const r of rows) {
-    html += '<tr>' + headers.map(h => `<td>${esc(r[h])}</td>`).join('') + '</tr>';
+  for (const r of filasProcesadas) {
+    const codigo = r['codigo'] || '';
+    const telefono = r['telefono'] || '';
+    const cliente = r['consignado'] || r['destinatario'] || '';
+    const estado = r['estado'] || '';
+    // Helper: obtener valor por columna visible del thead (tolerante a acentos/variantes)
+    const getVal = (label)=>{
+      const lab = String(label||'').toLowerCase();
+      const picks = {
+        'código': ['codigo','código','cod','cod.'],
+        'codigo': ['codigo','código','cod','cod.'],
+        'departamento': ['departamento','depto'],
+        'provincia': ['provincia'],
+        'distrito': ['distrito'],
+        'estado': ['estado'],
+        'consignado': ['consignado','destinatario','cliente'],
+        'dirección consignado': ['direccion_consignado','dirección consignado','direccion consignado','direccion','dirección','address'],
+        'peso': ['peso'],
+        'teléfono': ['telefono','teléfono','celular','phone','cel'],
+        'telefono': ['telefono','teléfono','celular','phone','cel']
+      };
+      const keys = picks[lab] || [lab];
+      for (const k of keys){ if (r[k] != null && r[k] !== '') return r[k]; }
+      return '';
+    };
+    html += '<tr>' + ordenFinal.map(lbl=>{
+      if (lbl==='acciones'){
+        const telefonoLimpio = String(telefono||'').replace(/[^0-9]/g,'');
+        const telefonoForm = telefonoLimpio ? (telefonoLimpio.startsWith('51')?telefonoLimpio:('51'+telefonoLimpio)) : '';
+        return `<td class="text-center" style="white-space:nowrap;">`
+          + (telefonoForm? `<button class="btn btn-whatsapp btn-enviar-whatsapp" data-id="${esc(codigo)}" data-telefono="${esc(telefonoForm)}" data-cliente="${esc(cliente)}" data-estado="${esc(estado)}" style="padding:2px 6px; font-size:12px; background:#25D366; color:#fff; border:none; border-radius:3px; display:inline-flex; align-items:center; gap:4px;"><i class="fab fa-whatsapp" style="font-size:14px;"></i><span>Enviar</span></button>` : '')
+          + `</td>`;
+      }
+      const val = getVal(lbl);
+      return `<td>${esc(val)}</td>`;
+    }).join('') + '</tr>';
   }
   tbody.innerHTML = html;
+  // Sincronizar barra de desplazamiento inferior
+  try { initHScrollPaquetes(); } catch(_){ }
+  
+  // Inicializar los tooltips de Bootstrap para los botones de WhatsApp
+  const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+  tooltipTriggerList.map(function (tooltipTriggerEl) {
+    return new bootstrap.Tooltip(tooltipTriggerEl);
+  });
 }
 // Pinta headers y filas en #tablaPaquetes a partir de matriz [ [headers...], [row1...], ... ]
 function renderPaquetesDesdeExcel(rows) {
-    const tabla = document.getElementById('tablaPaquetes');
-    if (!tabla) {
-        alert('No se encontró la tabla de Paquetes (id="tablaPaquetes").');
-        return;
-    }
-    const thead = tabla.querySelector('thead');
-    const tbody = tabla.querySelector('tbody');
-    if (!thead || !tbody) {
-        alert('La tabla de Paquetes no tiene thead/tbody.');
-        return;
-    }
-
-    // Primera fila = encabezados
-    const headers = rows[0].map(h => String(h || '').trim());
-    const dataRows = rows.slice(1);
-
-    // Helper para evitar XSS en celdas
-    const esc = (s) => String(s ?? '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;');
-
-    // Construir encabezados
-    thead.innerHTML = '<tr>' + headers.map(h => `<th>${esc(h)}</th>`).join('') + '</tr>';
-
-    // Construir cuerpo
-    let html = '';
-    for (const r of dataRows) {
-        html += '<tr>' + headers.map((_, i) => `<td>${esc(r[i] ?? '')}</td>`).join('') + '</tr>';
-    }
-    tbody.innerHTML = html;
+    try {
+        if (!Array.isArray(rows) || rows.length < 2) { alert('Excel vacío'); return; }
+        const headersRaw = rows[0].map(h => String(h||'').trim());
+        const normalizar = (s)=> String(s||'').toLowerCase();
+        const mapeo = {
+            'código': 'codigo','codigo':'codigo','cod.':'codigo','cod':'codigo',
+            'departamento':'departamento','provincia':'provincia','distrito':'distrito',
+            'estado':'estado',
+            'consignado':'consignado','destinatario':'consignado','cliente':'consignado',
+            'dirección consignado':'direccion_consignado','direccion consignado':'direccion_consignado','direccion':'direccion_consignado','dirección':'direccion_consignado',
+            'peso':'peso',
+            'teléfono':'telefono','telefono':'telefono','celular':'telefono','phone':'telefono'
+        };
+        const keys = headersRaw.map(h => mapeo[normalizar(h)] || normalizar(h));
+        const objetos = rows.slice(1).map(arr => {
+            const o = {}; keys.forEach((k, i)=>{ if (k) o[k] = arr[i]; }); return o;
+        });
+        const headers = inferHeaders(objetos);
+        renderPaquetesDesdeBD(headers, objetos);
+    } catch(e){ console.error('renderPaquetesDesdeExcel', e); }
 }
         // Funciones para cargar datos de empleados, vehículos y rutas
         function cargarEmpleados() {
@@ -2605,8 +2763,19 @@ function renderPaquetesDesdeExcel(rows) {
                     <td>${p.codigo || ''}</td>
                     <td>${p.destinatario || ''}</td>
                     <td>${p.distrito || ''}</td>
+                    <td>${p.peso || ''}</td>
+                    <td>${p.telefono || ''}</td>
                     <td>
                         <button class="btn btn-pequeno btn-primario" onclick="reasignarPrompt(${p.id})">Reasignar</button>
+                        <button class="btn btn-whatsapp btn-enviar-whatsapp"
+                                style="margin-left:6px; padding:2px 6px; font-size:12px; background-color:#25D366; color:white; border:none; border-radius:3px; cursor:pointer; display:inline-flex; align-items:center; gap:4px;"
+                                data-id="${p.codigo || ''}"
+                                data-telefono="${(p.telefono||'').toString().trim()}"
+                                data-cliente="${(p.consignado||p.destinatario||'').toString().replace(/\"/g,'&quot;')}"
+                                data-estado="${(p.estado||'').toString()}">
+                          <i class="fab fa-whatsapp" style="font-size:14px;"></i>
+                          <span>Enviar</span>
+                        </button>
                     </td>
                 </tr>
             `).join('');
@@ -2646,6 +2815,18 @@ function renderPaquetesDesdeExcel(rows) {
     }
     // Enlazar botón
     document.getElementById('btnAsignarAuto')?.addEventListener('click', asignarPaquetesAuto);
+    document.getElementById('btnRefrescarSinAsignar')?.addEventListener('click', function(){ cargarPaquetesSinAsignar(); });
+    document.getElementById('btnLimpiarAsignaciones')?.addEventListener('click', async function(){
+      try{
+        const r = await fetch('php/admin.php?accion=limpiar_asignaciones', { cache:'no-store' });
+        const d = await r.json();
+        if (!d.exito){ alert(d.mensaje || 'No se pudo limpiar'); return; }
+        const a = d.limpiados?.paquetes || 0; const b = d.limpiados?.paquetes_json || 0;
+        alert(`Limpieza completada. Paquetes sin asignar: ${a+b} (paquetes: ${a}, paquetes_json: ${b})`);
+        await cargarPaquetesSinAsignar();
+        if (typeof cargarResumenAsignados==='function') await cargarResumenAsignados();
+      }catch(e){ console.error('limpiar_asignaciones', e); alert('Error al limpiar'); }
+    });
     </script>
     
     <!-- jQuery (debe cargarse primero) -->
@@ -2817,6 +2998,9 @@ function renderPaquetesDesdeExcel(rows) {
     }
     </script>
     
+    <!-- Script para el envío de notificaciones por WhatsApp -->
+    <script src="js/enviar-notificacion.js"></script>
+    
     <!-- Fallback: define cargarRutasConfig si aún no existe -->
     <script>
     if (typeof window.cargarRutasConfig === 'undefined') {
@@ -2885,6 +3069,204 @@ function renderPaquetesDesdeExcel(rows) {
             } catch(e){ console.error(e); alert('Error eliminando ruta'); }
         };
     }
+    </script>
+
+    <!-- Función para cargar archivos Excel -->
+    <script>
+    // Función para formatear el tamaño del archivo en un formato legible
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+
+    // Función para formatear la fecha
+    function formatDate(dateString) {
+        const options = { 
+            year: 'numeric', 
+            month: 'short', 
+            day: 'numeric',
+            hour: '2-digit', 
+            minute: '2-digit' 
+        };
+        return new Date(dateString).toLocaleDateString('es-ES', options);
+    }
+
+    // Función para cargar la lista de archivos Excel
+    window.cargarArchivosExcel = async function() {
+        try {
+            const response = await fetch('php/admin.php?accion=listar_archivos_excel');
+            const data = await response.json();
+            
+            if (data.exito) {
+                const tbody = document.getElementById('cuerpoTablaArchivos');
+                if (!tbody) return;
+                
+                // Ordenar por fecha de modificación (más reciente primero)
+                const archivos = data.archivos.sort((a, b) => 
+                    new Date(b.fecha_modificacion) - new Date(a.fecha_modificacion)
+                );
+                
+                tbody.innerHTML = archivos.map(archivo => {
+                    const nombre = archivo.nombre;
+                    const ruta = 'downloads/' + nombre;
+                    const tamano = formatFileSize(archivo.tamano);
+                    const fecha = formatDate(archivo.fecha_modificacion);
+                    
+                    return `
+                        <tr>
+                            <td>${nombre}</td>
+                            <td>${tamano}</td>
+                            <td>${fecha}</td>
+                            <td>
+                                <a href="${ruta}" class="btn btn-pequeno btn-primario" download>
+                                    <i class="fas fa-download"></i> Descargar
+                                </a>
+                                <button class="btn btn-pequeno btn-secundario" onclick="verArchivo('${nombre}')">
+                                    <i class="fas fa-eye"></i> Ver
+                                </button>
+                            </td>
+                        </tr>`;
+                }).join('');
+            } else {
+                console.error('Error al cargar archivos:', data.mensaje);
+                alert('Error al cargar la lista de archivos: ' + (data.mensaje || 'Error desconocido'));
+            }
+        } catch (error) {
+            console.error('Error en cargarArchivosExcel:', error);
+            alert('Error al cargar la lista de archivos. Por favor, intente de nuevo.');
+        }
+    };
+
+    // Función para ver el contenido de un archivo
+    window.verArchivo = function(nombreArchivo) {
+        // Aquí puedes implementar la lógica para mostrar el contenido del archivo
+        // Por ejemplo, abrir un modal con una vista previa o redirigir a una página de vista previa
+        window.open('ver_archivo.php?archivo=' + encodeURIComponent(nombreArchivo), '_blank');
+    };
+
+    // Función para cargar y mostrar los archivos Excel
+    async function cargarArchivosExcel() {
+        try {
+            const contenedor = document.getElementById('contenedor-archivos-excel');
+            if (!contenedor) return;
+            
+            // Mostrar indicador de carga
+            contenedor.innerHTML = '<div class="text-center py-4"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Cargando...</span></div><p class="mt-2">Cargando archivos...</p></div>';
+            
+            // Hacer la petición al servidor
+            const response = await fetch('php/admin.php?accion=listar_archivos_excel');
+            const data = await response.json();
+            
+            if (!data.exito) {
+                throw new Error(data.mensaje || 'Error al cargar los archivos');
+            }
+            
+            // Si no hay archivos
+            if (!data.archivos || data.archivos.length === 0) {
+                contenedor.innerHTML = `
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        No se encontraron archivos Excel en la carpeta de descargas.
+                    </div>`;
+                return;
+            }
+            
+            // Construir la tabla de archivos
+            let html = `
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Nombre del archivo</th>
+                            <th>Tamaño</th>
+                            <th>Fecha de modificación</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>`;
+            
+            // Agregar cada archivo a la tabla
+            data.archivos.forEach(archivo => {
+                const nombreArchivo = archivo.nombre;
+                // Asegurarse de que la ruta incluya el directorio downloads/
+                let rutaParaFrontend = archivo.ruta || '';
+                if (!rutaParaFrontend.includes('downloads/')) {
+                    rutaParaFrontend = `downloads/${nombreArchivo}`;
+                }
+                
+                html += `
+                    <tr>
+                        <td>${nombreArchivo}</td>
+                        <td>${archivo.tamano_formateado}</td>
+                        <td>${new Date(archivo.fecha_modificacion).toLocaleString()}</td>
+                        <td>
+                            <a href="${rutaParaFrontend}" class="btn btn-sm btn-primary me-2" download>
+                                <i class="fas fa-download"></i> Descargar
+                            </a>
+                            <button class="btn btn-sm btn-info" onclick="verArchivo('${encodeURIComponent(rutaParaFrontend)}')">
+                                <i class="fas fa-eye"></i> Ver
+                            </button>
+                            <div class="d-none ruta-completa">${rutaParaFrontend}</div>
+                        </td>
+                    </tr>`;
+            });
+            
+            html += `
+                    </tbody>
+                </table>
+            </div>`;
+            
+            contenedor.innerHTML = html;
+            
+        } catch (error) {
+            console.error('Error al cargar archivos Excel:', error);
+            const contenedor = document.getElementById('contenedor-archivos-excel');
+            if (contenedor) {
+                contenedor.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Error al cargar los archivos: ${error.message}
+                    </div>`;
+            }
+        }
+    }
+    
+    // Función para ver el contenido de un archivo
+    function verArchivo(nombreArchivo) {
+        // Extraer solo el nombre del archivo (por si viene con ruta)
+        const nombreArchivoLimpio = nombreArchivo.split('/').pop().split('\\').pop();
+        
+        // Construir la URL para ver el archivo
+        const url = new URL(`ver_archivo.php?archivo=${encodeURIComponent(nombreArchivoLimpio)}`, window.location.origin + window.location.pathname.replace('paneladmin.html', ''));
+        console.log('Intentando acceder a:', url.toString()); // Para depuración
+        
+        // Abrir en una nueva pestaña
+        window.open(url, '_blank');
+    }
+    
+    // Hacer las funciones accesibles globalmente
+    window.cargarArchivosExcel = cargarArchivosExcel;
+    window.verArchivo = verArchivo;
+    
+    // Cargar los archivos cuando se muestre la sección
+    document.addEventListener('DOMContentLoaded', function() {
+        // Agregar un observador para cargar los archivos cuando se muestre la sección
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting && entry.target.id === 'seccion-archivos-excel') {
+                    cargarArchivosExcel();
+                }
+            });
+        }, { threshold: 0.1 });
+        
+        const seccionArchivos = document.getElementById('seccion-archivos-excel');
+        if (seccionArchivos) {
+            observer.observe(seccionArchivos);
+        }
+    });
     </script>
 </body>
 </html>

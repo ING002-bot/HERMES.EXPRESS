@@ -170,7 +170,7 @@ try {
             if (!in_array($tipo, $tiposPermitidos, true)) {
                 throw new Exception('Tipo de usuario inválido');
             }
-            $zonasPermitidas = ['URBANO','PUEBLOS','PLAYAS','COOPERATIVAS','EXCOOPERATIVA','FERREÑAFE'];
+            $zonasPermitidas = ['URBANO','PUEBLOS','PLAYAS','COOPERATIVAS','EXCOOPERATIVA','EXCOOPERATIVAS','FERREÑAFE'];
             if ($tipo === 'empleado') {
                 if (empty($zona)) {
                     throw new Exception('La zona es obligatoria para empleados');
@@ -263,26 +263,70 @@ try {
 
         case 'eliminar':
             $id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
-            
-            if ($id <= 0) {
-                throw new Exception('ID de usuario no válido');
+            if ($id <= 0) { throw new Exception('ID de usuario no válido'); }
+            if ($id === 1) { throw new Exception('No se puede eliminar el administrador principal'); }
+
+            // Desasignar paquetes del usuario y luego eliminarlo (transacción)
+            $pdo->beginTransaction();
+            try {
+                // Asegurar columnas empleado_id existen (idempotente)
+                try { $pdo->exec("ALTER TABLE paquetes ADD COLUMN empleado_id INT NULL"); } catch (Throwable $e) { }
+                try { $pdo->exec("ALTER TABLE paquetes_json ADD COLUMN empleado_id INT NULL"); } catch (Throwable $e) { }
+                // Contar antes para reporte
+                $cnt1 = $pdo->prepare("SELECT COUNT(*) c FROM paquetes WHERE empleado_id = ?");
+                $cnt1->execute([$id]);
+                $paquetes_asignados = (int)($cnt1->fetch(PDO::FETCH_ASSOC)['c'] ?? 0);
+
+                $cnt2 = $pdo->prepare("SELECT COUNT(*) c FROM paquetes_json WHERE empleado_id = ?");
+                try { $cnt2->execute([$id]); } catch (Throwable $e) { $paquetes_json_asignados = 0; }
+                $paquetes_json_asignados = isset($paquetes_json_asignados) ? $paquetes_json_asignados : (int)($cnt2->fetch(PDO::FETCH_ASSOC)['c'] ?? 0);
+
+                // Desasignar SOLO paquetes 'En almacén' en tabla paquetes
+                $upd1 = $pdo->prepare("UPDATE paquetes 
+                                        SET empleado_id = NULL 
+                                        WHERE empleado_id = ? 
+                                          AND (
+                                            estado IS NULL OR 
+                                            LOWER(estado) IN ('en almacen','en almacén','en_almacen','almacen')
+                                          )");
+                try { $upd1->execute([$id]); } catch (Throwable $e) { /* tabla puede no existir en algunos entornos */ }
+
+                $upd2 = $pdo->prepare("UPDATE paquetes_json SET empleado_id = NULL WHERE empleado_id = ?");
+                try { $upd2->execute([$id]); } catch (Throwable $e) { /* tabla opcional */ }
+
+                // Eliminar usuario
+                $del = $pdo->prepare("DELETE FROM usuarios WHERE id = ? AND id != 1");
+                $del->execute([$id]);
+                if ($del->rowCount() === 0) { throw new Exception('No se pudo eliminar el usuario o no existe'); }
+
+                // Limpieza defensiva: cualquier asignación con empleado inexistente y estado 'En almacén' -> NULL
+                try {
+                    $pdo->exec("UPDATE paquetes p 
+                                LEFT JOIN usuarios u ON p.empleado_id = u.id 
+                                SET p.empleado_id = NULL 
+                                WHERE p.empleado_id IS NOT NULL 
+                                  AND u.id IS NULL
+                                  AND (
+                                    p.estado IS NULL OR 
+                                    LOWER(p.estado) IN ('en almacen','en almacén','en_almacen','almacen')
+                                  )");
+                } catch (Throwable $e) { /* ignorar si tabla/columna no existe */ }
+                try {
+                    $pdo->exec("UPDATE paquetes_json pj LEFT JOIN usuarios u ON pj.empleado_id = u.id SET pj.empleado_id = NULL WHERE pj.empleado_id IS NOT NULL AND u.id IS NULL");
+                } catch (Throwable $e) { /* ignorar si tabla/columna no existe */ }
+
+                $pdo->commit();
+                echo json_encode([
+                    'success' => 'Usuario eliminado y paquetes desasignados',
+                    'desasignados' => [
+                        'paquetes' => $paquetes_asignados,
+                        'paquetes_json' => $paquetes_json_asignados
+                    ]
+                ]);
+            } catch (Throwable $e) {
+                $pdo->rollBack();
+                throw $e;
             }
-            
-            // No permitir eliminar el usuario admin principal (ID 1)
-            if ($id === 1) {
-                throw new Exception('No se puede eliminar el administrador principal');
-            }
-            
-            // Verificar si el usuario existe
-            $stmt = $pdo->prepare("DELETE FROM usuarios WHERE id = ? AND id != 1");
-            $stmt->execute([$id]);
-            
-            if ($stmt->rowCount() === 0) {
-                throw new Exception('No se pudo eliminar el usuario o el usuario no existe');
-            }
-            
-            $response = ['success' => 'Usuario eliminado correctamente'];
-            echo json_encode($response);
             break;
 
         default:

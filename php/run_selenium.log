@@ -328,3 +328,67 @@ Esperando 10 segundos antes de cerrar...
 [2025-10-27 16:50:56] SKIP inexistente: C:\Python313\python.exe
 [2025-10-27 16:50:56] SKIP inexistente: C:\Python312\python.exe
 [2025-10-27 16:50:56] PROBANDO: python "C:\xampp\htdocs\HERMES.EXPRESS\selenium_utils.py" 2>&1
+[2025-11-01 20:09:47] PROBANDO: "C:\Users\JULIO DME\AppData\Local\Programs\Python\Python313\python.exe" "C:\xampp\htdocs\HERMES.EXPRESS\selenium_utils.py" 2>&1
+[2025-11-01 20:10:19] CODE: 0
+OUT:
+=== EXTRACCION DE DATOS SAVAR EXPRESS ===
+
+Configurando consulta para el rango de fechas: 2025-09-15 al 2025-09-15
+
+PASO 1: INICIANDO SESION...
+Iniciando sesión en SAVAR con usuario: CHI.HER
+Navegando a la página de inicio de sesión...
+Página cargada correctamente
+Screenshot guardado: screenshot_login_page.png
+Buscando campos de login...
+Elemento encontrado: css selector=input[type='text']
+Elemento encontrado: css selector=input[type='password']
+Campos de login encontrados, completando credenciales...
+Usuario ingresado
+Contraseña ingresada
+Elemento encontrado: css selector=button[type='submit']
+Haciendo clic en el botón de envío...
+Esperando a que se complete el inicio de sesión...
+Error en el proceso de inicio de sesión: Message: no such window: target window already closed
+from unknown error: web view not found
+  (Session info: chrome=141.0.7390.123)
+Stacktrace:
+	GetHandleVerifier [0x0x4ffe43+66515]
+	GetHandleVerifier [0x0x4ffe84+66580]
+	(No symbol) [0x0x2edc48]
+	(No symbol) [0x0x2cc18d]
+	(No symbol) [0x0x361a4e]
+	(No symbol) [0x0x37c4d9]
+	(No symbol) [0x0x35afc6]
+	(No symbol) [0x0x32c2ca]
+	(No symbol) [0x0x32d154]
+	GetHandleVerifier [0x0x757353+2521315]
+	GetHandleVerifier [0x0x7522d3+2500707]
+	GetHandleVerifier [0x0x527c94+229924]
+	GetHandleVerifier [0x0x5181f8+165768]
+	GetHandleVerifier [0x0x51ecad+193085]
+	GetHandleVerifier [0x0x508158+100072]
+	GetHandleVerifier [0x0x5082f0+100480]
+	GetHandleVerifier [0x0x4f25aa+11066]
+	BaseThreadInitThunk [0x0x75c65d49+25]
+	RtlInitializeExceptionChain [0x0x7768d6db+107]
+	RtlGetAppContainerNamedObjectPath [0x0x7768d661+561]
+
+No se pudo guardar el screenshot del error
+Error: No se pudo iniciar sesion
+
+==================================================
+RESULTADO DE DESCARGA DE EXCEL:
+==================================================
+Estado: error
+Mensaje: No se pudo iniciar sesión
+
+==================================================
+PROCESO FINALIZADO
+==================================================
+Revisa los siguientes archivos:
+- datos_savar.json (datos extraídos)
+- downloads/ (archivos Excel descargados)
+- Screenshots (imágenes del proceso)
+
+Esperando 10 segundos antes de cerrar...

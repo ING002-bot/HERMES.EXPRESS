@@ -119,15 +119,20 @@
         const d = await r.json();
         if (!d.exito) return;
         const items = Array.isArray(d.datos) ? d.datos : [];
-        const asignados = items.filter(x => Number(x.empleado_id) > 0);
+        const asignados = items.filter(x => {
+          const raw = (x.empleado_id !== undefined && x.empleado_id !== null) ? String(x.empleado_id).trim() : '';
+          const id = parseInt(raw, 10);
+          return Number.isFinite(id) && id > 0;
+        });
         const porEmpleado = {};
         for (const p of asignados){
-          const empId = Number(p.empleado_id);
-          if (!empId) continue;
+          const raw = (p.empleado_id !== undefined && p.empleado_id !== null) ? String(p.empleado_id).trim() : '';
+          const empId = parseInt(raw, 10) || 0; if (!empId) continue;
           const key = String(empId);
-          if (!porEmpleado[key]) porEmpleado[key] = { empleado_id: empId, empleado_nombre: p.empleado_nombre || ('Empleado '+key), zona: p.zona || '', total:0, lista: [] };
+          const nombre = (p.empleado_nombre && String(p.empleado_nombre).trim()) ? String(p.empleado_nombre).trim() : ('Empleado '+key);
+          if (!porEmpleado[key]) porEmpleado[key] = { empleado_id: empId, empleado_nombre: nombre, zona: p.zona || '', total:0, lista: [] };
           porEmpleado[key].total++;
-          porEmpleado[key].lista.push({ id: p.id, codigo: p.codigo || '', destinatario: p.destinatario || '', distrito: p.distrito || '' });
+          porEmpleado[key].lista.push({ id: p.id, codigo: p.codigo || '', destinatario: p.destinatario || p.consignado || '', distrito: p.distrito || '' });
         }
         const tbody = document.getElementById('cuerpoResumenAsignados');
         if (!tbody) return;

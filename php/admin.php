@@ -353,6 +353,11 @@ function finanzasResumenHermes() {
 $accion = $_GET['accion'] ?? $_POST['accion'] ?? '';
 
 switch($accion) {
+    case 'listar_archivos_excel':
+        header('Content-Type: application/json');
+        echo json_encode(['exito' => true, 'archivos' => listarArchivosExcel()]);
+        exit;
+        break;
     case 'metricas':
         obtenerMetricasAdmin();
         break;
@@ -455,6 +460,15 @@ switch($accion) {
     case 'escaneo_comparar':
         escaneoComparar();
         break;
+    case 'sin_asignar':
+        listarPaquetesSinAsignar();
+        break;
+    case 'resumen_asignados':
+        resumenAsignados();
+        break;
+    case 'limpiar_asignaciones':
+        limpiarAsignaciones();
+        break;
     default:
         echo json_encode(['exito' => false, 'mensaje' => 'Acción no válida']);
 }
@@ -502,6 +516,16 @@ function obtenerTodosLosPaquetes() {
     global $pdo;
     
     try {
+        // Si las tablas no existen, devolver vacío sin error
+        $hasPaquetes = $pdo->query("SHOW TABLES LIKE 'paquetes'")->rowCount() > 0;
+        $hasPaquetesJson = $pdo->query("SHOW TABLES LIKE 'paquetes_json'")->rowCount() > 0;
+        if (!$hasPaquetes && !$hasPaquetesJson) {
+            echo json_encode(['exito'=>true, 'datos'=>[]]);
+            return;
+        }
+        // Asegurar columnas necesarias (idempotente)
+        if ($hasPaquetes) { try { $pdo->exec("ALTER TABLE paquetes ADD COLUMN empleado_id INT NULL"); } catch (Throwable $e) {} }
+        if ($hasPaquetesJson) { try { $pdo->exec("ALTER TABLE paquetes_json ADD COLUMN empleado_id INT NULL"); } catch (Throwable $e) {} }
         // Preparar paths para JSON en paquetes_json (coincidir con asignación)
         $pathDistrito = "COALESCE(
             JSON_UNQUOTE(JSON_EXTRACT(data, '$.distrito')),
@@ -524,16 +548,60 @@ function obtenerTodosLosPaquetes() {
             JSON_UNQUOTE(JSON_EXTRACT(data, '$.direccion_destino')),
             JSON_UNQUOTE(JSON_EXTRACT(data, '$.direccion'))
         )";
+        $pathDepartamento = "COALESCE(
+            JSON_UNQUOTE(JSON_EXTRACT(data, '$.departamento')),
+            JSON_UNQUOTE(JSON_EXTRACT(data, '$.Departamento')),
+            JSON_UNQUOTE(JSON_EXTRACT(data, '$.DEPARTAMENTO'))
+        )";
+        $pathProvincia = "COALESCE(
+            JSON_UNQUOTE(JSON_EXTRACT(data, '$.provincia')),
+            JSON_UNQUOTE(JSON_EXTRACT(data, '$.Provincia')),
+            JSON_UNQUOTE(JSON_EXTRACT(data, '$.PROVINCIA'))
+        )";
+        $pathEstado = "COALESCE(
+            JSON_UNQUOTE(JSON_EXTRACT(data, '$.estado')),
+            JSON_UNQUOTE(JSON_EXTRACT(data, '$.Estado')),
+            JSON_UNQUOTE(JSON_EXTRACT(data, '$.ESTADO'))
+        )";
+        $pathPeso = "COALESCE(
+            JSON_UNQUOTE(JSON_EXTRACT(data, '$.peso')),
+            JSON_UNQUOTE(JSON_EXTRACT(data, '$.Peso')),
+            JSON_UNQUOTE(JSON_EXTRACT(data, '$.PESO'))
+        )";
+        $pathTelefono = "COALESCE(
+            JSON_UNQUOTE(JSON_EXTRACT(data, '$.telefono')),
+            JSON_UNQUOTE(JSON_EXTRACT(data, '$.Teléfono')),
+            JSON_UNQUOTE(JSON_EXTRACT(data, '$.TELEFONO')),
+            JSON_UNQUOTE(JSON_EXTRACT(data, '$.celular')),
+            JSON_UNQUOTE(JSON_EXTRACT(data, '$.Celular')),
+            JSON_UNQUOTE(JSON_EXTRACT(data, '$.CELULAR'))
+        )";
 
         $sql = "
-            SELECT p.id, p.codigo, p.destinatario, p.distrito, p.empleado_id, u.nombre AS empleado_nombre, u.zona AS zona, 'paquetes' AS origen
+            SELECT p.id,
+                   p.codigo,
+                   p.departamento,
+                   p.provincia,
+                   p.distrito,
+                   p.estado,
+                   p.destinatario AS consignado,
+                   p.direccion_consignado AS direccion_consignado,
+                   p.peso,
+                   p.telefono,
+                   p.empleado_id, u.nombre AS empleado_nombre, u.zona AS zona, 'paquetes' AS origen
             FROM paquetes p
             LEFT JOIN usuarios u ON p.empleado_id = u.id
             UNION ALL
             SELECT pj.id,
                    JSON_UNQUOTE(JSON_EXTRACT(pj.data, '$.Codigo')) AS codigo,
-                   COALESCE(JSON_UNQUOTE(JSON_EXTRACT(pj.data, '$.Cliente')), JSON_UNQUOTE(JSON_EXTRACT(pj.data, '$.Destinatario'))) AS destinatario,
+                   $pathDepartamento AS departamento,
+                   $pathProvincia AS provincia,
                    TRIM(COALESCE(NULLIF($pathDistrito, ''), NULLIF(TRIM(SUBSTRING_INDEX($pathDireccion, ',', -1)), ''))) AS distrito,
+                   $pathEstado AS estado,
+                   COALESCE(JSON_UNQUOTE(JSON_EXTRACT(pj.data, '$.Cliente')), JSON_UNQUOTE(JSON_EXTRACT(pj.data, '$.Destinatario'))) AS consignado,
+                   $pathDireccion AS direccion_consignado,
+                   $pathPeso AS peso,
+                   $pathTelefono AS telefono,
                    pj.empleado_id,
                    u2.nombre AS empleado_nombre,
                    u2.zona AS zona,
@@ -541,15 +609,21 @@ function obtenerTodosLosPaquetes() {
             FROM paquetes_json pj
             LEFT JOIN usuarios u2 ON pj.empleado_id = u2.id
         ";
-        $stmt = $pdo->query($sql);
-        $paquetes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $paquetes = [];
+        try {
+            $stmt = $pdo->query($sql);
+            $paquetes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Throwable $e) {
+            // Si la consulta falla por esquema, devolver vacío para no romper el front
+            $paquetes = [];
+        }
         
         echo json_encode([
             'exito' => true,
             'datos' => $paquetes
         ]);
     } catch(PDOException $e) {
-        echo json_encode(['exito' => false, 'mensaje' => 'Error al obtener paquetes']);
+        echo json_encode(['exito' => true, 'datos' => []]);
     }
 }
 
@@ -1437,6 +1511,97 @@ function reasignarPaquete() {
     } catch (Throwable $e) {
         echo json_encode(['exito'=>false, 'mensaje'=>'Error al reasignar: '.$e->getMessage()]);
     }
+}
+
+// Limpia asignaciones huérfanas: si el empleado no existe, deja empleado_id = NULL
+function limpiarAsignaciones(){
+    global $pdo; header('Content-Type: application/json');
+    try {
+        // Asegurar columnas (idempotente)
+        try { $pdo->exec("ALTER TABLE paquetes ADD COLUMN empleado_id INT NULL"); } catch (Throwable $e) {}
+        try { $pdo->exec("ALTER TABLE paquetes_json ADD COLUMN empleado_id INT NULL"); } catch (Throwable $e) {}
+
+        // Contar antes
+        $c1 = 0; $c2 = 0;
+        try { $c1 = (int)($pdo->query("SELECT COUNT(*) c FROM paquetes p LEFT JOIN usuarios u ON p.empleado_id=u.id WHERE p.empleado_id IS NOT NULL AND u.id IS NULL")->fetch(PDO::FETCH_ASSOC)['c'] ?? 0); } catch (Throwable $e) {}
+        try { $c2 = (int)($pdo->query("SELECT COUNT(*) c FROM paquetes_json pj LEFT JOIN usuarios u ON pj.empleado_id=u.id WHERE pj.empleado_id IS NOT NULL AND u.id IS NULL")->fetch(PDO::FETCH_ASSOC)['c'] ?? 0); } catch (Throwable $e) {}
+
+        // Limpiar
+        try { $pdo->exec("UPDATE paquetes p LEFT JOIN usuarios u ON p.empleado_id = u.id SET p.empleado_id = NULL WHERE p.empleado_id IS NOT NULL AND u.id IS NULL"); } catch (Throwable $e) {}
+        try { $pdo->exec("UPDATE paquetes_json pj LEFT JOIN usuarios u ON pj.empleado_id = u.id SET pj.empleado_id = NULL WHERE pj.empleado_id IS NOT NULL AND u.id IS NULL"); } catch (Throwable $e) {}
+
+        echo json_encode([ 'exito'=>true, 'limpiados'=>[ 'paquetes'=>$c1, 'paquetes_json'=>$c2 ] ]);
+    } catch (Throwable $e) {
+        echo json_encode([ 'exito'=>false, 'mensaje'=>$e->getMessage() ]);
+    }
+}
+
+// ===================== ARCHIVOS EXCEL DESCARGADOS =====================
+function listarArchivosExcel() {
+    $downloadsDir = __DIR__ . '/../downloads';
+    $archivos = [];
+    
+    if (is_dir($downloadsDir)) {
+        // Obtener todos los archivos del directorio
+        $files = [];
+        $xlsFiles = glob($downloadsDir . '/*.xls');
+        $xlsxFiles = glob($downloadsDir . '/*.xlsx');
+        $files = array_merge($xlsFiles, $xlsxFiles);
+        
+        // Array para almacenar la información de los archivos
+        $archivosData = [];
+        
+        foreach ($files as $file) {
+            if (!is_file($file)) continue;
+            
+            $fileInfo = pathinfo($file);
+            $rutaRelativa = 'HERMES.EXPRESS/downloads/' . $fileInfo['basename'];
+            $rutaCompleta = realpath($file);
+            
+            // Solo agregar si el archivo existe y es legible
+            if ($rutaCompleta !== false && is_readable($rutaCompleta)) {
+                $archivosData[] = [
+                    'nombre' => $fileInfo['basename'],
+                    'ruta' => $rutaRelativa,
+                    'ruta_completa' => str_replace('\\', '/', $rutaCompleta),
+                    'tamano' => filesize($file),
+                    'fecha_modificacion' => filemtime($file), // Guardamos el timestamp directamente
+                    'fecha_formateada' => date('Y-m-d H:i:s', filemtime($file)),
+                    'tamano_formateado' => formatBytes(filesize($file))
+                ];
+            }
+        }
+        
+        // Ordenar por fecha de modificación (más reciente primero)
+        usort($archivosData, function($a, $b) {
+            return $b['fecha_modificacion'] - $a['fecha_modificacion'];
+        });
+        
+        // Mapear al formato final
+        foreach ($archivosData as $archivo) {
+            $archivos[] = [
+                'nombre' => $archivo['nombre'],
+                'ruta' => $archivo['ruta'],
+                'ruta_completa' => $archivo['ruta_completa'],
+                'tamano' => $archivo['tamano'],
+                'fecha_modificacion' => $archivo['fecha_formateada'],
+                'tamano_formateado' => $archivo['tamano_formateado']
+            ];
+        }
+    }
+    
+    return $archivos;
+}
+
+// Función auxiliar para formatear tamaños de archivo
+function formatBytes($bytes, $precision = 2) {
+    $units = ['B', 'KB', 'MB', 'GB', 'TB'];
+    $bytes = max($bytes, 0);
+    $pow = floor(($bytes ? log($bytes) : 0) / log(1024));
+    $pow = min($pow, count($units) - 1);
+    $bytes /= (1 << (10 * $pow));
+    
+    return round($bytes, $precision) . ' ' . $units[$pow];
 }
 
 // ===================== TARIFAS POR ZONA =====================
