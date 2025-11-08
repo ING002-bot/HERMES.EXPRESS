@@ -18,10 +18,10 @@
     <link rel="stylesheet" href="css/paneladmin-responsive.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="js/rutas.constants.js"></script>
+    <script src="js/admin.shared.js?v=asig_fix_2" defer></script>
     <title>HERMES - Panel Administrador</title>
 </head>
 <body>
-    <script src="js/admin.shared.js"></script>
     <div class="contenedor">
         <!-- Botón de menú móvil -->
         <button class="menu-movil" id="btnMenuMovil" aria-label="Menú">
@@ -47,9 +47,7 @@
                 </a></li>
                 
                 
-                <li><a href="javascript:void(0)" onclick="mostrarSeccion('asignar', this)">
-                    <span class="icono">🧩</span>Asignar
-                </a></li>
+                
                 <li><a href="javascript:void(0)" onclick="mostrarSeccion('finanzas', this)">
                     <span class="icono">💹</span>Finanzas
                 </a></li>
@@ -58,6 +56,9 @@
                 </a></li>
                 <li><a href="javascript:void(0)" onclick="mostrarSeccion('escaneo', this)">
                     <span class="icono">📷</span>Escaneo
+                </a></li>
+                <li><a href="javascript:void(0)" onclick="mostrarSeccion('asignacion', this); if (window.cargarVistaAsignacion) try{ window.cargarVistaAsignacion(); }catch(e){}">
+                    <span class="icono">🧩</span>Asignación
                 </a></li>
                 <li><a href="javascript:void(0)" onclick="mostrarSeccion('configuracion', this)">
                     <span class="icono">⚙️</span>Configuración
@@ -119,6 +120,49 @@
                     </div>
                 </div>
             </section>
+            <!-- Sección Asignación -->
+            <section id="seccion-asignacion" class="seccion">
+                <div class="seccion-header d-flex justify-content-between align-items-center">
+                    <h2>Asignación</h2>
+                </div>
+                <div class="card">
+                    <div class="card-body">
+                        <div class="tabla-container">
+                            <table id="tablaAsignacionEmpleados" class="tabla" style="width:100%">
+                                <thead>
+                                    <tr>
+                                        <th>Nombre</th>
+                                        <th>ID</th>
+                                        <th>Rol</th>
+                                        <th>Paquetes asignados</th>
+                                        <th>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="cuerpoAsignacionEmpleados"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Modal Asignación (custom) -->
+            <div id="modalAsignacion" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:10000; align-items:center; justify-content:center;">
+              <div style="background:#fff; width:95%; max-width:700px; border-radius:8px; box-shadow:0 10px 30px rgba(0,0,0,0.2);">
+                <div style="padding:14px 18px; border-bottom:1px solid #e9ecef; display:flex; align-items:center; justify-content:space-between;">
+                  <h3 id="modalAsignacionTitulo" style="margin:0; font-size:18px;">Asignar rutas</h3>
+                  <button id="modalAsignacionCerrar" class="btn btn-secundario" style="padding:6px 10px;">✕</button>
+                </div>
+                <div style="padding:16px; max-height:60vh; overflow:auto;">
+                  <div id="modalAsignacionContenido">
+                    <p class="text-muted">Cargando rutas…</p>
+                  </div>
+                </div>
+                <div style="padding:12px 16px; border-top:1px solid #e9ecef; display:flex; gap:8px; justify-content:flex-end;">
+                  <button id="modalAsignacionCancelar" class="btn btn-secundario">Cancelar</button>
+                  <button id="modalAsignacionAceptar" class="btn btn-primario">Aceptar</button>
+                </div>
+              </div>
+            </div>
 
             <!-- Sección Configuración (Usuarios y Rutas) -->
             <section id="seccion-configuracion" class="seccion">
@@ -300,6 +344,23 @@
               // Refrescar inmediatamente para asegurar que aparezcan los botones Editar
               try { window.safeCargarRutasConfig(); } catch(_){ }
             })();
+            </script>
+
+            <script>
+            document.addEventListener('DOMContentLoaded', function(){
+              try{
+                if (document.getElementById('cuerpoAsignacionEmpleados') && typeof window.cargarVistaAsignacion==='function') {
+                  window.cargarVistaAsignacion();
+                }
+                // Fallback: click programático al menú Asignación para activar rendering
+                const linkAsig = Array.from(document.querySelectorAll('.menu a')).find(a=>/Asignación/i.test(a.textContent||''));
+                if (linkAsig) {
+                  linkAsig.addEventListener('click', function(){
+                    setTimeout(function(){ if (typeof window.cargarVistaAsignacion==='function') window.cargarVistaAsignacion(); }, 50);
+                  });
+                }
+              }catch(e){}
+            });
             </script>
 
             <!-- Modal Ruta (Crear/Editar) -->
@@ -606,80 +667,6 @@
             </script>
 
             
-
-            <!-- Sección Asignar -->
-            <section id="seccion-asignar" class="seccion">
-                <div class="seccion-header d-flex justify-content-between align-items-center">
-                    <h2>Asignación de Paquetes</h2>
-                    <div class="acciones">
-                        <button id="btnAsignarAuto" class="btn btn-primario">Asignar automáticamente</button>
-                    </div>
-                </div>
-                <div class="card">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <h3>Paquetes sin asignar</h3>
-                            <div>
-                              <button id="btnLimpiarAsignaciones" class="btn btn-peligro me-2" title="Quitar asignaciones a empleados inexistentes">Limpiar asignaciones</button>
-                              <button id="btnRefrescarSinAsignar" class="btn btn-secundario">Refrescar</button>
-                            </div>
-                        </div>
-                        <div class="tabla-container">
-                            <table id="tablaSinAsignar">
-                                <thead>
-                                    <tr>
-                                        <th>ID</th>
-                                        <th>Código</th>
-                                        <th>Destinatario</th>
-                                        <th>Distrito</th>
-                                        <th>Peso</th>
-                                        <th>Teléfono</th>
-                                        <th>Acciones</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="cuerpoSinAsignar"></tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-                <div class="card" style="margin-top: 16px;">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <h3>Resumen por empleado</h3>
-                            <button class="btn btn-secundario" onclick="(function(){ if (typeof cargarResumenAsignados==='function') cargarResumenAsignados(); })()">Actualizar resumen</button>
-                        </div>
-                        <div class="tabla-container">
-                            <table id="tablaResumenAsignados">
-                                <thead>
-                                    <tr>
-                                        <th>Empleado</th>
-                                        <th>Zona</th>
-                                        <th>Total asignados</th>
-                                        <th>Ver</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="cuerpoResumenAsignados"></tbody>
-                            </table>
-                        </div>
-                        <div id="listaAsignadosEmpleado" style="margin-top:12px; display:none;">
-                            <h4 id="tituloListaEmpleado">Paquetes del empleado</h4>
-                            <div class="tabla-container">
-                                <table>
-                                    <thead>
-                                        <tr>
-                                            <th>ID</th>
-                                            <th>Código</th>
-                                            <th>Destinatario</th>
-                                            <th>Distrito</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="cuerpoListaEmpleado"></tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
 
             <section id="seccion-paquetes" class="seccion">
                 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -2590,19 +2577,18 @@ function renderPaquetesDesdeExcel(rows) {
                 'empleados': 'Gestión de Empleados',
                 'vehiculos': 'Gestión de Vehículos',
                 'rutas': 'Gestión de Rutas',
+                'asignacion': 'Asignación',
                 'configuracion': 'Configuración',
                 'reportes': 'Reportes',
                 'pagos': 'Pagos Empleados',
-                'asignar': 'Asignar Paquetes por Distrito',
                 'finanzas': 'Finanzas',
                 'tarifas': 'Tarifas por Zona',
                 'escaneo': 'Escaneo de Códigos'
             };
             document.getElementById('tituloSeccion').textContent = titulos[seccion] || 'Panel de Administración';
             // Cargar datos específicos de la sección
-            if (seccion === 'asignar') {
-                try { if (typeof cargarPaquetesSinAsignar === 'function') cargarPaquetesSinAsignar(); } catch(e){}
-                try { if (typeof cargarResumenAsignados === 'function') cargarResumenAsignados(); } catch(e){}
+            if (seccion === 'asignacion') {
+                try { if (typeof cargarVistaAsignacion === 'function') cargarVistaAsignacion(); } catch(e){}
             } else if (seccion === 'configuracion') {
                 try { if (typeof safeCargarRutasConfig === 'function') safeCargarRutasConfig(); } catch(e){}
                 try { if (typeof cargarEmpleados === 'function') cargarEmpleados(); } catch(e){}
@@ -2652,9 +2638,8 @@ function renderPaquetesDesdeExcel(rows) {
                             case 'seccion-configuracion':
                                 safeCargarRutasConfig();
                                 break;
-                            case 'seccion-asignar':
-                                if (typeof cargarPaquetesSinAsignar === 'function') cargarPaquetesSinAsignar();
-                                if (typeof cargarResumenAsignados === 'function') cargarResumenAsignados();
+                            case 'seccion-asignacion':
+                                if (typeof cargarVistaAsignacion === 'function') cargarVistaAsignacion();
                                 break;
                             // Agrega más casos según sea necesario
                         }

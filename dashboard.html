@@ -19,7 +19,7 @@
   <link rel="stylesheet" href="css/paneladmin-responsive.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" media="print" onload="this.media='all'">
   <script src="js/rutas.constants.js"></script>
-  <script src="js/admin.shared.js"></script>
+  <script src="js/admin.shared.js?v=asig_fix_1" defer></script>
 
   <title>HERMES - Panel de Control</title>
 </head>
@@ -37,8 +37,7 @@
         <li><a href="javascript:void(0)" class="activo" onclick="mostrarSeccion('dashboard', this)"><span class="icono">📊</span>Dashboard</a></li>
         <li><a href="javascript:void(0)" onclick="mostrarSeccion('paquetes', this)"><span class="icono">📦</span>Paquetes</a></li>
         <li><a href="javascript:void(0)" onclick="mostrarSeccion('rutas', this)"><span class="icono">🗺️</span>Rutas</a></li>
-        
-        <li><a href="javascript:void(0)" onclick="mostrarSeccion('asignar', this)"><span class="icono">🧩</span>Asignar</a></li>
+        <li><a href="javascript:void(0)" onclick="mostrarSeccion('asignacion', this)"><span class="icono">🧩</span>Asignación</a></li>
       </ul>
       <div class="usuario-info">
         <div class="avatar">👤</div>
@@ -96,6 +95,30 @@
           <div class="actividad-reciente">
             <h3>Actividad Reciente</h3>
             <div id="listaActividad" class="lista-actividad"></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="seccion-asignacion" class="seccion">
+        <div class="seccion-header d-flex justify-content-between align-items-center">
+          <h2>Asignación</h2>
+        </div>
+        <div class="card">
+          <div class="card-body">
+            <div class="tabla-container">
+              <table id="tablaAsignacionEmpleados" class="tabla" style="width:100%">
+                <thead>
+                  <tr>
+                    <th>Nombre</th>
+                    <th>ID</th>
+                    <th>Rol</th>
+                    <th>Paquetes asignados</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="cuerpoAsignacionEmpleados"></tbody>
+              </table>
+            </div>
           </div>
         </div>
       </section>
@@ -174,71 +197,6 @@
       </section>
 
       
-
-      <section id="seccion-asignar" class="seccion">
-        <div class="seccion-header d-flex justify-content-between align-items-center">
-          <h2>Asignación de Paquetes</h2>
-          <div class="acciones">
-            <button id="btnAsignarAuto" class="btn btn-primario" onclick="asignarPaquetesAuto()">Asignar automáticamente</button>
-          </div>
-        </div>
-        <div class="card">
-          <div class="card-body">
-            <h3>Paquetes sin asignar</h3>
-            <div class="tabla-container">
-              <table id="tablaSinAsignar">
-                <thead>
-                  <tr>
-                    <th>ID</th>
-                    <th>Código</th>
-                    <th>Destinatario</th>
-                    <th>Distrito</th>
-                    <th>Acciones</th>
-                  </tr>
-                </thead>
-                <tbody id="cuerpoSinAsignar"></tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-        <div class="card" style="margin-top: 16px;">
-          <div class="card-body">
-            <div class="d-flex justify-content-between align-items-center">
-              <h3>Resumen por empleado</h3>
-              <button class="btn btn-secundario" onclick="cargarResumenAsignados()">Actualizar resumen</button>
-            </div>
-            <div class="tabla-container">
-              <table id="tablaResumenAsignados">
-                <thead>
-                  <tr>
-                    <th>Empleado</th>
-                    <th>Zona</th>
-                    <th>Total asignados</th>
-                    <th>Ver</th>
-                  </tr>
-                </thead>
-                <tbody id="cuerpoResumenAsignados"></tbody>
-              </table>
-            </div>
-            <div id="listaAsignadosEmpleado" style="margin-top:12px; display:none;">
-              <h4 id="tituloListaEmpleado">Paquetes del empleado</h4>
-              <div class="tabla-container">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>ID</th>
-                      <th>Código</th>
-                      <th>Destinatario</th>
-                      <th>Distrito</th>
-                    </tr>
-                  </thead>
-                  <tbody id="cuerpoListaEmpleado"></tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
     </main>
   </div>
 
@@ -317,6 +275,7 @@
         inicio: 'Dashboard',
         paquetes: 'Gestión de Paquetes',
         rutas: 'Gestión de Rutas',
+        asignacion: 'Asignación',
         vehiculos: 'Gestión de Vehículos',
         reportes: 'Reportes'
       };
@@ -364,9 +323,7 @@
           document.getElementById('nombreUsuario').textContent = d.usuario.nombre;
           // Cargar paquetes desde BD al iniciar para que se muestren al entrar o al refrescar
           cargarPaquetesDesdeBD();
-          // Pre-cargar selects de Asignar
-          cargarEmpleadosAsignar();
-          cargarDistritosAsignar();
+          
         })
         .catch(() => window.location.href = 'login.html');
     });
@@ -531,50 +488,7 @@
       tbody.innerHTML = html;
     }
 
-    // ====== Asignaciones: empleados y distritos ======
-    async function cargarEmpleadosAsignar() {
-      try {
-        const resp = await fetch('php/asignaciones.php?accion=empleados', { cache: 'no-store' });
-        const data = await resp.json();
-        const sel = document.getElementById('selEmpleadoAsignar');
-        if (!sel) return;
-        sel.innerHTML = '<option value="">Seleccione empleado...</option>' +
-          (data.datos || []).map(e => `<option value="${e.id}">${e.nombre}</option>`).join('');
-      } catch (e) { console.error('cargarEmpleadosAsignar', e); }
-    }
-
-    async function cargarDistritosAsignar() {
-      try {
-        const resp = await fetch('php/asignaciones.php?accion=distritos', { cache: 'no-store' });
-        const data = await resp.json();
-        const sel = document.getElementById('selDistritosAsignar');
-        if (!sel) return;
-        sel.innerHTML = (data.datos || []).map(d => `<option value="${d}">${d}</option>`).join('');
-      } catch (e) { console.error('cargarDistritosAsignar', e); }
-    }
-
-    async function asignarPaquetesPorDistrito() {
-      try {
-        const selEmp = document.getElementById('selEmpleadoAsignar');
-        const selDis = document.getElementById('selDistritosAsignar');
-        const resBox = document.getElementById('resultadoAsignacion');
-        const empleado_id = parseInt(selEmp?.value || '0', 10);
-        const distritos = Array.from(selDis?.selectedOptions || []).map(o => o.value);
-        if (!empleado_id) { alert('Seleccione un empleado'); return; }
-        if (!distritos.length) { alert('Seleccione al menos un distrito'); return; }
-        const form = new FormData();
-        form.append('accion', 'asignar_por_distrito');
-        form.append('empleado_id', String(empleado_id));
-        distritos.forEach(d => form.append('distritos[]', d));
-        const resp = await fetch('php/asignaciones.php', { method:'POST', body: form });
-        const data = await resp.json();
-        if (!data.exito) { alert('Error: ' + (data.mensaje || 'No se pudo asignar')); return; }
-        resBox.textContent = `Asignados: ${data.asignados || 0}`;
-      } catch (e) {
-        console.error('asignarPaquetesPorDistrito', e);
-        alert('Error al asignar: ' + e.message);
-      }
-    }
+    
   </script>
 
   <script src="js/dashboard.js"></script>

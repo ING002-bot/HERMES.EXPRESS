@@ -442,8 +442,14 @@ switch($accion) {
     case 'tarifas_aplicar_paquetes':
         tarifasAplicarPaquetes();
         break;
+    case 'tarifas_agrupadas':
+        tarifasAgrupadas();
+        break;
     case 'reasignar_paquete':
         reasignarPaquete();
+        break;
+    case 'asignar_por_distritos':
+        asignarPorDistritos();
         break;
     case 'escaneo_crear_lote':
         escaneoCrearLote();
@@ -524,8 +530,8 @@ function obtenerTodosLosPaquetes() {
             return;
         }
         // Asegurar columnas necesarias (idempotente)
-        if ($hasPaquetes) { try { $pdo->exec("ALTER TABLE paquetes ADD COLUMN empleado_id INT NULL"); } catch (Throwable $e) {} }
-        if ($hasPaquetesJson) { try { $pdo->exec("ALTER TABLE paquetes_json ADD COLUMN empleado_id INT NULL"); } catch (Throwable $e) {} }
+        if ($hasPaquetes) { try { $pdo->exec("ALTER TABLE paquetes ADD COLUMN empleado_id INT NULL"); } catch (Exception $e) {} }
+        if ($hasPaquetesJson) { try { $pdo->exec("ALTER TABLE paquetes_json ADD COLUMN empleado_id INT NULL"); } catch (Exception $e) {} }
         // Preparar paths para JSON en paquetes_json (coincidir con asignación)
         $pathDistrito = "COALESCE(
             JSON_UNQUOTE(JSON_EXTRACT(data, '$.distrito')),
@@ -716,7 +722,7 @@ function actualizarRuta() {
         $distancia = isset($_POST['distancia']) ? $_POST['distancia'] : null;
         $tiempo_estimado = isset($_POST['tiempo_estimado']) ? $_POST['tiempo_estimado'] : null;
         $zonas = isset($_POST['zonas']) ? trim($_POST['zonas']) : null; // coma-separado
-
+        
         if ($id <= 0) {
             echo json_encode(['exito' => false, 'mensaje' => 'ID inválido']);
             return;
@@ -1044,7 +1050,7 @@ function crearPaquete() {
         
         // Autoprecio desde tarifas si no viene precio o es 0
         if ($precio <= 0) {
-            $precio = obtenerPrecioTarifaPorDistrito($distrito, $pdo) ?? 0;
+            $precio = obtenerPrecioTarifaPorDistrito($distrito) ?? 0;
         }
 
         $stmt = $pdo->prepare("
@@ -1363,7 +1369,7 @@ function asignarPaquetesAuto() {
             ['nombre'=>'PUEBLOS', 'zonas'=> 'Lambayeque, Mochumi, Tucume, Illimo, Nueva Arica, Jayanca, Pacora, Morrope, Motupe, Olmos, Salas'],
             ['nombre'=>'PLAYAS', 'zonas'=> 'San Jose, Santa Rosa, Pimentel, Reque, Monsefu, Eten, Puerto Eten'],
             ['nombre'=>'COOPERATIVAS', 'zonas'=> 'Pomalca, Tuman, Patapo, Pucala, Saltur, Chongoyape'],
-            ['nombre'=>'EXCOOPERATIVA', 'zonas'=> 'Ucupe, Mocupe, Zaña, Saña, Cayalti, Oyotun, Lagunas'],
+            ['nombre'=>'EXCOOPERATIVAS', 'zonas'=> 'Ucupe, Mocupe, Zaña, Saña, Cayalti, Oyotun, Lagunas'],
             ['nombre'=>'FERREÑAFE', 'zonas'=> 'Ferreñafe, Picsi, Pitipo, Motupillo, Pueblo Nuevo']
         ];
         $rutas = array_merge(is_array($rutas)?$rutas:[], $fallback);
@@ -1399,9 +1405,9 @@ function asignarPaquetesAuto() {
         };
         foreach ($rutas as $r) {
             $zonas = array_map('trim', explode(',', (string)$r['zonas']));
-            foreach ($zonas as $distrito) {
-                if ($distrito !== '') {
-                    $key = $normalizar($distrito);
+            foreach ($zonas as $z) {
+                if ($z !== '') {
+                    $key = $normalizar($z);
                     $mapDistritoZona[$key] = strtoupper(trim($r['nombre']));
                 }
             }
@@ -1518,8 +1524,8 @@ function limpiarAsignaciones(){
     global $pdo; header('Content-Type: application/json');
     try {
         // Asegurar columnas (idempotente)
-        try { $pdo->exec("ALTER TABLE paquetes ADD COLUMN empleado_id INT NULL"); } catch (Throwable $e) {}
-        try { $pdo->exec("ALTER TABLE paquetes_json ADD COLUMN empleado_id INT NULL"); } catch (Throwable $e) {}
+        try { $pdo->exec("ALTER TABLE paquetes ADD COLUMN empleado_id INT NULL"); } catch (Exception $e) {}
+        try { $pdo->exec("ALTER TABLE paquetes_json ADD COLUMN empleado_id INT NULL"); } catch (Exception $e) {}
 
         // Contar antes
         $c1 = 0; $c2 = 0;
@@ -1744,7 +1750,7 @@ function mapDistritoAGrupo($distrito) {
         ['nombre'=>'PUEBLOS', 'zonas'=> 'Lambayeque, Mochumi, Tucume, Illimo, Nueva Arica, Jayanca, Pacora, Morrope, Motupe, Olmos, Salas'],
         ['nombre'=>'PLAYAS', 'zonas'=> 'San Jose, Santa Rosa, Pimentel, Reque, Monsefu, Eten, Puerto Eten'],
         ['nombre'=>'COOPERATIVAS', 'zonas'=> 'Pomalca, Tuman, Patapo, Pucala, Saltur, Chongoyape'],
-        ['nombre'=>'EXCOOPERATIVAS', 'zonas'=> 'Ucupe, Mocupe, Zaña, Saña, Cayalti, Oyotun, Lagunas'],
+        ['nombre'=>'EXCOOPERATIVA', 'zonas'=> 'Ucupe, Mocupe, Zaña, Saña, Cayalti, Oyotun, Lagunas'],
         ['nombre'=>'FERREÑAFE', 'zonas'=> 'Ferreñafe, Picsi, Pitipo, Motupillo, Pueblo Nuevo']
     ];
     $rutas = array_merge(is_array($rutas)?$rutas:[], $fallback);
