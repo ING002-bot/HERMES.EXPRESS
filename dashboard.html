@@ -266,20 +266,24 @@
       }
     }
 
-    function mostrarSeccion(seccion) {
+    function mostrarSeccion(seccion, elemento) {
       document.querySelectorAll('.seccion').forEach(s => s.classList.remove('activa'));
-      document.getElementById('seccion-' + seccion).classList.add('activa');
+      const sec = document.getElementById('seccion-' + seccion);
+      if (sec) sec.classList.add('activa');
       document.querySelectorAll('.menu a').forEach(i => i.classList.remove('activo'));
-      event.target.classList.add('activo');
+      if (elemento) {
+        elemento.classList.add('activo');
+      }
       const titulos = {
-        inicio: 'Dashboard',
+        dashboard: 'Panel de Control',
         paquetes: 'Gestión de Paquetes',
         rutas: 'Gestión de Rutas',
         asignacion: 'Asignación',
         vehiculos: 'Gestión de Vehículos',
         reportes: 'Reportes'
       };
-      document.getElementById('tituloSeccion').textContent = titulos[seccion] || 'Dashboard';
+      const t = document.getElementById('tituloSeccion');
+      if (t) t.textContent = titulos[seccion] || 'Panel de Control';
     }
 
     function cerrarModal(id) {

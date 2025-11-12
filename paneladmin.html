@@ -2540,11 +2540,8 @@ function renderPaquetesDesdeExcel(rows) {
         
         // Función para mostrar secciones
         function mostrarSeccion(seccion, elemento) {
-            // Prevenir comportamiento por defecto del enlace
-            if (event) {
-                event.preventDefault();
-                event.stopPropagation();
-            }
+            // Prevenir comportamiento por defecto del enlace si se provee elemento
+            try { if (elemento && elemento.preventDefault) { elemento.preventDefault(); } } catch(_) {}
             
             // No hacer nada si ya estamos en esa sección
             const seccionActual = document.querySelector('.seccion.activa');

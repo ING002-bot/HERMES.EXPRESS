@@ -49,6 +49,155 @@ def _find_th_by_text(driver: webdriver.Chrome, key_text: str) -> Optional[Any]:
     except Exception:
         pass
 
+def _set_date_with_datepicker(driver: webdriver.Chrome, input_elem, yyyy_mm_dd: str, timeout: int = 10) -> bool:
+    """
+    Abre el datepicker del input, navega al año/mes del valor y hace clic en el día.
+    Soporta datepickers tipo Bootstrap/flatpickr/ui-datepicker con flechas « » y celdas <td>/<span> con número de día.
+    """
+    try:
+        # Parsear fecha
+        y, m, d = yyyy_mm_dd.split('-')
+        y = int(y); m = int(m); d = int(d)
+
+        # Focus y click para abrir calendario
+        try:
+            input_elem.click()
+        except Exception:
+            driver.execute_script("arguments[0].click();", input_elem)
+        time.sleep(0.2)
+
+        # Localizar contenedor del calendario visible
+        panel_candidates = [
+            "//div[contains(@class,'datepicker') and not(contains(@style,'display: none'))]",
+            "//div[contains(@class,'ui-datepicker') and not(contains(@style,'display: none'))]",
+            "//div[contains(@class,'flatpickr-calendar') and contains(@class,'open')]",
+        ]
+        panel = None
+        for xp in panel_candidates:
+            try:
+                el = WebDriverWait(driver, timeout).until(EC.presence_of_element_located((By.XPATH, xp)))
+                if el and el.is_displayed():
+                    panel = el
+                    break
+            except Exception:
+                continue
+        if panel is None:
+            return False
+
+        # Intentar leer el título de mes/año y los controles de navegación
+        def get_month_year_text():
+            try:
+                for xp in [
+                    ".//*[contains(@class,'datepicker-switch')]",
+                    ".//div[contains(@class,'cur-month')]",
+                    ".//*[contains(@class,'ui-datepicker-title')]",
+                    ".//span[contains(@class,'flatpickr-monthDropdown-months')]",
+                ]:
+                    try:
+                        el = panel.find_element(By.XPATH, xp)
+                        if el and el.is_displayed():
+                            return el.text.strip()
+                    except Exception:
+                        continue
+            except Exception:
+                pass
+            return ""
+
+        # Botones prev/next
+        def click_prev():
+            for xp in [
+                ".//*[contains(@class,'prev') or contains(.,'«')]",
+                ".//span[contains(@class,'flatpickr-prev')]",
+                ".//a[contains(@class,'ui-datepicker-prev')]",
+            ]:
+                try:
+                    b = panel.find_element(By.XPATH, xp)
+                    if b.is_displayed():
+                        driver.execute_script("arguments[0].click();", b)
+                        time.sleep(0.15)
+                        return True
+                except Exception:
+                    continue
+            return False
+        def click_next():
+            for xp in [
+                ".//*[contains(@class,'next') or contains(.,'»')]",
+                ".//span[contains(@class,'flatpickr-next')]",
+                ".//a[contains(@class,'ui-datepicker-next')]",
+            ]:
+                try:
+                    b = panel.find_element(By.XPATH, xp)
+                    if b.is_displayed():
+                        driver.execute_script("arguments[0].click();", b)
+                        time.sleep(0.15)
+                        return True
+                except Exception:
+                    continue
+            return False
+
+        # Navegar aproximando por diferencia de meses si no hay picker de mes directo
+        # Intento limitado a 24 pasos para evitar bucles infinitos
+        for _ in range(24):
+            title = get_month_year_text()
+            # Si el título no es parseable, intentar directamente clickear día; muchos pickers ya posicionan por valor actual
+            try:
+                # Click en el día
+                day_candidates = panel.find_elements(By.XPATH, f".//*[self::td or self::span or self::a][normalize-space()='{d}']")
+                for dc in day_candidates:
+                    try:
+                        if dc.is_displayed():
+                            driver.execute_script("arguments[0].click();", dc)
+                            time.sleep(0.2)
+                            return True
+                    except Exception:
+                        continue
+            except Exception:
+                pass
+            # Si no hizo click, intentamos mover mes a mes en función de comparación con input value
+            # Como fallback, alternar prev/next unas pocas veces
+            moved = click_prev() or click_next()
+            if not moved:
+                break
+
+        return False
+    except Exception:
+        return False
+
+def ensure_checkbox_by_label(driver: webdriver.Chrome, label_text: str, checked: bool, timeout: int = 10) -> bool:
+    """
+    Asegura el estado (checked/unchecked) del checkbox asociado al label dado.
+    Busca un input[type=checkbox] cercano al label con ese texto.
+    """
+    try:
+        # Normalizar búsqueda con y sin acentos
+        xps = [
+            f"//*[self::label or self::div or self::span][contains(translate(.,'áéíóúÁÉÍÓÚ','aeiouAEIOU'),'{label_text}')]/preceding::input[@type='checkbox'][1]",
+            f"//*[self::label or self::div or self::span][contains(.,'{label_text}')]/preceding::input[@type='checkbox'][1]",
+            f"//*[self::label or self::div or self::span][contains(translate(.,'áéíóúÁÉÍÓÚ','aeiouAEIOU'),'{label_text}')]/ancestor::*[1]//input[@type='checkbox']",
+            f"//*[self::label or self::div or self::span][contains(.,'{label_text}')]/ancestor::*[1]//input[@type='checkbox']",
+        ]
+        cb = None
+        for xp in xps:
+            try:
+                el = WebDriverWait(driver, timeout).until(EC.presence_of_element_located((By.XPATH, xp)))
+                if el and el.is_displayed():
+                    cb = el
+                    break
+            except Exception:
+                continue
+        if not cb:
+            return False
+        is_checked = (cb.get_attribute('checked') is not None) or cb.is_selected()
+        if checked != is_checked:
+            try:
+                driver.execute_script("arguments[0].click();", cb)
+                time.sleep(0.2)
+            except Exception:
+                cb.click()
+        return True
+    except Exception:
+        return False
+
 def close_overlays_and_datepickers(driver: webdriver.Chrome) -> None:
     """Cierra posibles overlays, backdrops y datepickers que bloqueen los clics."""
     try:
@@ -309,72 +458,78 @@ def login_and_fetch_saver(driver: webdriver.Chrome, usuario: str, contrasena: st
         driver.save_screenshot("screenshot_after_login.png")
         print("Screenshot guardado: screenshot_after_login.png")
         
-        # Si se proporcionaron fechas, intentar configurarlas
+        # Si se proporcionaron fechas, configurar específicamente 'Fecha de Recepción' y consultar
         if fecha_inicio and fecha_fin:
-            print(f"Configurando rango de fechas: {fecha_inicio} a {fecha_fin}")
+            print(f"Configurando rango de fechas (Recepción): {fecha_inicio} a {fecha_fin}")
             try:
-                # Intentar diferentes selectores para los campos de fecha
-                date_selectors = [
-                    "input[type='date']",
-                    "input[data-role='datepicker']",
-                    "input[class*='date']",
-                    "input[id*='fecha']",
-                    "input[name*='fecha']"
-                ]
-                
-                fecha_encontrada = False
-                for selector in date_selectors:
+                # Asegurar checkboxes correctos: Recepción ON, Creación OFF
+                ensure_checkbox_by_label(driver, "Fecha de Recepcion", True, timeout=10)
+                ensure_checkbox_by_label(driver, "Fecha de Recepción", True, timeout=10)
+                ensure_checkbox_by_label(driver, "Fecha de Creacion", False, timeout=10)
+                ensure_checkbox_by_label(driver, "Fecha de Creación", False, timeout=10)
+
+                ok = set_date_inputs_by_label(
+                    driver,
+                    label_text="Fecha de Recepcion",  # sin acento para el XPath normalizado
+                    start_date=fecha_inicio,
+                    end_date=fecha_fin,
+                    timeout=20
+                )
+                if not ok:
+                    print("Reintentando con 'Fecha de Recepción' (con acento)...")
+                    ok = set_date_inputs_by_label(
+                        driver,
+                        label_text="Fecha de Recepción",
+                        start_date=fecha_inicio,
+                        end_date=fecha_fin,
+                        timeout=20
+                    )
+                if ok:
+                    # Verificación y corrección si quedaron iguales
                     try:
-                        fecha_inputs = driver.find_elements(By.CSS_SELECTOR, selector)
-                        if len(fecha_inputs) >= 2:
-                            # Establecer fecha de inicio
-                            driver.execute_script(
-                                f"arguments[0].value = '{fecha_inicio}'", 
-                                fecha_inputs[0]
-                            )
-                            print(f"Fecha inicio establecida: {fecha_inicio}")
-                            
-                            # Establecer fecha fin
-                            driver.execute_script(
-                                f"arguments[0].value = '{fecha_fin}'", 
-                                fecha_inputs[1]
-                            )
-                            print(f"Fecha fin establecida: {fecha_fin}")
-                            
-                            # Buscar y hacer clic en el botón de búsqueda
-                            buscar_selectors = [
-                                "button[type='submit']",
-                                "button:contains('Buscar')",
-                                "button:contains('Consultar')",
-                                "input[type='submit'][value='Buscar']"
-                            ]
-                            
-                            for btn_selector in buscar_selectors:
-                                try:
-                                    btn = WebDriverWait(driver, 5).until(
-                                        EC.element_to_be_clickable((By.CSS_SELECTOR, btn_selector))
-                                    )
-                                    driver.execute_script("arguments[0].click();", btn)
-                                    print("Botón de búsqueda clickeado")
-                                    time.sleep(3)  # Esperar a que se carguen los resultados
-                                    break
-                                except Exception as e:
-                                    print(f"Error al hacer clic en el botón {btn_selector}: {str(e)}")
-                                    continue
-                            
-                            fecha_encontrada = True
-                            break
-                            
+                        base_xp = "//label[contains(translate(.,'áéíóúÁÉÍÓÚ','aeiouAEIOU'),'Fecha de Recepcion')]|//label[contains(.,'Fecha de Recepción')]"
+                        first_input = driver.find_element(By.XPATH, base_xp + "/following::input[1]")
+                        second_input = driver.find_element(By.XPATH, base_xp + "/following::input[2]")
+                        v1 = (first_input.get_attribute('value') or '').strip()
+                        v2 = (second_input.get_attribute('value') or '').strip()
+                        print(f"Valores después de escribir -> inicio: {v1} | fin: {v2}")
+                        if v1 == v2 and v1 != fecha_inicio:
+                            print("Detectado v1=v2, reescribiendo inicio con fecha de ayer...")
+                            # Reforzar valor de inicio
+                            first_input.click()
+                            first_input.send_keys(Keys.CONTROL + 'a')
+                            first_input.send_keys(Keys.DELETE)
+                            for ch in fecha_inicio:
+                                first_input.send_keys(ch)
+                                time.sleep(0.03)
+                            first_input.send_keys(Keys.TAB)
+                            time.sleep(0.3)
                     except Exception as e:
-                        print(f"Error al configurar fechas con selector {selector}: {str(e)}")
-                        continue
-                
-                if not fecha_encontrada:
-                    print("Advertencia: No se encontraron campos de fecha válidos")
-                    
+                        print(f"No se pudo verificar/corregir fechas: {e}")
+
+                    print("Fechas de Recepción configuradas. Procediendo a Consultar...")
+                    # Intentar clic por texto visible
+                    clicked = click_element_by_text(driver, "Consultar", timeout=10)
+                    if not clicked:
+                        # Fallback: buscar posibles botones de consulta
+                        candidates = [
+                            (By.XPATH, "//button[contains(.,'Consultar') or contains(.,'Buscar')]"),
+                            (By.CSS_SELECTOR, "button[type='submit']"),
+                        ]
+                        for by, sel in candidates:
+                            try:
+                                btn = WebDriverWait(driver, 5).until(EC.element_to_be_clickable((by, sel)))
+                                driver.execute_script("arguments[0].click();", btn)
+                                print("Botón de consulta clickeado (fallback)")
+                                break
+                            except Exception:
+                                continue
+                    # Esperar a que se carguen resultados
+                    wait_until_not_processing(driver, timeout=30)
+                else:
+                    print("No fue posible configurar las fechas de 'Fecha de Recepción'")
             except Exception as e:
-                print(f"Error al configurar fechas: {str(e)}")
-                # Continuar aunque falle la configuración de fechas
+                print(f"Error al configurar fechas (Recepción): {str(e)}")
         
         print("Inicio de sesión exitoso")
         return True
@@ -442,17 +597,68 @@ def set_date_inputs_by_label(
     """
     print(f"Iniciando configuración de fechas para etiqueta: {label_text}")
     try:
-        # 1) Seleccionar explícitamente los DOS inputs que siguen al label indicado
-        xpath_start = f"//label[contains(translate(.,'áéíóúÁÉÍÓÚ','aeiouAEIOU'),'{label_text}')]"
-        print(f"Buscando inputs con XPath: {xpath_start}/following::input[1] y [2]")
-        
-        # Esperar a que los inputs estén presentes
-        first_input = WebDriverWait(driver, timeout).until(
-            EC.presence_of_element_located((By.XPATH, xpath_start + "/following::input[1]"))
-        )
-        second_input = WebDriverWait(driver, timeout).until(
-            EC.presence_of_element_located((By.XPATH, xpath_start + "/following::input[2]"))
-        )
+        def find_inputs_for_label(label_text_local: str):
+            base = f"//*[self::label or self::div or self::span][contains(translate(.,'áéíóúÁÉÍÓÚ','aeiouAEIOU'),'{label_text_local}')]"
+            # Preferir inputs dentro de la misma fila/contenedor del label
+            strategies = [
+                base + "/ancestor::div[contains(@class,'row')][1]//input",
+                base + "/ancestor::div[1]//input",
+                base + "/ancestor::tr[1]//input",
+                base + "/following-sibling::*//input",
+                base + "/following::input[position()<=2]",
+            ]
+            for xp in strategies:
+                try:
+                    els = WebDriverWait(driver, timeout).until(
+                        EC.presence_of_all_elements_located((By.XPATH, xp))
+                    )
+                    # Filtrar inputs que aparenten ser fechas (type=date o con patrón YYYY-MM-DD en value/placeholder)
+                    def looks_like_date(el):
+                        try:
+                            t = (el.get_attribute('type') or '').lower()
+                            ph = (el.get_attribute('placeholder') or '')
+                            val = (el.get_attribute('value') or '')
+                            cls = (el.get_attribute('class') or '').lower()
+                            return (
+                                t == 'date' or
+                                'date' in cls or
+                                re.search(r"\d{4}-\d{2}-\d{2}", ph or '') or
+                                re.search(r"\d{4}-\d{2}-\d{2}", val or '')
+                            )
+                        except Exception:
+                            return False
+                    vis = [e for e in els if e.is_displayed() and e.is_enabled() and looks_like_date(e)]
+                    if len(vis) >= 2:
+                        return vis[0], vis[1]
+                except Exception:
+                    continue
+            return None, None
+
+        print("Buscando inputs de fecha asociados al label en su misma fila...")
+        first_input, second_input = find_inputs_for_label(label_text)
+        if not first_input or not second_input:
+            print("No encontrados con label sin acento, probando con acento...")
+            first_input, second_input = find_inputs_for_label(label_text)
+        if not first_input or not second_input:
+            print("Fallo al localizar los dos inputs de fecha asociados al label; aplicando fallback por checkbox marcado")
+            # Fallback: localizar la fila del checkbox marcado (Recepción) y tomar los 2 inputs dentro
+            try:
+                cb_checked = driver.find_element(By.XPATH, "//input[@type='checkbox' and @checked]/ancestor::*[contains(@class,'row') or contains(@class,'form-group') or self::tr][1]")
+                cand = [e for e in cb_checked.find_elements(By.XPATH, ".//input") if e.is_displayed() and e.is_enabled()]
+                # Filtrar a los que parezcan fechas
+                def looks_like_date2(el):
+                    try:
+                        t=(el.get_attribute('type') or '').lower(); cls=(el.get_attribute('class') or '').lower(); ph=(el.get_attribute('placeholder') or ''); val=(el.get_attribute('value') or '')
+                        return t=='date' or 'date' in cls or re.search(r"\d{4}-\d{2}-\d{2}", ph or '') or re.search(r"\d{4}-\d{2}-\d{2}", val or '')
+                    except Exception:
+                        return False
+                cand = [e for e in cand if looks_like_date2(e)]
+                if len(cand) >= 2:
+                    first_input, second_input = cand[0], cand[1]
+                else:
+                    return False
+            except Exception:
+                return False
         
         # Asegurarse de que los inputs son visibles y habilitados
         WebDriverWait(driver, timeout).until(
@@ -461,7 +667,7 @@ def set_date_inputs_by_label(
         )
         
         vis = [first_input, second_input]
-        print(f"Inputs encontrados: {len(vis)}")
+        print(f"Inputs encontrados: {len(vis)} en misma fila/contenedor del label")
         
         if len(vis) != 2:
             print(f"Error: No se encontraron los 2 inputs necesarios. Se encontraron {len(vis)} inputs visibles.")
@@ -599,9 +805,28 @@ def set_date_inputs_by_label(
             except Exception:
                 return False
 
-        # Configurar fecha de inicio
+        # Escribir primero fecha de fin (derecha), luego inicio (izquierda) para evitar sincronizaciones
+        print(f"Configurando fecha de fin: {end_date}")
+        ok2 = type_date(vis[1], end_date, press_tab=False)
+        if ok2 is False:
+            ok2 = _set_date_with_datepicker(driver, vis[1], end_date, timeout=10)
+        if not ok2:
+            print("Error al configurar fecha de fin, intentando método alternativo...")
+            driver.execute_script("""
+                var elem = arguments[0];
+                var value = arguments[1];
+                elem.value = value;
+                elem.dispatchEvent(new Event('input', {bubbles: true}));
+                elem.dispatchEvent(new Event('change', {bubbles: true}));
+            """, vis[1], end_date)
+            ok2 = True
+
+        time.sleep(0.7)
+
         print(f"Configurando fecha de inicio: {start_date}")
         ok1 = type_date(vis[0], start_date, press_tab=True)
+        if ok1 is False:
+            ok1 = _set_date_with_datepicker(driver, vis[0], start_date, timeout=10)
         if not ok1:
             print("Error al configurar fecha de inicio, intentando método alternativo...")
             # Método alternativo para la fecha de inicio
@@ -613,24 +838,39 @@ def set_date_inputs_by_label(
                 elem.dispatchEvent(new Event('change', {bubbles: true}));
             """, vis[0], start_date)
             ok1 = True  # Asumir éxito después del intento alternativo
-        
-        # Pequeña pausa entre fechas
-        time.sleep(1)
-        
-        # Configurar fecha de fin
-        print(f"Configurando fecha de fin: {end_date}")
-        ok2 = type_date(vis[1], end_date, press_tab=False)
-        if not ok2:
-            print("Error al configurar fecha de fin, intentando método alternativo...")
-            # Método alternativo para la fecha de fin
-            driver.execute_script("""
-                var elem = arguments[0];
-                var value = arguments[1];
-                elem.value = value;
-                elem.dispatchEvent(new Event('input', {bubbles: true}));
-                elem.dispatchEvent(new Event('change', {bubbles: true}));
-            """, vis[1], end_date)
-            ok2 = True  # Asumir éxito después del intento alternativo
+
+        # Verificar orden: si el input izquierdo contiene hoy y el derecho ayer, intercambiar
+        try:
+            v_left = (vis[0].get_attribute('value') or '').strip()
+            v_right = (vis[1].get_attribute('value') or '').strip()
+            if v_left == end_date and v_right == start_date:
+                print("Orden invertido detectado, reescribiendo: izquierda=inicio, derecha=fin")
+                type_date(vis[0], start_date, press_tab=True)
+                time.sleep(0.2)
+                type_date(vis[1], end_date, press_tab=False)
+            # Si aún quedan iguales, forzar por JS y disparar eventos
+            v_left2 = (vis[0].get_attribute('value') or '').strip()
+            v_right2 = (vis[1].get_attribute('value') or '').strip()
+            if v_left2 == v_right2:
+                print("Ambos campos siguen iguales, forzando valores por JS (inicio=ayer, fin=hoy)")
+                driver.execute_script("""
+                    var a=arguments[0], b=arguments[1], v1=arguments[2], v2=arguments[3];
+                    a.value=v1; b.value=v2;
+                    ['input','change','blur','keyup'].forEach(function(ev){
+                        a.dispatchEvent(new Event(ev,{bubbles:true}));
+                        b.dispatchEvent(new Event(ev,{bubbles:true}));
+                    });
+                """, vis[0], vis[1], start_date, end_date)
+                time.sleep(0.2)
+                # Releer y último intento: escribir con teclas si siguen iguales
+                v_left3 = (vis[0].get_attribute('value') or '').strip()
+                v_right3 = (vis[1].get_attribute('value') or '').strip()
+                if v_left3 == v_right3:
+                    type_date(vis[0], start_date, press_tab=True)
+                    time.sleep(0.2)
+                    type_date(vis[1], end_date, press_tab=False)
+        except Exception:
+            pass
 
         # Cerrar calendarios inmediatamente tras el segundo input
         try:
@@ -2672,8 +2912,12 @@ def main():
         contrasena = "123456789"
         
         # Definir fechas para la consulta (formato: YYYY-MM-DD)
-        fecha_inicio = "2025-09-15"
-        fecha_fin = "2025-09-15"
+        # fecha_inicio = día anterior, fecha_fin = día de ejecución
+        from datetime import datetime, timedelta
+        hoy_dt = datetime.now()
+        ayer_dt = hoy_dt - timedelta(days=1)
+        fecha_inicio = ayer_dt.strftime('%Y-%m-%d')
+        fecha_fin = hoy_dt.strftime('%Y-%m-%d')
         
         print(f"\nConfigurando consulta para el rango de fechas: {fecha_inicio} al {fecha_fin}")
         

@@ -392,3 +392,76 @@ Revisa los siguientes archivos:
 - Screenshots (imágenes del proceso)
 
 Esperando 10 segundos antes de cerrar...
+[2025-11-12 15:38:22] PROBANDO: "C:\Users\JULIO DME\AppData\Local\Programs\Python\Python313\python.exe" "C:\xampp\htdocs\HERMES.EXPRESS\selenium_utils.py" 2>&1
+[2025-11-12 15:50:00] PROBANDO: "C:\Users\JULIO DME\AppData\Local\Programs\Python\Python313\python.exe" "C:\xampp\htdocs\HERMES.EXPRESS\selenium_utils.py" 2>&1
+[2025-11-12 15:50:22] CODE: 0
+OUT:
+=== EXTRACCION DE DATOS SAVAR EXPRESS ===
+
+Configurando consulta para el rango de fechas: 2025-09-15 al 2025-09-15
+
+PASO 1: INICIANDO SESION...
+Iniciando sesión en SAVAR con usuario: CHI.HER
+Navegando a la página de inicio de sesión...
+Página cargada correctamente
+Screenshot guardado: screenshot_login_page.png
+Buscando campos de login...
+Elemento encontrado: css selector=input[type='text']
+Elemento encontrado: css selector=input[type='password']
+Campos de login encontrados, completando credenciales...
+Usuario ingresado
+Contraseña ingresada
+Elemento encontrado: css selector=button[type='submit']
+Haciendo clic en el botón de envío...
+Esperando a que se complete el inicio de sesión...
+Error en el proceso de inicio de sesión: Message: invalid session id: session deleted as the browser has closed the connection
+from disconnected: not connected to DevTools
+  (Session info: chrome=142.0.7444.61); For documentation on this error, please visit: https://www.selenium.dev/documentation/webdriver/troubleshooting/errors#invalidsessionidexception
+Stacktrace:
+Symbols not available. Dumping unresolved backtrace:
+	0xce4093
+	0xce40d4
+	0xaee71d
+	0xadd910
+	0xafc714
+	0xb63475
+	0xb7e749
+	0xb5c706
+	0xb2da30
+	0xb2ed54
+	0xf55744
+	0xf5091a
+	0xd0c322
+	0xcfc458
+	0xd031dd
+	0xcec408
+	0xcec5cc
+	0xcd675a
+	0x75ad5d49
+	0x771fd6db
+	0x771fd661
+
+No se pudo guardar el screenshot del error
+Error: No se pudo iniciar sesion
+
+==================================================
+RESULTADO DE DESCARGA DE EXCEL:
+==================================================
+Estado: error
+Mensaje: No se pudo iniciar sesión
+
+==================================================
+PROCESO FINALIZADO
+==================================================
+Revisa los siguientes archivos:
+- datos_savar.json (datos extraídos)
+- downloads/ (archivos Excel descargados)
+- Screenshots (imágenes del proceso)
+
+Esperando 10 segundos antes de cerrar...
+[2025-11-12 16:07:08] PROBANDO: "C:\Users\JULIO DME\AppData\Local\Programs\Python\Python313\python.exe" "C:\xampp\htdocs\HERMES.EXPRESS\selenium_utils.py" 2>&1
+[2025-11-12 16:15:39] PROBANDO: "C:\Users\JULIO DME\AppData\Local\Programs\Python\Python313\python.exe" "C:\xampp\htdocs\HERMES.EXPRESS\selenium_utils.py" 2>&1
+[2025-11-12 16:21:04] PROBANDO: "C:\Users\JULIO DME\AppData\Local\Programs\Python\Python313\python.exe" "C:\xampp\htdocs\HERMES.EXPRESS\selenium_utils.py" 2>&1
+[2025-11-12 16:38:44] PROBANDO: "C:\Users\JULIO DME\AppData\Local\Programs\Python\Python313\python.exe" "C:\xampp\htdocs\HERMES.EXPRESS\selenium_utils.py" 2>&1
+[2025-11-12 16:52:10] PROBANDO: "C:\Users\JULIO DME\AppData\Local\Programs\Python\Python313\python.exe" "C:\xampp\htdocs\HERMES.EXPRESS\selenium_utils.py" 2>&1
+[2025-11-12 17:04:57] PROBANDO: "C:\Users\JULIO DME\AppData\Local\Programs\Python\Python313\python.exe" "C:\xampp\htdocs\HERMES.EXPRESS\selenium_utils.py" 2>&1
